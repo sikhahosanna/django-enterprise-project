@@ -1,13 +1,20 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
+
+from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
-from .serializers import RegisterSerializer, LoginSerializer, ChangePasswordSerializer
-
+from .models import User, Profile
+from .serializers import (
+    RegisterSerializer,
+    LoginSerializer,
+    ChangePasswordSerializer,
+    ProfileSerializer
+)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -50,16 +57,109 @@ class LoginView(APIView):
 class ProfileView(APIView):
 
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
 
     def get(self, request):
 
+        try:
+            profile = request.user.profile
+
+        except Profile.DoesNotExist:
+
+            return Response(
+                {
+                    "message": "Profile not created"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+        serializer = ProfileSerializer(profile)
+
         return Response(
-            {
-                "id": str(request.user.id),
-                "email": request.user.email
-            },
+            serializer.data,
             status=status.HTTP_200_OK
         )
+
+
+
+    def post(self, request):
+
+        try:
+
+            profile = request.user.profile
+
+            serializer = ProfileSerializer(
+                profile,
+                data=request.data,
+                partial=True
+            )
+
+
+        except Profile.DoesNotExist:
+
+            serializer = ProfileSerializer(
+                data=request.data
+            )
+
+
+        if serializer.is_valid():
+
+            serializer.save(
+                user=request.user
+            )
+
+            return Response(
+                serializer.data,
+                status=status.HTTP_200_OK
+            )
+
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+class ProfileListView(generics.ListAPIView):
+
+    queryset = Profile.objects.all()
+
+    serializer_class = ProfileSerializer
+
+
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+        DjangoFilterBackend,
+    ]
+
+
+    # Search
+    search_fields = [
+        "first_name",
+        "last_name",
+        "phone",
+    ]
+
+
+    # Ordering
+    ordering_fields = [
+        "first_name",
+        "last_name",
+    ]
+
+
+    # Filtering
+    filterset_fields = [
+        "first_name",
+        "last_name",
+    ]
+
+
+
 class ChangePasswordView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -69,8 +169,11 @@ class ChangePasswordView(APIView):
 
         serializer = ChangePasswordSerializer(
             data=request.data,
-            context={"request": request}
+            context={
+                "request": request
+            }
         )
+
 
         serializer.is_valid(
             raise_exception=True
@@ -90,18 +193,24 @@ class ChangePasswordView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+
 class LogoutView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+
     def post(self, request):
 
         try:
-            refresh_token = request.data["refresh"]
+
+            refresh_token = request.data.get("refresh")
 
             token = RefreshToken(refresh_token)
 
             token.blacklist()
+
 
             return Response(
                 {
@@ -109,6 +218,7 @@ class LogoutView(APIView):
                 },
                 status=status.HTTP_200_OK
             )
+
 
         except Exception:
 
@@ -118,4 +228,3 @@ class LogoutView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
