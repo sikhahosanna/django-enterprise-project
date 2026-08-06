@@ -617,638 +617,257 @@ The Authentication Module provides a complete JWT-based security layer for the m
 The implementation supports secure user onboarding, authentication, authorization, password management, and session termination following modern backend development standards.
 
 TASK-3 (DAY 3)
-# Authentication Module Development
+# Running the Project Locally
 
-## Epic
+## 1. Clone Repository
 
-**Authentication Module Development**
+```bash
+git clone <repository-url>
 
----
+cd myproject
+2. Create Virtual Environment
+python -m venv venv
 
-# Objective
+Activate environment:
 
-The objective of this module is to develop a complete authentication system for a mobile application using JWT (JSON Web Token) authentication.
+Windows:
 
-The module provides secure user management functionality including:
+venv\Scripts\activate
 
-- User Registration
-- Email-based Login
-- JWT Authentication
-- Access and Refresh Token Management
-- Protected APIs
-- Change Password
-- Logout with Token Blacklisting
-- API Documentation
-- Testing and Version Control
+Linux/Mac:
 
+source venv/bin/activate
+3. Install Dependencies
+pip install -r requirements.txt
+Environment Configuration
 
----
-
-# Technology Stack
-
-| Technology | Purpose |
-|---|---|
-| Django 6.x | Backend Framework |
-| Django REST Framework | API Development |
-| PostgreSQL | Database Management |
-| Simple JWT | JWT Authentication |
-| drf-spectacular | API Documentation |
-| Postman | API Testing |
-| Git | Version Control |
-
-
----
-
-# Project Structure
-myproject/
-
-│
-├── accounts/
-│ ├── models.py
-│ ├── serializers.py
-│ ├── views.py
-│ ├── urls.py
-│
-├── core/
-│
-├── common/
-│
-├── myproject/
-│ ├── settings.py
-│ ├── urls.py
-│
-├── media/
-│
-├── manage.py
-└── requirements.txt
-
-
-
----
-
-# Task 1 — Study Authentication Flow
-
-## Purpose
-
-To understand the complete authentication lifecycle and security flow used in modern applications.
-
-
----
-
-## Concepts Studied
-
-
-## Registration
-
-Registration allows a new user to create an account.
-
-Flow:
-
-
-User
-|
-Enter Email and Password
-|
-Registration API
-|
-Serializer Validation
-|
-Check Duplicate Email
-|
-Hash Password
-|
-Save User
-|
-Account Created
-
-
-
-Purpose:
-
-- Create new user account
-- Validate user information
-- Store encrypted password
-
-
----
-
-## Login
-
-Login verifies existing user credentials.
-
-
-Flow:
-
-
-User
-|
-Email + Password
-|
-Login API
-|
-Authentication Check
-|
-Generate JWT Tokens
-|
-Return Tokens
-
-
-
-Purpose:
-
-- Verify user identity
-- Generate authentication tokens
-
-
----
-
-## Authentication
-
-Authentication identifies the user making an API request.
-
-
-Flow:
-
-
-Request
-|
-JWT Access Token
-|
-Token Verification
-|
-User Authentication
-
-
-
-Purpose:
-
-Allow only valid users to access protected resources.
-
-
----
-
-## Authorization
-
-Authorization controls user permissions after authentication.
-
+Create .env file in project root.
 
 Example:
 
-- User can access own profile
-- Unauthorized users cannot access protected APIs
+SECRET_KEY=your_secret_key
 
+DEBUG=True
 
----
-
-## JWT (JSON Web Token)
-
-JWT is a token-based authentication mechanism.
-
-
-JWT contains:
-
-- User identity
-- Token expiry
-- Signature
-
-
-Types:
-
-
-### Access Token
+DB_NAME=mydb
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
 
 Purpose:
 
-- Used for accessing APIs
-- Short expiry duration
+Environment variables keep sensitive information secure and avoid hardcoding secrets inside settings.py.
 
+Database Setup
 
-Example:
+This project uses PostgreSQL.
 
+Create database:
 
-Authorization: Bearer access_token
+CREATE DATABASE mydb;
 
+Run migrations:
 
+python manage.py makemigrations
 
-### Refresh Token
+python manage.py migrate
 
-Purpose:
+Create admin user:
 
-- Generate new access tokens
-- Maintain user session
+python manage.py createsuperuser
+Start Development Server
 
+Run:
 
----
+python manage.py runserver
 
-# Task 2 — Registration API
+Server:
 
+http://127.0.0.1:8000/
+API Documentation
 
-## Purpose
+Swagger documentation is available using drf-spectacular.
 
-Create API for new user account registration.
+OpenAPI Schema
+GET /api/schema/
+Swagger UI
+GET /api/docs/
 
+Swagger provides:
 
----
+API endpoint details
+Request body structure
+Response examples
+Authentication testing
+JWT authorization support
+API Endpoints
+Authentication APIs
+API	Method	Purpose
+/api/register/	POST	Create new user account
+/api/login/	POST	Login and generate JWT tokens
+/api/profile/	GET	Get authenticated user profile
+/api/profile/	POST	Update user profile
+/api/change-password/	POST	Change password securely
+/api/logout/	POST	Logout and blacklist token
+/api/profiles/	GET	List user profiles
+JWT Authentication Usage
 
-## Implementation
-
-
-### Serializer Created
-
-Purpose:
-
-- Validate incoming request data
-- Validate email
-- Validate password
-- Create user object
-
-
-Implemented:
-
-- Duplicate email validation
-- Password validation using Django validators
-
-
----
-
-### API View Created
-
-Purpose:
-
-Handle registration request.
-
-
-Responsibilities:
-
-- Receive user details
-- Validate serializer
-- Create user
-- Return response
-
-
----
-
-### Endpoint
-
-
-
-POST /api/register/
-
-
-
-Request:
-
-
-```json
-{
-"email":"test@gmail.com",
-"password":"Password@123"
-}
+After successful login:
 
 Response:
 
 {
-"message":"Registration successful"
-}
-Testing Completed
-
-Verified:
-
-✅ Valid registration
-
-✅ Invalid email
-
-✅ Weak password
-
-✅ Missing fields
-
-✅ Duplicate email
-
-Task 3 — Login API
-Purpose
-
-Authenticate users using email and password.
-
-Implementation
-
-Created login API using:
-
-Email authentication
-Password verification
-JWT token generation
-
-Generated:
-
-Access Token
-
-Used for API authentication.
-
-Refresh Token
-
-Used for token renewal.
-
-Endpoint:
-
-POST /api/login/
-
-Request:
-
-{
-"email":"test@gmail.com",
-"password":"Password@123"
+ "access":"access_token",
+ "refresh":"refresh_token"
 }
 
-Response:
+Use access token for protected APIs:
 
-{
-"user":{
-"email":"test@gmail.com"
-},
+Header:
 
-"access":"JWT_ACCESS_TOKEN",
-
-"refresh":"JWT_REFRESH_TOKEN"
-}
-Testing Completed
-
-Verified:
-
-✅ Valid login
-
-✅ Invalid password
-
-✅ Invalid email
-
-✅ Missing fields
-
-Task 4 — JWT Authentication
-Purpose
-
-Secure APIs using JWT authentication.
-
-Configuration Completed
-
-Added:
-
-JWT Authentication class
-Simple JWT configuration
-Protected API access
-
-settings.py:
-
-REST_FRAMEWORK = {
-
-"DEFAULT_AUTHENTICATION_CLASSES":(
-"rest_framework_simplejwt.authentication.JWTAuthentication",
-)
-
-}
-Protected APIs
+Authorization: Bearer <access_token>
 
 Example:
 
 GET /api/profile/
 
-Without Token:
+Without token:
 
 401 Unauthorized
 
-With Valid Token:
+With valid token:
 
 200 OK
-Verification Completed
+Postman Testing
+
+Created Postman collections for:
+
+Registration Collection
+
+Test cases:
+
+Valid registration
+Invalid email
+Missing fields
+Duplicate email
+Login Collection
+
+Test cases:
+
+Valid credentials
+Wrong password
+Invalid email
+Token generation
+Password Collection
+
+Test cases:
+
+Correct old password
+Wrong old password
+Password validation
+Successful update
+Logout Collection
+
+Test cases:
+
+Valid refresh token
+Blacklisted token validation
+Testing Summary
+
+All APIs verified successfully:
+
+Registration API
+
+Checked:
+
+✅ User creation
+✅ Email validation
+✅ Password validation
+✅ Duplicate email handling
+
+Login API
+
+Checked:
+
+✅ Email authentication
+✅ JWT access token
+✅ JWT refresh token
+
+Protected APIs
 
 Checked:
 
 ✅ Unauthorized access blocked
+✅ Authorized access allowed
 
-✅ Valid token access allowed
-
-Task 5 — Change Password API
-Purpose
-
-Allow authenticated users to securely update passwords.
-
-Features Implemented
-Current Password Validation
-
-System verifies old password before updating.
-
-New Password Validation
-
-Applied Django password validators.
-
-Validation:
-
-Minimum length
-Common password check
-Numeric password check
-Secure Password Update
-
-Password stored using Django password hashing.
-
-Endpoint:
-
-POST /api/change-password/
-
-Request:
-
-{
-"current_password":"OldPassword@123",
-
-"new_password":"NewPassword@123"
-}
-Testing Completed
-
-Verified:
-
-✅ Correct current password
-
-✅ Wrong current password
-
-✅ Password validation
-
-✅ Successful password update
-
-Task 6 — Logout API
-Purpose
-
-Securely logout users by invalidating refresh tokens.
-
-Implementation
-
-Used:
-
-JWT Token Blacklist
-
-Flow:
-
-Logout Request
-
-      |
-
-Refresh Token
-
-      |
-
-Blacklist Token
-
-      |
-
-Token Invalid
-
-Endpoint:
-
-POST /api/logout/
-Testing Completed
-
-Verified:
-
-✅ Logout success
-
-✅ Blacklisted token rejection
-
-Task 7 — Swagger Documentation
-Purpose
-
-Generate interactive API documentation and verify all endpoints.
-
-Implementation
-
-Installed:
-
-drf-spectacular
-
-Added:
-
-drf_spectacular
-
-in INSTALLED_APPS.
-
-Configured:
-
-"DEFAULT_SCHEMA_CLASS":
-"drf_spectacular.openapi.AutoSchema"
-Swagger URLs
-
-Schema:
-
-GET /api/schema/
-
-Swagger UI:
-
-GET /api/docs/
-Documented APIs
-
-Available endpoints:
-
-POST /api/register/
-
-POST /api/login/
-
-GET /api/profile/
-
-POST /api/profile/
-
-POST /api/change-password/
-
-POST /api/logout/
-
-GET /api/profiles/
-Verification Completed
-
-Checked:
-
-✅ All endpoints visible
-
-✅ Request methods displayed
-
-✅ Response schemas generated
-
-✅ Swagger UI working
-
-Task 8 — Testing & Git
-Purpose
-
-Verify complete functionality and maintain proper version control.
-
-API Testing
-
-Tested APIs:
-
-Registration API
-
-Checked:
-
-Success response
-Validation errors
-Duplicate email
-Login API
-
-Checked:
-
-Valid credentials
-Invalid credentials
-JWT generation
-Profile API
-
-Checked:
-
-Authentication required
-User profile access
 Change Password API
 
 Checked:
 
-Old password verification
-Password update
+✅ Current password verification
+✅ Secure password update
+
 Logout API
 
 Checked:
 
-Token blacklist
-Logout behaviour
-Git Implementation
-Repository Setup
+✅ Refresh token blacklist
+✅ Session termination
 
-Commands:
+Git Commit History
+
+Feature-wise commits:
 
 git init
+
 
 git add .
 
 git commit -m "Initial project setup"
 
+
 git commit -m "Add registration API"
+
 
 git commit -m "Add login JWT authentication"
 
+
+git commit -m "Configure JWT authentication"
+
+
 git commit -m "Add change password API"
+
 
 git commit -m "Add logout token blacklist"
 
+
 git commit -m "Add swagger documentation"
 
-git commit -m "Update README documentation"
-Code Review Completed
+
+git commit -m "Update authentication documentation"
+
+Purpose:
+
+Maintain clean development history
+Track feature implementation
+Easy rollback and review
+Code Review Checklist
 
 Verified:
 
-✅ Clean project structure
-
+✅ Django project structure
 ✅ Serializer validations
-
-✅ Secure password handling
-
-✅ JWT implementation
-
-✅ API security
-
-✅ Swagger documentation
-
+✅ Password security
+✅ JWT configuration
+✅ Authentication classes
+✅ Protected APIs
+✅ Token blacklist implementation
+✅ API documentation
 ✅ Error handling
+✅ Git history
 
-End of Day Deliverables
+Final Deliverables
 
 Completed:
 
@@ -1258,9 +877,9 @@ Completed:
 
 ✅ JWT Authentication
 
-✅ Access Token
+✅ Access Token Generation
 
-✅ Refresh Token
+✅ Refresh Token Generation
 
 ✅ Protected APIs
 
@@ -1268,56 +887,74 @@ Completed:
 
 ✅ Logout API
 
-✅ JWT Token Blacklist
+✅ Token Blacklist
 
 ✅ Swagger Documentation
 
+✅ Postman Collections
+
 ✅ API Testing
 
-✅ Git Commits
+✅ Git Commit History
 
-✅ README Documentation
+✅ Authentication Documentation
 
-Final Authentication Flow
+Final Authentication Architecture
 User Registration
 
         |
-
         v
 
-User Account Created
+Create User Account
 
         |
-
         v
 
-User Login
+Login Using Email
 
         |
-
         v
 
-JWT Access + Refresh Token
+Generate JWT Access + Refresh Token
 
         |
-
         v
 
 Access Protected APIs
 
         |
-
         v
 
 Password Management
 
         |
-
         v
 
-Logout & Token Blacklist
+Logout
+
+        |
+        v
+
+Blacklist Refresh Token
+
+        |
+        v
+
+Secure Session Termination
 Conclusion
 
-The Authentication Module was successfully developed with complete JWT-based security implementation.
+The Authentication Module was successfully developed using Django REST Framework and JWT authentication.
 
-The system supports secure registration, authentication, authorization, password management, logout functionality, API documentation, testing, and version control following professional backend development practices.
+The implementation provides a secure authentication layer with:
+
+User registration
+Email based login
+JWT authorization
+Token management
+Password security
+Logout functionality
+API documentation
+Testing workflow
+Git based version control
+
+The module follows professional backend development practices and is ready for mobile application integration.
