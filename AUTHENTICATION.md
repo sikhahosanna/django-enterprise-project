@@ -1,102 +1,330 @@
+
+```markdown
 # Authentication Documentation
 
 ## Overview
 
-This project implements JWT Authentication using Django REST Framework and Simple JWT.
+This project implements a secure JWT-based authentication system using Django REST Framework and Simple JWT.
 
-## Authentication Features
+The authentication module provides secure user registration, login, authorization, password management, and logout functionality.
+
+---
+
+# Authentication Features
+
+The system supports the following features:
 
 - User Registration API
-- User Login API
-- JWT Access Token and Refresh Token
-- Protected Profile API
+- Email Based Login API
+- JWT Access Token Generation
+- JWT Refresh Token Generation
+- Protected API Authentication
 - Change Password API
 - Logout API with Token Blacklist
+- API Testing and Documentation
 
-## API Endpoints
+---
+
+# API Endpoints
 
 ## 1. Register API
 
-Method:
+### Method
+
 POST
 
-Endpoint:
+
+### Endpoint
+
+```
 
 /api/register/
 
-Request:
+````
+
+
+### Purpose
+
+Creates a new user account in the application.
+
+
+### Request Body
 
 ```json
 {
     "email": "siri@gmail.com",
     "password": "Siri@12345"
 }
-2. Login API
+````
 
-Method:
+### Response Example
+
+```json
+{
+    "message": "User registered successfully"
+}
+```
+
+### Validation
+
+The API validates:
+
+* Email format
+* Required fields
+* Duplicate email
+* Password strength
+
+---
+
+# 2. Login API
+
+### Method
+
 POST
 
-Endpoint:
+### Endpoint
 
+```
 /api/login/
+```
 
-Login response contains:
+### Purpose
 
-Access Token
-Refresh Token
-3. Profile API
+Authenticates users using email and password.
 
-Method:
+### Request Body
+
+```json
+{
+    "email": "siri@gmail.com",
+    "password": "Siri@12345"
+}
+```
+
+### Response Contains
+
+* User details
+* Access Token
+* Refresh Token
+
+### Response Example
+
+```json
+{
+    "user": {
+        "email": "siri@gmail.com"
+    },
+    "access": "jwt_access_token",
+    "refresh": "jwt_refresh_token"
+}
+```
+
+---
+
+# 3. Profile API
+
+### Method
+
 GET
 
-Endpoint:
+### Endpoint
 
+```
 /api/profile/
+```
 
-Authorization:
+### Purpose
 
-Bearer <access_token>
-4. Change Password API
+Retrieves authenticated user profile information.
 
-Method:
+### Authorization Header
+
+```
+Authorization: Bearer <access_token>
+```
+
+### Security
+
+Only authenticated users with valid JWT tokens can access this API.
+
+---
+
+# 4. Change Password API
+
+### Method
+
 POST
 
-Endpoint:
+### Endpoint
 
+```
 /api/change-password/
+```
 
-Request:
+### Purpose
 
+Allows authenticated users to securely update their password.
+
+### Request Body
+
+```json
 {
     "current_password": "OldPassword",
     "new_password": "NewPassword"
 }
-5. Logout API
+```
 
-Method:
+### Validation
+
+The API verifies:
+
+* Current password correctness
+* New password strength
+* Secure password hashing
+
+---
+
+# 5. Logout API
+
+### Method
+
 POST
 
-Endpoint:
+### Endpoint
 
+```
 /api/logout/
+```
 
-Request:
+### Purpose
 
+Securely logs out users by invalidating refresh tokens.
+
+### Request Body
+
+```json
 {
     "refresh": "refresh_token"
 }
+```
 
-After logout, the refresh token will be blacklisted and cannot be reused.
+### Logout Process
 
-JWT Authentication Flow
-User registers using Register API.
-User logs in and receives JWT tokens.
-Access token is used for protected APIs.
-Logout API blacklists the refresh token.
+```
+User Logout
 
-Tarvata save chesi:
+     |
 
-```powershell
+Refresh Token
+
+     |
+
+Token Blacklist
+
+     |
+
+Token Cannot Be Used Again
+```
+
+After logout, the refresh token is blacklisted and cannot be reused.
+
+---
+
+# JWT Authentication Flow
+
+```
+User Registration
+
+        |
+
+        v
+
+User Account Created
+
+        |
+
+        v
+
+User Login
+
+        |
+
+        v
+
+JWT Access + Refresh Token Generated
+
+        |
+
+        v
+
+Access Protected APIs
+
+        |
+
+        v
+
+Password Change / Logout
+
+        |
+
+        v
+
+Secure User Session Management
+```
+
+---
+
+# Security Implementation
+
+Implemented security practices:
+
+* JWT Token Authentication
+* Password Hashing
+* Password Validation
+* Token Blacklisting
+* Protected API Access
+* Secure User Session Handling
+
+---
+
+# Testing Completed
+
+Verified:
+
+* Successful registration
+* Duplicate email validation
+* Invalid credentials handling
+* JWT token generation
+* Protected API access
+* Password update validation
+* Logout token blacklist functionality
+
+---
+
+# Documentation Status
+
+Completed:
+
+✅ Authentication APIs
+✅ JWT Configuration
+✅ API Request Examples
+✅ API Response Examples
+✅ Security Flow Documentation
+✅ Testing Documentation
+
+---
+
+# Git Commit
+
+Save authentication documentation:
+
+```bash
 git add AUTHENTICATION.md
+
 git commit -m "Updated authentication documentation"
+
 git push origin main
+```
+
+```
+
