@@ -1,12 +1,16 @@
 from django.urls import path
 
 from .views import (
+    DeleteProfileView,
     RegisterView,
+  
     LoginView,
     ProfileView,
     ChangePasswordView,
     LogoutView,
-    ProfileListView
+    ProfileListView,
+    RestoreProfileView,
+    
 )
 
 
@@ -32,5 +36,14 @@ urlpatterns = [
         "profiles/",
         ProfileListView.as_view()
     ),
+    path(
+    "profile/delete/",
+    DeleteProfileView.as_view()
+),
+
+path(
+    "profile/restore/",
+    RestoreProfileView.as_view()
+),
 
 ]

@@ -85,6 +85,11 @@ class Profile(models.Model):
         blank=True
     )
 
+    # Soft Delete
+    is_deleted = models.BooleanField(
+        default=False
+    )
+
 
     def __str__(self):
         return self.user.email

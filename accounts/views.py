@@ -1,8 +1,9 @@
 from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser 
+from .permissions import IsAdminOrOwner 
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -56,7 +57,8 @@ class LoginView(APIView):
 
 class ProfileView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsAdminOrOwner]
+    
     parser_classes = [MultiPartParser, FormParser]
 
 
@@ -125,8 +127,13 @@ class ProfileView(APIView):
 
 class ProfileListView(generics.ListAPIView):
 
-    queryset = Profile.objects.all()
-
+    permission_classes = [IsAdminUser]
+    
+    queryset = Profile.objects.select_related(
+        "user"
+    ).filter(
+        is_deleted=False
+    )
     serializer_class = ProfileSerializer
 
 
@@ -227,4 +234,85 @@ class LogoutView(APIView):
                     "error": "Invalid refresh token"
                 },
                 status=status.HTTP_400_BAD_REQUEST
+            )
+class LogoutView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        try:
+            refresh_token = request.data.get("refresh")
+
+            token = RefreshToken(refresh_token)
+
+            token.blacklist()
+
+            return Response(
+                {
+                    "message": "Logout successfully"
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Exception:
+
+            return Response(
+                {
+                    "error": "Invalid refresh token"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class DeleteProfileView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def delete(self, request):
+
+        print(request.user)
+        
+        profile = request.user.profile
+
+        profile.is_deleted = True
+        profile.save()
+
+        return Response(
+            {
+                "message": "Profile deleted successfully"
+            }
+        )
+
+
+class RestoreProfileView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request):
+
+        try:
+            profile = request.user.profile
+
+            profile.is_deleted = False
+            profile.save()
+
+            return Response(
+                {
+                    "message": "Profile restored successfully"
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Profile.DoesNotExist:
+
+            return Response(
+                {
+                    "message": "Profile not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
             )

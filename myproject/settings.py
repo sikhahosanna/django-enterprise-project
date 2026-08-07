@@ -8,8 +8,56 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / "logs"
 
 load_dotenv(BASE_DIR / ".env")
+LOGGING = {
+
+    "version": 1,
+
+    "disable_existing_loggers": False,
+
+    "handlers": {
+
+        "file": {
+
+            "level": "ERROR",
+
+            "class": "logging.FileHandler",
+
+            "filename": str(LOG_DIR / "error.log"),
+
+        },
+
+    },
+
+
+    "loggers": {
+
+        "django": {
+
+            "handlers": ["file"],
+
+            "level": "ERROR",
+
+            "propagate": True,
+
+        },
+
+
+        "accounts": {
+
+            "handlers": ["file"],
+
+            "level": "ERROR",
+
+            "propagate": False,
+
+        },
+
+    },
+
+}
 
 
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -55,7 +103,8 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
 
     ),
-
+    "EXCEPTION_HANDLER":
+"accounts.exceptions.custom_exception_handler",
 
     "DEFAULT_SCHEMA_CLASS":
 
@@ -223,3 +272,49 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 AUTH_USER_MODEL = 'accounts.User'
+LOGGING = {
+
+    "version": 1,
+
+    "disable_existing_loggers": False,
+
+    "handlers": {
+
+        "file": {
+
+            "level": "ERROR",
+
+            "class": "logging.FileHandler",
+
+            "filename": LOG_DIR / "error.log",
+
+        },
+
+    },
+
+
+    "loggers": {
+
+        "django": {
+
+            "handlers": ["file"],
+
+            "level": "ERROR",
+
+            "propagate": True,
+
+        },
+
+        "accounts": {
+
+            "handlers": ["file"],
+
+            "level": "ERROR",
+
+            "propagate": False,
+
+        },
+
+    },
+
+}
