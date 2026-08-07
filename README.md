@@ -738,3 +738,382 @@ The system provides:
 * Testing workflow
 * Git based version control
 
+TASK-4
+
+
+# Security & Performance Enhancement Tasks
+
+## Objective
+
+Secure the application and improve API performance using enterprise best practices.
+
+The implementation focused on:
+
+- Role-Based Access Control (RBAC)
+- API security
+- Soft delete functionality
+- Audit tracking
+- Centralized logging
+- Exception handling
+- ORM optimization
+- Final testing and documentation
+
+---
+
+# Task 1 – RBAC (Role-Based Access Control)
+
+## Overview
+
+RBAC is a security approach where access to application resources is controlled based on user roles.
+
+## Concepts Studied
+
+### Roles
+
+Roles define the type of user and their access level.
+
+Implemented roles:
+
+- Admin
+- User
+
+
+### Permissions
+
+Permissions define what actions a role can perform.
+
+Examples:
+
+- Admin can view all profiles.
+- User can access and update their own profile.
+
+
+### Authorization
+
+Authorization verifies whether a user has permission to perform a specific action.
+
+Implemented using Django REST Framework custom permissions.
+
+---
+
+# Task 2 – Role Implementation
+
+## Implemented Roles
+
+### Admin Role
+
+Admin users can:
+
+- View all user profiles.
+- Access protected admin APIs.
+- Manage application data.
+
+
+### User Role
+
+Normal users can:
+
+- View their own profile.
+- Update their own profile.
+- Access authorized resources only.
+
+
+## Verification
+
+Access rules were tested using:
+
+- Admin JWT token
+- Normal user JWT token
+- Anonymous requests
+
+
+---
+
+# Task 3 – API Security
+
+## Implementation
+
+Protected APIs using custom permission classes.
+
+Implemented:
+
+- JWT Authentication
+- IsAuthenticated permission
+- Custom Admin/Owner permission
+
+
+## Security Verification
+
+### Anonymous User
+
+Result:
+
+```
+
+Authentication credentials were not provided.
+
+```
+
+### Unauthorized User
+
+Result:
+
+```
+
+You do not have permission to perform this action.
+
+```
+
+### Authorized User
+
+Successfully accessed allowed resources.
+
+---
+
+# Task 4 – Soft Delete Implementation
+
+## Implementation
+
+Added:
+
+```
+
+is_deleted
+
+```
+
+field to Profile model.
+
+
+## Functionality
+
+### Delete
+
+Instead of permanently deleting records:
+
+```
+
+is_deleted = True
+
+```
+
+is updated.
+
+
+### Restore
+
+Deleted records can be restored:
+
+```
+
+is_deleted = False
+
+````
+
+
+### Active Records Filtering
+
+Only active records are displayed:
+
+```python
+Profile.objects.filter(
+    is_deleted=False
+)
+````
+
+## Verification
+
+Tested:
+
+* Delete profile
+* Restore profile
+* Active record filtering
+
+---
+
+# Task 5 – Audit Fields
+
+## Added Fields
+
+Implemented tracking fields:
+
+```python
+created_at
+updated_at
+created_by
+updated_by
+```
+
+## Purpose
+
+Audit fields help track:
+
+* When a record was created.
+* When a record was modified.
+* Which user created the record.
+* Which user updated the record.
+
+## Verification
+
+Confirmed automatic timestamp updates during create and update operations.
+
+---
+
+# Task 6 – Logging & Exception Handling
+
+## Centralized Logging
+
+Configured Django logging system.
+
+Log location:
+
+```
+logs/error.log
+```
+
+## Features Implemented
+
+* Error logging
+* Application error tracking
+* Custom exception responses
+* API error handling
+
+## Verification
+
+Generated errors and verified logs were stored successfully.
+
+---
+
+# Task 7 – ORM Performance Optimization
+
+## Objective
+
+Improve database performance by reducing unnecessary queries.
+
+## Implemented Optimization
+
+### select_related()
+
+Used for ForeignKey and OneToOne relationships.
+
+Example:
+
+```python
+Profile.objects.select_related(
+    "user"
+).filter(
+    is_deleted=False
+)
+```
+
+### prefetch_related()
+
+Used for handling multiple related objects efficiently.
+
+## Query Optimization Result
+
+Before optimization:
+
+```
+Multiple database queries executed
+```
+
+After optimization:
+
+```
+Single optimized query executed
+```
+
+## Verification
+
+Used Django query count:
+
+```python
+len(connection.queries)
+```
+
+Confirmed reduced database queries.
+
+---
+
+# Task 8 – Final Testing & Documentation
+
+## API Testing
+
+All APIs tested end-to-end using Postman.
+
+Tested:
+
+* Registration API
+* Login API
+* JWT authentication
+* Profile CRUD APIs
+* Image upload
+* Password change
+* Logout
+* Soft delete
+* Restore functionality
+* Filtering
+* Pagination
+
+## Project Review
+
+Reviewed:
+
+* Project structure
+* Database models
+* API endpoints
+* Permissions
+* Exception handling
+* Logging configuration
+
+## Bug Fixing
+
+Resolved:
+
+* Authentication issues
+* Permission issues
+* Migration issues
+* API response issues
+
+## Git Commit
+
+Completed work committed to Git repository.
+
+Implemented:
+
+* Security enhancements
+* Performance optimization
+* Documentation updates
+
+---
+
+# Final Implementation Summary
+
+| Feature               | Status    |
+| --------------------- | --------- |
+| RBAC                  | Completed |
+| Custom Permissions    | Completed |
+| JWT Security          | Completed |
+| Profile APIs          | Completed |
+| Image Upload          | Completed |
+| Soft Delete           | Completed |
+| Restore Functionality | Completed |
+| Audit Fields          | Completed |
+| Logging               | Completed |
+| Exception Handling    | Completed |
+| ORM Optimization      | Completed |
+| API Testing           | Completed |
+| Documentation         | Completed |
+
+## Blockers
+
+```
+0
+```
+
+## Project Status
+
+Completed Successfully ✅
+
+```
