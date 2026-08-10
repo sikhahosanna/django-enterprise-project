@@ -1117,3 +1117,555 @@ Implemented:
 Completed Successfully ✅
 
 ```
+# Ride Booking Backend – Database & Business Module Documentation
+
+## 1. Business Domain
+
+**Domain:** Ride Booking
+
+The application allows users to book rides, drivers to accept rides, and vehicles to be associated with drivers.
+
+### Main Business Entities
+
+* User
+* Profile
+* DriverProfile
+* VehicleType
+* Vehicle
+* RideStatus
+* Ride
+
+---
+
+# 2. ER Diagram
+
+```text
+                         ┌─────────────────┐
+                         │      User       │
+                         │─────────────────│
+                         │ PK: id (UUID)   │
+                         │ email           │
+                         └────────┬────────┘
+                                  │
+                       1          │          1
+                                  │
+                 ┌────────────────┴──────────────┐
+                 │                               │
+                 ▼                               ▼
+       ┌─────────────────┐             ┌──────────────────┐
+       │     Profile     │             │  DriverProfile   │
+       │─────────────────│             │──────────────────│
+       │ PK: user_id     │             │ PK: id (UUID)    │
+       │ first_name      │             │ FK: user_id      │
+       │ last_name       │             │ license_number   │
+       │ phone           │             │ status           │
+       └─────────────────┘             └────────┬─────────┘
+                                                │
+                                                │ 1
+                                                │
+                                                │ N
+                                                ▼
+                                      ┌──────────────────┐
+                                      │     Vehicle      │
+                                      │──────────────────│
+                                      │ PK: id (UUID)    │
+                                      │ FK: driver_id    │
+                                      │ FK: vehicle_type │
+                                      │ registration_no  │
+                                      │ model            │
+                                      └────────┬─────────┘
+                                               │
+                                               │ N
+                                               │
+                                               │ 1
+                                               ▼
+                                      ┌──────────────────┐
+                                      │   VehicleType    │
+                                      │──────────────────│
+                                      │ PK: id (UUID)    │
+                                      │ name             │
+                                      └──────────────────┘
+
+
+                         ┌─────────────────┐
+                         │      User       │
+                         └────────┬────────┘
+                                  │
+                                  │ 1
+                                  │
+                                  │ N
+                                  ▼
+                         ┌─────────────────┐
+                         │      Ride       │
+                         │─────────────────│
+                         │ PK: id (UUID)   │
+                         │ FK: rider_id    │
+                         │ FK: driver_id   │
+                         │ FK: status_id   │
+                         │ pickup location │
+                         │ dropoff location│
+                         │ fare            │
+                         └──────┬──────┬───┘
+                                │      │
+                                │      │
+                         N      │      │ N
+                                │      │
+                                ▼      ▼
+                     DriverProfile   RideStatus
+```
+
+---
+
+# 3. Models
+
+## User
+
+Represents a registered application user.
+
+Important fields:
+
+* `id` – UUID primary key
+* `email` – unique email address
+* Authentication fields from Django `AbstractUser`
+
+---
+
+## Profile
+
+Stores additional information about a user.
+
+Important fields:
+
+* `user` – One-to-One relationship with User
+* `first_name`
+* `last_name`
+* `phone`
+* `profile_image`
+* `is_deleted`
+
+---
+
+## DriverProfile
+
+Represents a user who works as a driver.
+
+Important fields:
+
+* `id` – UUID primary key
+* `user` – One-to-One relationship with User
+* `license_number` – unique
+* `status`
+* `created_at`
+* `updated_at`
+
+Driver status choices:
+
+* Active
+* Inactive
+* Suspended
+
+---
+
+## VehicleType
+
+Represents the type/category of vehicle.
+
+Supported vehicle types:
+
+* Bike
+* Auto
+* Car
+* SUV
+
+Important fields:
+
+* `id` – UUID primary key
+* `name` – unique vehicle type
+* `created_at`
+* `updated_at`
+
+---
+
+## Vehicle
+
+Represents a vehicle owned/assigned to a driver.
+
+Important fields:
+
+* `id` – UUID primary key
+* `driver` – Foreign Key to DriverProfile
+* `vehicle_type` – Foreign Key to VehicleType
+* `registration_number` – unique
+* `model`
+* `created_at`
+* `updated_at`
+
+---
+
+## RideStatus
+
+Represents the current status of a ride.
+
+Available statuses:
+
+* Requested
+* Accepted
+* Started
+* Completed
+* Cancelled
+
+Important fields:
+
+* `id` – UUID primary key
+* `name` – unique
+* `created_at`
+* `updated_at`
+
+---
+
+## Ride
+
+Represents a ride booking.
+
+Important fields:
+
+* `id` – UUID primary key
+* `rider` – Foreign Key to User
+* `driver` – optional Foreign Key to DriverProfile
+* `status` – Foreign Key to RideStatus
+* `pickup_address`
+* `pickup_latitude`
+* `pickup_longitude`
+* `dropoff_address`
+* `dropoff_latitude`
+* `dropoff_longitude`
+* `fare`
+* `created_at`
+* `updated_at`
+
+---
+
+# 4. Relationships
+
+### One-to-One Relationships
+
+**User → Profile**
+
+One user has one profile.
+
+```text
+User 1 ───── 1 Profile
+```
+
+**User → DriverProfile**
+
+A user can have one driver profile.
+
+```text
+User 1 ───── 1 DriverProfile
+```
+
+---
+
+### One-to-Many Relationships
+
+**DriverProfile → Vehicle**
+
+One driver can have multiple vehicles.
+
+```text
+DriverProfile 1 ───── N Vehicle
+```
+
+**VehicleType → Vehicle**
+
+One vehicle type can be used by multiple vehicles.
+
+```text
+VehicleType 1 ───── N Vehicle
+```
+
+**User → Ride**
+
+One user can create multiple rides.
+
+```text
+User 1 ───── N Ride
+```
+
+**DriverProfile → Ride**
+
+One driver can have multiple rides.
+
+```text
+DriverProfile 1 ───── N Ride
+```
+
+**RideStatus → Ride**
+
+One status can be associated with multiple rides.
+
+```text
+RideStatus 1 ───── N Ride
+```
+
+---
+
+### Many-to-Many Relationships
+
+No direct Many-to-Many relationship is required in the current database design.
+
+The required relationships can be represented using Foreign Keys.
+
+---
+
+# 5. Business Rules
+
+1. Each user must have a unique email address.
+
+2. A user can have only one profile.
+
+3. A user can have only one driver profile.
+
+4. Each driver must have a unique driving license number.
+
+5. A driver can have multiple vehicles.
+
+6. Every vehicle must belong to a valid driver.
+
+7. Every vehicle must have a valid vehicle type.
+
+8. Vehicle registration numbers must be unique.
+
+9. A ride must have a rider.
+
+10. A ride may initially have no driver because a driver can be assigned later.
+
+11. Every ride must have a valid ride status.
+
+12. Ride fare cannot be negative.
+
+13. Driver status must use one of the predefined choices.
+
+14. Vehicle type must use one of the predefined choices.
+
+15. Ride status must use one of the predefined statuses.
+
+---
+
+# 6. Database Constraints
+
+## Primary Keys
+
+UUID primary keys are used for the main business models.
+
+```text
+User
+Profile
+DriverProfile
+VehicleType
+Vehicle
+RideStatus
+Ride
+```
+
+UUIDs provide unique identifiers for records.
+
+---
+
+## Unique Constraints
+
+The following fields are unique:
+
+```text
+User.email
+DriverProfile.license_number
+VehicleType.name
+Vehicle.registration_number
+RideStatus.name
+```
+
+This prevents duplicate values.
+
+---
+
+## NOT NULL Constraints
+
+Required fields are not nullable by default.
+
+Examples:
+
+```text
+User.email
+DriverProfile.license_number
+Vehicle.registration_number
+Vehicle.model
+Ride.rider
+Ride.status
+Ride.pickup_address
+Ride.dropoff_address
+Ride.fare
+```
+
+The `Ride.driver` field is nullable because a driver may be assigned after the ride is requested.
+
+---
+
+## Choices
+
+### Driver Status
+
+```text
+active
+inactive
+suspended
+```
+
+### Vehicle Type
+
+```text
+bike
+auto
+car
+suv
+```
+
+### Ride Status
+
+```text
+requested
+accepted
+started
+completed
+cancelled
+```
+
+---
+
+## Database Indexes
+
+Indexes are created for frequently queried fields.
+
+Examples:
+
+```text
+DriverProfile.status
+Vehicle.driver
+Vehicle.vehicle_type
+VehicleType.name
+RideStatus.name
+Ride.rider
+Ride.driver
+Ride.status
+Ride.created_at
+```
+
+Indexes improve query performance when filtering or searching these fields.
+
+---
+
+## Check Constraint
+
+The Ride model contains a database-level check constraint:
+
+```text
+fare >= 0
+```
+
+This prevents negative ride fares from being stored in the database.
+
+Constraint name:
+
+```text
+ride_fare_non_negative
+```
+
+---
+
+# 7. Timestamp Management
+
+Business models use:
+
+```text
+created_at
+updated_at
+```
+
+`created_at` records when the record was created.
+
+`updated_at` records when the record was last updated.
+
+---
+
+# 8. Database Migration Verification
+
+Django migrations were created and applied successfully.
+
+Migration verification was performed using:
+
+```bash
+python manage.py showmigrations accounts
+```
+
+All migrations were successfully applied.
+
+PostgreSQL database tables were also verified using:
+
+```sql
+\dt
+```
+
+The following business tables were confirmed:
+
+```text
+accounts_user
+accounts_profile
+accounts_driverprofile
+accounts_vehicletype
+accounts_vehicle
+accounts_ridestatus
+accounts_ride
+```
+
+---
+
+# 9. Django Admin
+
+The following models were registered in Django Admin:
+
+* User
+* Profile
+* DriverProfile
+* VehicleType
+* Vehicle
+* RideStatus
+* Ride
+
+Admin configuration includes:
+
+* List display
+* Search
+* Filters
+* Ordering
+
+---
+
+# 10. Conclusion
+
+The Ride Booking business module database has been designed using Django ORM and PostgreSQL.
+
+The implementation includes:
+
+* UUID primary keys
+* Foreign Key relationships
+* One-to-One relationships
+* One-to-Many relationships
+* Unique constraints
+* Check constraints
+* Choices
+* Database indexes
+* Timestamps
+* Django Admin configuration
+* PostgreSQL migration verification
+
+The database structure provides a foundation for implementing the REST API and business logic layer of the Ride Booking mobile application backend.
