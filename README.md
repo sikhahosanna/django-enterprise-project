@@ -1669,3 +1669,480 @@ The implementation includes:
 * PostgreSQL migration verification
 
 The database structure provides a foundation for implementing the REST API and business logic layer of the Ride Booking mobile application backend.
+  
+
+  11/8/26
+   # Django Driver & Vehicle Management API
+
+A Django REST Framework based backend API for managing users, profiles, drivers, and vehicles with JWT authentication, role-based permissions, validation, filtering, searching, ordering, and pagination.
+
+## Features
+
+### Authentication
+
+* User registration
+* User login
+* JWT access and refresh tokens
+* Password change
+* Logout with refresh-token blacklisting
+
+### Profile Management
+
+* Create and update profile
+* View own profile
+* Profile image upload
+* Soft delete profile
+* Restore deleted profile
+* Admin profile listing
+
+### Driver Management
+
+* Admin can create drivers
+* Admin can list all drivers
+* Admin and driver owner can view driver details
+* Driver owner can update own driver details
+* Driver status management
+* Driver search
+* Active/inactive filtering
+
+### Vehicle Management
+
+* Create vehicles
+* List vehicles
+* View vehicle details
+* Update vehicles
+* Delete vehicles
+* Driver-based vehicle access
+* Vehicle type filtering
+* Registration number validation
+* Duplicate registration number prevention
+
+### Filtering, Searching & Pagination
+
+* Driver search
+* Driver status filtering
+* Vehicle type filtering
+* Pagination
+* Ordering
+
+### API Error Handling
+
+The API handles:
+
+* Driver not found
+* Vehicle not found
+* Duplicate registration number
+* Authentication errors
+* Permission errors
+* Invalid request data
+* Missing required fields
+* Invalid vehicle type
+* Invalid driver ID
+
+## Technology Stack
+
+* Python
+* Django
+* Django REST Framework
+* Django REST Framework Simple JWT
+* django-filter
+* SQLite / PostgreSQL
+* Postman
+* drf-spectacular / Swagger
+
+## Project Structure
+
+```text
+myproject/
+│
+├── accounts/
+│   ├── migrations/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── views.py
+│   ├── permissions.py
+│   ├── urls.py
+│   └── admin.py
+│
+├── myproject/
+│   ├── settings.py
+│   ├── urls.py
+│   └── ...
+│
+├── manage.py
+├── requirements.txt
+└── README.md
+```
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone <your-github-repository-url>
+```
+
+### 2. Open the project
+
+```bash
+cd myproject
+```
+
+### 3. Create virtual environment
+
+```bash
+python -m venv venv
+```
+
+### 4. Activate virtual environment
+
+Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+### 5. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 6. Run migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 7. Create admin user
+
+```bash
+python manage.py createsuperuser
+```
+
+### 8. Run development server
+
+```bash
+python manage.py runserver
+```
+
+The API will be available at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## API Endpoints
+
+### Authentication
+
+| Method | Endpoint                | Description     |
+| ------ | ----------------------- | --------------- |
+| POST   | `/api/register/`        | Register user   |
+| POST   | `/api/login/`           | Login           |
+| POST   | `/api/change-password/` | Change password |
+| POST   | `/api/logout/`          | Logout          |
+
+### Profile
+
+| Method   | Endpoint                | Description                    |
+| -------- | ----------------------- | ------------------------------ |
+| GET/POST | `/api/profile/`         | View/Create/Update own profile |
+| GET      | `/api/profiles/`        | Admin profile list             |
+| DELETE   | `/api/profile/delete/`  | Soft delete profile            |
+| POST     | `/api/profile/restore/` | Restore profile                |
+
+### Drivers
+
+| Method    | Endpoint               | Description    |
+| --------- | ---------------------- | -------------- |
+| GET       | `/api/drivers/`        | List drivers   |
+| POST      | `/api/drivers/`        | Create driver  |
+| GET       | `/api/drivers/<uuid>/` | Driver details |
+| PUT/PATCH | `/api/drivers/<uuid>/` | Update driver  |
+
+### Vehicles
+
+| Method    | Endpoint                | Description     |
+| --------- | ----------------------- | --------------- |
+| GET       | `/api/vehicles/`        | List vehicles   |
+| POST      | `/api/vehicles/`        | Create vehicle  |
+| GET       | `/api/vehicles/<uuid>/` | Vehicle details |
+| PUT/PATCH | `/api/vehicles/<uuid>/` | Update vehicle  |
+| DELETE    | `/api/vehicles/<uuid>/` | Delete vehicle  |
+
+## Authentication
+
+The API uses JWT authentication.
+
+After login, the API returns:
+
+```json
+{
+    "user": {
+        "id": "user-id",
+        "email": "user@example.com"
+    },
+    "refresh": "refresh-token",
+    "access": "access-token"
+}
+```
+
+Use the access token in Postman:
+
+```text
+Authorization: Bearer <access-token>
+```
+
+## Permissions
+
+### Admin
+
+Admin users can:
+
+* Manage drivers
+* View all drivers
+* Manage all vehicles
+* View all profiles
+* Access administrative APIs
+
+### Driver
+
+Drivers can:
+
+* View their own driver details
+* Update their own driver details
+* View their own vehicles
+* Create vehicles for themselves
+* Update their own vehicles
+* Delete their own vehicles
+
+Users cannot access protected APIs without authentication.
+
+## Filtering
+
+### Driver status
+
+```text
+GET /api/drivers/?status=active
+```
+
+```text
+GET /api/drivers/?status=inactive
+```
+
+### Driver search
+
+```text
+GET /api/drivers/?search=DL123456
+```
+
+### Vehicle type
+
+```text
+GET /api/vehicles/?vehicle_type=<vehicle-type-id>
+```
+
+## Ordering
+
+Example:
+
+```text
+GET /api/drivers/?ordering=created_at
+```
+
+Descending order:
+
+```text
+GET /api/drivers/?ordering=-created_at
+```
+
+## Pagination
+
+The API supports pagination.
+
+Example:
+
+```text
+GET /api/drivers/?page=1
+```
+
+Example response:
+
+```json
+{
+    "count": 3,
+    "next": null,
+    "previous": null,
+    "results": []
+}
+```
+
+## Validation
+
+### Registration Number
+
+Vehicle registration numbers are validated before creation.
+
+Example:
+
+```text
+TS09CD1234
+```
+
+Duplicate registration numbers are rejected.
+
+Example error:
+
+```json
+{
+    "success": false,
+    "error": {
+        "registration_number": [
+            "vehicle with this registration number already exists."
+        ]
+    }
+}
+```
+
+### Required Fields
+
+Missing required fields return validation errors.
+
+Example:
+
+```json
+{
+    "success": false,
+    "error": {
+        "vehicle_type": [
+            "This field is required."
+        ],
+        "registration_number": [
+            "This field is required."
+        ],
+        "model": [
+            "This field is required."
+        ]
+    }
+}
+```
+
+## Error Handling
+
+### Authentication Error
+
+```json
+{
+    "success": false,
+    "error": {
+        "detail": "Authentication credentials were not provided."
+    }
+}
+```
+
+### Driver Not Found
+
+```json
+{
+    "success": false,
+    "error": {
+        "detail": "No DriverProfile matches the given query."
+    }
+}
+```
+
+### Vehicle Not Found
+
+```json
+{
+    "success": false,
+    "error": {
+        "detail": "No Vehicle matches the given query."
+    }
+}
+```
+
+## API Documentation
+
+Swagger documentation is available at:
+
+```text
+/api/docs/
+```
+
+OpenAPI schema:
+
+```text
+/api/schema/
+```
+
+## Postman Testing
+
+The API was tested using Postman for:
+
+### Positive Tests
+
+* Successful registration
+* Successful login
+* Successful profile creation/update
+* Successful driver creation
+* Successful driver retrieval
+* Successful vehicle creation
+* Successful vehicle retrieval
+* Successful vehicle update
+* Successful vehicle deletion
+* Filtering
+* Searching
+* Ordering
+* Pagination
+
+### Negative Tests
+
+* Invalid login credentials
+* Missing authentication token
+* Unauthorized access
+* Driver not found
+* Vehicle not found
+* Duplicate registration number
+* Invalid driver ID
+* Invalid vehicle type
+* Missing required fields
+* Invalid request data
+
+### Permission Tests
+
+* Admin access
+* Driver owner access
+* Unauthorized user access
+* Driver accessing another driver's resources
+
+## Running Tests
+
+Run Django checks:
+
+```bash
+python manage.py check
+```
+
+Run tests:
+
+```bash
+python manage.py test
+```
+
+## Git
+
+The project is maintained using Git for version control.
+
+```bash
+git status
+git add .
+git commit -m "Complete driver and vehicle management APIs"
+git push
+```
+
+## Author
+
+Developed as a Django REST Framework backend project implementing authentication, driver management, vehicle management, permissions, validation, filtering, pagination, and API testing.
