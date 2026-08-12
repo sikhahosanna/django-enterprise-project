@@ -28,3 +28,197 @@ Authentication credentials were not provided.
 Authentication credentials were not provided.
 {'vehicle_type': [ErrorDetail(string='This field is required.', code='required')], 'registration_number': [ErrorDetail(string='This field is required.', code='required')], 'model': [ErrorDetail(string='This field is required.', code='required')]}
 {'email': [ErrorDetail(string='user with this email already exists.', code='unique')]}
+Field name `vehicle_type` is not valid for model `Ride` in `accounts.serializers.RideCreateSerializer`.
+Internal Server Error: /api/rides/
+"POST /api/rides/ HTTP/1.1" 500 49
+Field name `vehicle_type` is not valid for model `Ride` in `accounts.serializers.RideCreateSerializer`.
+Internal Server Error: /api/rides/
+"POST /api/rides/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'email': [ErrorDetail(string='user with this email already exists.', code='unique')]}
+{'email': [ErrorDetail(string='user with this email already exists.', code='unique')]}
+Field name `vehicle_type` is not valid for model `Ride` in `accounts.serializers.RideCreateSerializer`.
+Internal Server Error: /api/rides/
+"POST /api/rides/ HTTP/1.1" 500 49
+Field name `vehicle_type` is not valid for model `Ride` in `accounts.serializers.RideCreateSerializer`.
+Internal Server Error: /api/rides/
+"POST /api/rides/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+Method "GET" not allowed.
+Method "GET" not allowed.
+Method "GET" not allowed.
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+Method "GET" not allowed.
+Method "GET" not allowed.
+Method "GET" not allowed.
+Method "GET" not allowed.
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+name 'RideSerializer' is not defined
+Internal Server Error: /api/rides/
+"GET /api/rides/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'status': [ErrorDetail(string="Cannot change ride status from 'accepted' to 'accepted'.", code='invalid')]}
+{'status': [ErrorDetail(string="Cannot change ride status from 'accepted' to 'accepted'.", code='invalid')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+Method "GET" not allowed.
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'pickup_latitude': [ErrorDetail(string='This field is required.', code='required')], 'pickup_longitude': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_latitude': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_longitude': [ErrorDetail(string='This field is required.', code='required')], 'vehicle_type': [ErrorDetail(string='This field is required.', code='required')], 'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is invalid', code='token_not_valid')}]}
+type object 'DriverProfile' has no attribute 'Status'
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+type object 'DriverProfile' has no attribute 'Status'
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+type object 'DriverProfile' has no attribute 'Status'
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+type object 'DriverProfile' has no attribute 'Status'
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+type object 'DriverProfile' has no attribute 'Status'
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/
+"POST /api/rides/d79482ce-d1d3-45b2-8aaf-d2a0fc7d3479/accept/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'pickup_latitude': [ErrorDetail(string='This field is required.', code='required')], 'pickup_longitude': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_latitude': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_longitude': [ErrorDetail(string='This field is required.', code='required')], 'vehicle_type': [ErrorDetail(string='This field is required.', code='required')], 'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'fare': [ErrorDetail(string='This field is required.', code='required')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+{'ride': [ErrorDetail(string='You already have an active ride.', code='invalid')]}
+You do not have permission to perform this action.
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 113
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 113
+{'vehicle_type': [ErrorDetail(string='“car” is not a valid UUID.', code='invalid')]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'vehicle_type': [ErrorDetail(string='Invalid pk "12345678-1234-1234-1234-123456789abc" - object does not exist.', code='does_not_exist')]}

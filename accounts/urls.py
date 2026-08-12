@@ -1,4 +1,3 @@
-
 from django.urls import path
 
 from .views import (
@@ -10,18 +9,26 @@ from .views import (
     ProfileListView,
     DeleteProfileView,
     RestoreProfileView,
+
     DriverListCreateView,
     DriverDetailView,
+
     VehicleListCreateView,
     VehicleDetailView,
+
+    RideListCreateView,
+    RideDetailView,
+    RideStatusUpdateView,
+    RideAcceptView,
+    RideCancelView,
 )
 
 
 urlpatterns = [
 
-    # ==============================
+    # =========================================
     # AUTH
-    # ==============================
+    # =========================================
 
     path(
         "register/",
@@ -44,9 +51,9 @@ urlpatterns = [
     ),
 
 
-    # ==============================
+    # =========================================
     # PROFILE
-    # ==============================
+    # =========================================
 
     path(
         "profile/",
@@ -69,9 +76,9 @@ urlpatterns = [
     ),
 
 
-    # ==============================
+    # =========================================
     # DRIVER
-    # ==============================
+    # =========================================
 
     path(
         "drivers/",
@@ -84,9 +91,9 @@ urlpatterns = [
     ),
 
 
-    # ==============================
+    # =========================================
     # VEHICLE
-    # ==============================
+    # =========================================
 
     path(
         "vehicles/",
@@ -96,5 +103,38 @@ urlpatterns = [
     path(
         "vehicles/<uuid:pk>/",
         VehicleDetailView.as_view()
+    ),
+
+
+    # =========================================
+    # RIDES
+    # =========================================
+
+    path(
+        "rides/",
+        RideListCreateView.as_view()
+    ),
+
+    path(
+        "rides/<uuid:pk>/",
+        RideDetailView.as_view()
+    ),
+
+    path(
+        "rides/<uuid:pk>/status/",
+        RideStatusUpdateView.as_view()
+    ),
+
+    # TASK 6 - ACCEPT RIDE
+    path(
+        "rides/<uuid:pk>/accept/",
+        RideAcceptView.as_view()
+    ),
+
+    # TASK 7 - CANCEL RIDE
+    path(
+        "rides/<uuid:pk>/cancel/",
+        RideCancelView.as_view(),
+        name="ride-cancel"
     ),
 ]

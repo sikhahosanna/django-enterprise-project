@@ -2146,3 +2146,334 @@ git push
 ## Author
 
 Developed as a Django REST Framework backend project implementing authentication, driver management, vehicle management, permissions, validation, filtering, pagination, and API testing.
+
+12/08/2026
+
+Sure. **README lo direct ga paste chesukune professional notes format** lo ila pettuko:
+
+````markdown
+# Ride Management API – Development Notes
+
+## Project Overview
+
+This project is a Ride Management API developed using Django REST Framework.
+
+The application provides authentication, profile management, driver and vehicle management, ride creation, ride acceptance, ride status management, and ride cancellation.
+
+---
+
+## Authentication
+
+Implemented JWT-based authentication.
+
+### APIs
+
+- Register
+- Login
+- Change Password
+- Logout
+
+JWT access tokens are used to authenticate protected APIs.
+
+---
+
+## Profile Management
+
+Implemented user profile management with:
+
+- Create Profile
+- View Profile
+- Update Profile
+- Delete Profile
+- Restore Profile
+- Admin Profile Listing
+
+Profile deletion is handled using soft delete.
+
+---
+
+## Driver Management
+
+Implemented driver management with:
+
+- Create Driver
+- List Drivers
+- Driver Details
+- Update Driver
+- Driver Status Validation
+
+Only active drivers can accept rides.
+
+---
+
+## Vehicle Management
+
+Implemented vehicle management with:
+
+- Create Vehicle
+- List Vehicles
+- Vehicle Details
+- Update Vehicle
+- Delete Vehicle
+
+Vehicles are associated with drivers and vehicle types.
+
+---
+
+# Ride Management
+
+## Ride Creation
+
+Customers can create rides by providing:
+
+- Pickup address
+- Pickup latitude
+- Pickup longitude
+- Drop-off address
+- Drop-off latitude
+- Drop-off longitude
+- Vehicle type
+- Fare
+
+New rides are created with:
+
+```text
+requested
+````
+
+status.
+
+---
+
+## Ride Details
+
+Customers can:
+
+* View their rides
+* View individual ride details
+* View ride status
+* View assigned driver information
+
+Users can access only their own rides.
+
+---
+
+## Ride Status Management
+
+Ride statuses are managed through the ride status API.
+
+Main statuses:
+
+```text
+requested
+accepted
+driver_arriving
+started
+completed
+cancelled
+```
+
+---
+
+# Task 6 – Accept Ride
+
+Implemented driver ride acceptance.
+
+### Endpoint
+
+```text
+POST /api/rides/{id}/accept/
+```
+
+### Rules
+
+* User must be authenticated.
+* User must be registered as a driver.
+* Driver must be active.
+* Ride must be in `requested` status.
+* Driver cannot accept another ride while having an active ride.
+* Ride is assigned to the driver after successful acceptance.
+
+### Status Transition
+
+```text
+requested → accepted
+```
+
+### Concurrency Handling
+
+`transaction.atomic()` and `select_for_update()` are used to prevent multiple drivers from accepting the same ride simultaneously.
+
+---
+
+# Task 7 – Cancel Ride
+
+Implemented ride cancellation.
+
+### Endpoint
+
+```text
+POST /api/rides/{id}/cancel/
+```
+
+### Cancellation Rules
+
+A ride can be cancelled only when its current status is:
+
+```text
+requested
+accepted
+```
+
+Allowed transitions:
+
+```text
+requested → cancelled
+accepted  → cancelled
+```
+
+Cancellation is rejected for rides that are already:
+
+```text
+started
+completed
+cancelled
+```
+
+The API returns `400 Bad Request` for invalid cancellation attempts.
+
+---
+
+# Task 8 – End-to-End Testing
+
+The complete ride lifecycle is tested using Postman.
+
+## Successful Lifecycle
+
+```text
+Create Ride
+     ↓
+requested
+     ↓
+Accept Ride
+     ↓
+accepted
+     ↓
+Start Ride
+     ↓
+started
+     ↓
+Complete Ride
+     ↓
+completed
+```
+
+## Invalid Transition Testing
+
+Invalid status transitions are also tested.
+
+Examples:
+
+```text
+completed → started       ❌
+completed → accepted      ❌
+cancelled → started       ❌
+cancelled → completed     ❌
+```
+
+Invalid transitions should return:
+
+```text
+400 Bad Request
+```
+
+---
+
+# API Testing
+
+All APIs are tested using Postman.
+
+### Authentication
+
+Bearer Token authentication is used for protected endpoints.
+
+```text
+Authorization
+    ↓
+Bearer Token
+    ↓
+Access Token
+```
+
+Customer access token is used for customer operations.
+
+Driver access token is used for driver operations such as accepting rides.
+
+---
+
+# Error Handling
+
+The API handles common errors such as:
+
+* Authentication failure
+* Unauthorized access
+* Invalid ride ID
+* Ride not found
+* Invalid ride status
+* Inactive driver
+* Driver already having an active ride
+* Missing ride status configuration
+* Invalid UUID values
+
+Appropriate HTTP status codes are returned for different errors.
+
+---
+
+# Database & ORM
+
+Django ORM is used for database operations.
+
+`select_related()` is used for optimizing related-object queries.
+
+`transaction.atomic()` and `select_for_update()` are used where transactional consistency and concurrency protection are required.
+
+---
+
+# Development Server
+
+Run the project using:
+
+```bash
+python manage.py runserver
+```
+
+Default development server:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+# Project Status
+
+## Completed
+
+* JWT Authentication
+* User Profile Management
+* Driver Management
+* Vehicle Management
+* Ride Creation
+* Ride Listing
+* Ride Details
+* Ride Status Update
+* Ride Acceptance
+* Ride Cancellation
+* Ride Lifecycle Testing
+* Invalid Transition Testing
+
+```
+
+**Idi professional development notes style** lo untundi — project ki em implement chesavo, rules enti, testing ela chesavo clear ga document avutayi.
+```
+

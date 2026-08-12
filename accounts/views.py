@@ -1,4 +1,3 @@
-
 from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,30 +11,39 @@ from .permissions import (
 )
 
 from django_filters.rest_framework import DjangoFilterBackend
-
+from django.db import transaction
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
+    Ride,
     User,
     Profile,
     DriverProfile,
-    Vehicle
+    Vehicle,
+    RideStatus,
 )
 
 from .serializers import (
     DriverSerializer,
     DriverNestedSerializer,
+    RideCreateSerializer,
+    RideSerializer,
+    RideDetailSerializer,
+    RideStatusUpdateSerializer,
     VehicleSerializer,
     RegisterSerializer,
     LoginSerializer,
     ChangePasswordSerializer,
-    ProfileSerializer
+    ProfileSerializer,
 )
+
+
 class CustomPagination(PageNumberPagination):
 
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 50
+
 
 # =========================================
 # REGISTER
@@ -44,7 +52,6 @@ class CustomPagination(PageNumberPagination):
 class RegisterView(generics.CreateAPIView):
 
     queryset = User.objects.all()
-
     serializer_class = RegisterSerializer
 
 
@@ -99,7 +106,6 @@ class ProfileView(APIView):
     def get(self, request):
 
         try:
-
             profile = request.user.profile
 
         except Profile.DoesNotExist:
@@ -379,6 +385,7 @@ class DriverListCreateView(
         IsAuthenticated,
         IsAdminUser
     ]
+
     pagination_class = CustomPagination
 
     filter_backends = [
@@ -433,14 +440,9 @@ class DriverDetailView(
 
     def get_serializer_class(self):
 
-        # GET
-        # Returns nested driver response
         if self.request.method == "GET":
-
             return DriverNestedSerializer
 
-        # PUT / PATCH
-        # Uses normal driver serializer
         return DriverSerializer
 
 
@@ -464,18 +466,12 @@ class VehicleListCreateView(
 
         user = self.request.user
 
-        # ADMIN
-        # Can see all vehicles
-
         if user.is_staff:
 
             return Vehicle.objects.select_related(
                 "driver",
                 "vehicle_type"
             ).all()
-
-        # DRIVER
-        # Can see only own vehicles
 
         return Vehicle.objects.select_related(
             "driver",
@@ -505,18 +501,12 @@ class VehicleDetailView(
 
         user = self.request.user
 
-        # ADMIN
-        # Can GET / UPDATE / DELETE all vehicles
-
         if user.is_staff:
 
             return Vehicle.objects.select_related(
                 "driver",
                 "vehicle_type"
             ).all()
-
-        # DRIVER
-        # Can GET / UPDATE / DELETE only own vehicles
 
         return Vehicle.objects.select_related(
             "driver",
@@ -525,3 +515,501 @@ class VehicleDetailView(
             driver__user=user
         )
 
+
+# =========================================
+# CREATE RIDE
+# =========================================
+
+class CreateRideView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request):
+
+        serializer = RideCreateSerializer(
+            data=request.data,
+            context={
+                "request": request
+            }
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        ride = serializer.save()
+
+        return Response(
+            {
+                "message": "Ride created successfully",
+                "data": serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
+# =========================================
+# RIDE LIST + CREATE
+# USER CAN SEE OWN RIDES
+# =========================================
+
+class RideListCreateView(
+    generics.ListCreateAPIView
+):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+
+        return (
+            Ride.objects
+            .select_related(
+                "status",
+                "driver",
+                "driver__user",
+                "vehicle_type"
+            )
+            .filter(
+                rider=self.request.user
+            )
+            .order_by(
+                "-created_at"
+            )
+        )
+
+    def get_serializer_class(self):
+
+        if self.request.method == "POST":
+            return RideCreateSerializer
+
+        return RideSerializer
+
+    def perform_create(self, serializer):
+
+        serializer.save()
+
+
+# =========================================
+# RIDE DETAIL
+# TASK 4
+# =========================================
+
+class RideDetailView(
+    generics.RetrieveAPIView
+):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    serializer_class = RideDetailSerializer
+
+    def get_queryset(self):
+
+        return (
+            Ride.objects
+            .select_related(
+                "rider",
+                "rider__profile",
+                "driver",
+                "driver__user",
+                "status",
+                "vehicle_type"
+            )
+            .filter(
+                rider=self.request.user
+            )
+        )
+
+
+# =========================================
+# RIDE STATUS UPDATE
+# =========================================
+
+class RideStatusUpdateView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def patch(self, request, pk):
+
+        try:
+
+            ride = Ride.objects.select_related(
+                "status"
+            ).get(
+                pk=pk,
+                rider=request.user
+            )
+
+        except Ride.DoesNotExist:
+
+            return Response(
+                {
+                    "error": "Ride not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = RideStatusUpdateSerializer(
+            data=request.data,
+            context={
+                "ride": ride
+            }
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        new_status = RideStatus.objects.get(
+            name=serializer.validated_data["status"]
+        )
+
+        ride.status = new_status
+
+        ride.save(
+            update_fields=[
+                "status",
+                "updated_at"
+            ]
+        )
+
+        return Response(
+            {
+                "message": "Ride status updated successfully.",
+                "ride_id": str(ride.id),
+                "status": ride.status.name
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+# =========================================
+# ACCEPT RIDE - DRIVER
+# TASK 6
+# =========================================
+
+# =========================================
+# ACCEPT RIDE - DRIVER
+# TASK 6
+# =========================================
+
+# =========================================
+# ACCEPT RIDE - DRIVER
+# TASK 6
+# =========================================
+
+class RideAcceptView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request, pk):
+
+        print("\n========== TASK 6 DEBUG ==========")
+        print("USER:", request.user)
+        print("USER ID:", request.user.id)
+
+        # 1. DRIVER CHECK
+        try:
+
+            driver = DriverProfile.objects.get(
+                user=request.user
+            )
+
+            print("DRIVER:", driver)
+            print("DRIVER ID:", driver.id)
+            print("DRIVER STATUS:", driver.status)
+
+        except DriverProfile.DoesNotExist:
+
+            return Response(
+                {
+                    "error": "You are not registered as a driver."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 2. DRIVER ACTIVE CHECK
+        if driver.status != DriverProfile.DriverStatus.ACTIVE:
+
+            return Response(
+                {
+                    "error": "Driver is not active."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 3. RIDE LOCK + VALIDATION
+        try:
+
+            with transaction.atomic():
+
+                # IMPORTANT:
+                # driver ni select_related lo include cheyyakudadhu
+                # because driver nullable field.
+                ride = (
+                    Ride.objects
+                    .select_for_update()
+                    .select_related("status")
+                    .get(
+                        pk=pk
+                    )
+                )
+
+                print("RIDE:", ride)
+                print("RIDE ID:", ride.id)
+                print("RIDE STATUS:", ride.status.name)
+
+                # 4. RIDE MUST BE REQUESTED
+                if ride.status.name != RideStatus.Status.REQUESTED:
+
+                    return Response(
+                        {
+                            "error": (
+                                "Ride is no longer available. "
+                                f"Current status is "
+                                f"'{ride.status.name}'."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # 5. DRIVER CONFLICT CHECK
+                conflicting_statuses = [
+                    RideStatus.Status.ACCEPTED,
+                    RideStatus.Status.DRIVER_ARRIVING,
+                    RideStatus.Status.STARTED,
+                ]
+
+                conflicting_ride = (
+                    Ride.objects
+                    .filter(
+                        driver=driver,
+                        status__name__in=conflicting_statuses
+                    )
+                    .exclude(
+                        id=ride.id
+                    )
+                    .exists()
+                )
+
+                print(
+                    "CONFLICTING RIDE:",
+                    conflicting_ride
+                )
+
+                if conflicting_ride:
+
+                    return Response(
+                        {
+                            "error":
+                                "Driver already has an active ride."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # 6. GET ACCEPTED STATUS
+                try:
+
+                    accepted_status = RideStatus.objects.get(
+                        name=RideStatus.Status.ACCEPTED
+                    )
+
+                except RideStatus.DoesNotExist:
+
+                    return Response(
+                        {
+                            "error":
+                                "Accepted ride status is not configured."
+                        },
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+                # 7. ASSIGN DRIVER
+                ride.driver = driver
+                ride.status = accepted_status
+
+                ride.save(
+                    update_fields=[
+                        "driver",
+                        "status",
+                        "updated_at"
+                    ]
+                )
+
+                print("RIDE ACCEPTED SUCCESSFULLY")
+
+            # 8. SUCCESS RESPONSE
+            return Response(
+                {
+                    "message":
+                        "Ride accepted successfully.",
+                    "ride_id":
+                        str(ride.id),
+                    "driver_id":
+                        str(driver.id),
+                    "driver_email":
+                        driver.user.email,
+                    "status":
+                        ride.status.name
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+
+            import traceback
+
+            print("\n========== TASK 6 ERROR ==========")
+            print("ERROR TYPE:", type(e).__name__)
+            print("ERROR:", str(e))
+            traceback.print_exc()
+            print("==================================\n")
+
+            return Response(
+                {
+                    "error": str(e),
+                    "error_type": type(e).__name__
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+# =========================================
+# CANCEL RIDE
+# TASK 7
+# =========================================
+class RideCancelView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request, pk):
+
+        print("\n========== TASK 7 DEBUG ==========")
+        print("USER:", request.user)
+        print("USER ID:", request.user.id)
+        print("RIDE ID:", pk)
+
+        try:
+
+            with transaction.atomic():
+
+                ride = (
+                    Ride.objects
+                    .select_for_update()
+                    .select_related("status")
+                    .get(
+                        pk=pk,
+                        rider=request.user
+                    )
+                )
+
+                print("RIDE FOUND:", ride.id)
+                print("CURRENT STATUS:", ride.status.name)
+
+                # ---------------------------------
+                # CHECK CANCELLATION STATUS
+                # ---------------------------------
+
+                allowed_statuses = [
+                    RideStatus.Status.REQUESTED,
+                    RideStatus.Status.ACCEPTED,
+                ]
+
+                if ride.status.name not in allowed_statuses:
+
+                    return Response(
+                        {
+                            "error": (
+                                "Ride cannot be cancelled when "
+                                f"status is '{ride.status.name}'."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # ---------------------------------
+                # GET CANCELLED STATUS
+                # ---------------------------------
+
+                try:
+
+                    cancelled_status = RideStatus.objects.get(
+                        name=RideStatus.Status.CANCELLED
+                    )
+
+                except RideStatus.DoesNotExist:
+
+                    return Response(
+                        {
+                            "error":
+                                "Cancelled ride status is not configured."
+                        },
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+                # ---------------------------------
+                # CANCEL RIDE
+                # ---------------------------------
+
+                ride.status = cancelled_status
+
+                ride.save(
+                    update_fields=[
+                        "status",
+                        "updated_at"
+                    ]
+                )
+
+                print("RIDE CANCELLED SUCCESSFULLY")
+
+            return Response(
+                {
+                    "message":
+                        "Ride cancelled successfully.",
+                    "ride_id":
+                        str(ride.id),
+                    "status":
+                        ride.status.name
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Ride.DoesNotExist:
+
+            print("ERROR: Ride not found")
+
+            return Response(
+                {
+                    "error": "Ride not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Exception as e:
+
+            import traceback
+
+            print("\n========== TASK 7 ERROR ==========")
+            print("ERROR TYPE:", type(e).__name__)
+            print("ERROR:", str(e))
+            traceback.print_exc()
+            print("==================================")
+
+            return Response(
+                {
+                    "error": str(e),
+                    "error_type": type(e).__name__
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

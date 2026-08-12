@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 from django.core.validators import FileExtensionValidator
@@ -14,6 +13,8 @@ from .models import (
     DriverProfile,
     Vehicle,
     VehicleType,
+    Ride,
+    RideStatus,
 )
 
 
@@ -172,7 +173,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 # =========================================
 # DRIVER SERIALIZER
-# CREATE / UPDATE
 # =========================================
 
 class DriverSerializer(serializers.ModelSerializer):
@@ -264,7 +264,6 @@ class DriverSerializer(serializers.ModelSerializer):
 
 # =========================================
 # VEHICLE SERIALIZER
-# CREATE / UPDATE
 # =========================================
 
 class VehicleSerializer(serializers.ModelSerializer):
@@ -307,7 +306,10 @@ class VehicleSerializer(serializers.ModelSerializer):
             },
         }
 
-    # Registration number validation
+    # =====================================
+    # REGISTRATION NUMBER VALIDATION
+    # =====================================
+
     def validate_registration_number(self, value):
 
         value = value.strip().upper()
@@ -325,7 +327,6 @@ class VehicleSerializer(serializers.ModelSerializer):
             registration_number=value
         )
 
-        # Ignore current vehicle during PATCH/PUT
         if self.instance:
 
             queryset = queryset.exclude(
@@ -340,7 +341,10 @@ class VehicleSerializer(serializers.ModelSerializer):
 
         return value
 
-    # Vehicle type validation
+    # =====================================
+    # VEHICLE TYPE VALIDATION
+    # =====================================
+
     def validate_vehicle_type(self, value):
 
         if not VehicleType.objects.filter(
@@ -353,7 +357,10 @@ class VehicleSerializer(serializers.ModelSerializer):
 
         return value
 
-    # Driver validation
+    # =====================================
+    # DRIVER VALIDATION
+    # =====================================
+
     def validate_driver(self, value):
 
         if not DriverProfile.objects.filter(
@@ -366,14 +373,15 @@ class VehicleSerializer(serializers.ModelSerializer):
 
         return value
 
-    # Object-level validation
+    # =====================================
+    # OBJECT VALIDATION
+    # =====================================
+
     def validate(self, attrs):
 
         driver = attrs.get("driver")
         vehicle_type = attrs.get("vehicle_type")
 
-        # For POST both are required.
-        # For PATCH, missing fields can be allowed.
         if not self.instance:
 
             if driver is None:
@@ -412,7 +420,6 @@ class VehicleNestedSerializer(serializers.ModelSerializer):
 
 # =========================================
 # DRIVER NESTED SERIALIZER
-# TASK 5
 # =========================================
 
 class DriverNestedSerializer(serializers.ModelSerializer):
@@ -461,3 +468,482 @@ class DriverNestedSerializer(serializers.ModelSerializer):
         return VehicleNestedSerializer(
             vehicle
         ).data
+
+
+# =========================================
+# RIDE CREATE SERIALIZER
+# TASK 3
+# =========================================
+
+class RideCreateSerializer(serializers.ModelSerializer):
+
+    # Vehicle type input
+    vehicle_type = serializers.PrimaryKeyRelatedField(
+        queryset=VehicleType.objects.all(),
+        required=True
+    )
+
+    # Status is automatically assigned
+    status = serializers.CharField(
+        source="status.name",
+        read_only=True
+    )
+
+    class Meta:
+        model = Ride
+
+        fields = [
+            "id",
+
+            "pickup_address",
+            "pickup_latitude",
+            "pickup_longitude",
+
+            "dropoff_address",
+            "dropoff_latitude",
+            "dropoff_longitude",
+
+            "vehicle_type",
+
+            "fare",
+
+            "status",
+
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+    # =====================================
+    # PICKUP ADDRESS
+    # =====================================
+
+    def validate_pickup_address(self, value):
+
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Pickup location is required."
+            )
+
+        return value
+
+    # =====================================
+    # DROPOFF ADDRESS
+    # =====================================
+
+    def validate_dropoff_address(self, value):
+
+        value = value.strip()
+
+        if not value:
+
+            raise serializers.ValidationError(
+                "Drop location is required."
+            )
+
+        return value
+
+    # =====================================
+    # VEHICLE TYPE
+    # =====================================
+
+    def validate_vehicle_type(self, value):
+
+        if not VehicleType.objects.filter(
+            pk=value.pk
+        ).exists():
+
+            raise serializers.ValidationError(
+                "Invalid vehicle type."
+            )
+
+        return value
+
+    # =====================================
+    # TASK 3 VALIDATION
+    # =====================================
+
+    def validate(self, attrs):
+
+        request = self.context["request"]
+
+        # ---------------------------------
+        # 1. Pickup location
+        # ---------------------------------
+
+        pickup_address = attrs.get(
+            "pickup_address"
+        )
+
+        if not pickup_address:
+
+            raise serializers.ValidationError({
+                "pickup_address":
+                    "Pickup location is required."
+            })
+
+        # ---------------------------------
+        # 2. Drop location
+        # ---------------------------------
+
+        dropoff_address = attrs.get(
+            "dropoff_address"
+        )
+
+        if not dropoff_address:
+
+            raise serializers.ValidationError({
+                "dropoff_address":
+                    "Drop location is required."
+            })
+
+        # ---------------------------------
+        # 3. Pickup and drop should differ
+        # ---------------------------------
+
+        pickup_latitude = attrs.get(
+            "pickup_latitude"
+        )
+
+        pickup_longitude = attrs.get(
+            "pickup_longitude"
+        )
+
+        dropoff_latitude = attrs.get(
+            "dropoff_latitude"
+        )
+
+        dropoff_longitude = attrs.get(
+            "dropoff_longitude"
+        )
+
+        if (
+            pickup_latitude == dropoff_latitude
+            and
+            pickup_longitude == dropoff_longitude
+        ):
+
+            raise serializers.ValidationError({
+                "location":
+                    "Pickup and drop locations cannot be the same."
+            })
+
+        # ---------------------------------
+        # 4. Check active ride
+        # ---------------------------------
+
+        active_statuses = [
+            RideStatus.Status.REQUESTED,
+            RideStatus.Status.ACCEPTED,
+            RideStatus.Status.DRIVER_ARRIVING,
+            RideStatus.Status.STARTED,
+        ]
+
+        active_ride_exists = Ride.objects.filter(
+            rider=request.user,
+            status__name__in=active_statuses
+        ).exists()
+
+        if active_ride_exists:
+
+            raise serializers.ValidationError({
+                "ride":
+                    "You already have an active ride."
+            })
+
+        # ---------------------------------
+        # 5. Vehicle type required
+        # ---------------------------------
+
+        vehicle_type = attrs.get(
+            "vehicle_type"
+        )
+
+        if not vehicle_type:
+
+            raise serializers.ValidationError({
+                "vehicle_type":
+                    "Vehicle type is required."
+            })
+
+        # ---------------------------------
+        # All validations passed
+        # ---------------------------------
+
+        return attrs
+
+    # =====================================
+    # CREATE RIDE
+    # =====================================
+
+    def create(self, validated_data):
+
+        request = self.context["request"]
+
+        requested_status = RideStatus.objects.get(
+            name=RideStatus.Status.REQUESTED
+        )
+
+        ride = Ride.objects.create(
+            rider=request.user,
+            driver=None,
+            status=requested_status,
+            **validated_data
+        )
+
+        return ride
+
+
+# =========================================
+# RIDE LIST / DETAIL SERIALIZER
+# =========================================
+
+class RideSerializer(serializers.ModelSerializer):
+
+    vehicle_type = serializers.CharField(
+        source="vehicle_type.name",
+        read_only=True
+    )
+
+    status = serializers.CharField(
+        source="status.name",
+        read_only=True
+    )
+
+    class Meta:
+        model = Ride
+
+        fields = [
+            "id",
+
+            "pickup_address",
+            "pickup_latitude",
+            "pickup_longitude",
+
+            "dropoff_address",
+            "dropoff_latitude",
+            "dropoff_longitude",
+
+            "vehicle_type",
+
+            "fare",
+
+            "status",
+
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "vehicle_type",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+# =========================================
+# RIDE DETAIL SERIALIZER
+# TASK 4
+# =========================================
+
+class RideDetailSerializer(serializers.ModelSerializer):
+
+    # -------------------------------------
+    # PASSENGER
+    # -------------------------------------
+
+    passenger = serializers.SerializerMethodField()
+
+    # -------------------------------------
+    # DRIVER
+    # -------------------------------------
+
+    driver = DriverNestedSerializer(
+        read_only=True
+    )
+
+    # -------------------------------------
+    # VEHICLE
+    # -------------------------------------
+
+    vehicle = serializers.SerializerMethodField()
+
+    # -------------------------------------
+    # STATUS
+    # -------------------------------------
+
+    status = serializers.CharField(
+        source="status.name",
+        read_only=True
+    )
+
+    class Meta:
+
+        model = Ride
+
+        fields = [
+            "id",
+
+            "passenger",
+
+            "driver",
+
+            "vehicle",
+
+            "pickup_address",
+            "pickup_latitude",
+            "pickup_longitude",
+
+            "dropoff_address",
+            "dropoff_latitude",
+            "dropoff_longitude",
+
+            "status",
+
+            "fare",
+
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "passenger",
+            "driver",
+            "vehicle",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+    # =====================================
+    # PASSENGER DATA
+    # =====================================
+
+    def get_passenger(self, obj):
+
+        try:
+
+            profile = obj.rider.profile
+
+            return {
+                "id": str(obj.rider.id),
+                "email": obj.rider.email,
+                "first_name": profile.first_name,
+                "last_name": profile.last_name,
+                "phone": profile.phone,
+            }
+
+        except Profile.DoesNotExist:
+
+            return {
+                "id": str(obj.rider.id),
+                "email": obj.rider.email,
+                "first_name": "",
+                "last_name": "",
+                "phone": "",
+            }
+
+    # =====================================
+    # VEHICLE DATA
+    # =====================================
+
+    def get_vehicle(self, obj):
+
+        if not obj.driver:
+            return None
+
+        vehicle = (
+            Vehicle.objects
+            .select_related(
+                "vehicle_type"
+            )
+            .filter(
+                driver=obj.driver
+            )
+            .first()
+        )
+
+        if not vehicle:
+            return None
+
+        return {
+            "id": str(vehicle.id),
+            "type": vehicle.vehicle_type.name,
+            "registration_number": vehicle.registration_number,
+            "model": vehicle.model,
+        }
+# =========================================
+# TASK 5 - RIDE STATUS SERIALIZER
+# =========================================
+
+# =========================================
+# TASK 5 - RIDE STATUS UPDATE SERIALIZER
+# =========================================
+
+class RideStatusUpdateSerializer(serializers.Serializer):
+
+    status = serializers.ChoiceField(
+        choices=RideStatus.Status.choices
+    )
+
+    def validate(self, attrs):
+
+        new_status = attrs["status"]
+
+        ride = self.context["ride"]
+
+        current_status = ride.status.name
+
+        # =====================================
+        # ALLOWED STATUS TRANSITIONS
+        # =====================================
+
+        allowed_transitions = {
+
+            RideStatus.Status.REQUESTED: [
+                RideStatus.Status.ACCEPTED,
+            ],
+
+            RideStatus.Status.ACCEPTED: [
+                RideStatus.Status.STARTED,
+            ],
+
+            RideStatus.Status.STARTED: [
+                RideStatus.Status.COMPLETED,
+            ],
+
+            RideStatus.Status.COMPLETED: [],
+
+            RideStatus.Status.CANCELLED: [],
+        }
+
+        allowed_statuses = allowed_transitions.get(
+            current_status,
+            []
+        )
+
+        # =====================================
+        # INVALID TRANSITION
+        # =====================================
+
+        if new_status not in allowed_statuses:
+
+            raise serializers.ValidationError({
+                "status": (
+                    f"Cannot change ride status "
+                    f"from '{current_status}' "
+                    f"to '{new_status}'."
+                )
+            })
+
+        return attrs
