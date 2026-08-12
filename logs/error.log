@@ -222,3 +222,97 @@ Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
 {'vehicle_type': [ErrorDetail(string='“car” is not a valid UUID.', code='invalid')]}
 {'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
 {'vehicle_type': [ErrorDetail(string='Invalid pk "12345678-1234-1234-1234-123456789abc" - object does not exist.', code='does_not_exist')]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+'final_fare'
+Internal Server Error: /api/rides/fare/
+"POST /api/rides/fare/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+Method "GET" not allowed.
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+FOR UPDATE cannot be applied to the nullable side of an outer join
+
+Internal Server Error: /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/
+"POST /api/rides/8603c224-1204-4941-babb-988ca54ec923/accept/ HTTP/1.1" 500 49
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'detail': ErrorDetail(string='Given token not valid for any token type', code='token_not_valid'), 'code': ErrorDetail(string='token_not_valid', code='token_not_valid'), 'messages': [{'token_class': ErrorDetail(string='AccessToken', code='token_not_valid'), 'token_type': ErrorDetail(string='access', code='token_not_valid'), 'message': ErrorDetail(string='Token is expired', code='token_not_valid')}]}
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')]}
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')]}
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')]}
+{'pickup_address': [ErrorDetail(string='This field is required.', code='required')], 'dropoff_address': [ErrorDetail(string='This field is required.', code='required')]}
+{'status': ErrorDetail(string='Requested ride status is not configured.', code='invalid')}
+{'status': ErrorDetail(string='Requested ride status is not configured.', code='invalid')}
+type object 'RideService' has no attribute 'cancel_ride'
+Internal Server Error: /api/rides/1ddefc4f-3029-40ec-8f86-a798c914dd99/cancel/
+{'status': ErrorDetail(string='Requested ride status is not configured.', code='invalid')}
+{'status': ErrorDetail(string='Requested ride status is not configured.', code='invalid')}
+No module named 'accounts.services.fare'
+Internal Server Error: /api/rides/
+No module named 'accounts.services.fare'
+Internal Server Error: /api/rides/
+No module named 'accounts.services.fare'
+Internal Server Error: /api/rides/
+'final_fare'
+Internal Server Error: /api/rides/
+'final_fare'
+Internal Server Error: /api/rides/
+'final_fare'
+Internal Server Error: /api/rides/
+'final_fare'
+Internal Server Error: /api/rides/
+django.db.models.query.QuerySet.create() got multiple values for keyword argument 'rider'
+Internal Server Error: /api/rides/
+Class RideCreateSerializer missing "Meta" attribute
+Internal Server Error: /api/rides/
+Unhandled API Exception: Class RideCreateSerializer missing "Meta" attribute
+Traceback (most recent call last):
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\generics.py", line 246, in post
+    return self.create(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\mixins.py", line 18, in create
+    serializer.is_valid(raise_exception=True)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 225, in is_valid
+    self._validated_data = self.run_validation(self.initial_data)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 456, in run_validation
+    value = self.to_internal_value(data)
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 509, in to_internal_value
+    for field in fields:
+                 ^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 392, in _writable_fields
+    for field in self.fields.values():
+                 ^^^^^^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 386, in fields
+    for key, value in self.get_fields().items():
+                      ~~~~~~~~~~~~~~~^^
+  File "C:\Users\BlackRoth\Desktop\django\myproject\venv\Lib\site-packages\rest_framework\serializers.py", line 1076, in get_fields
+    assert hasattr(self, 'Meta'), (
+           ~~~~~~~^^^^^^^^^^^^^^
+AssertionError: Class RideCreateSerializer missing "Meta" attribute
+Internal Server Error: /api/rides/

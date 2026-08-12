@@ -547,8 +547,16 @@ class VehicleListCreateView(
 
     def perform_create(self, serializer):
 
-        serializer.save()
-        
+        if self.request.user.is_staff:
+
+            serializer.save()
+            return
+
+        driver = self.get_driver()
+
+        serializer.save(
+            driver=driver
+        )
 
 
 # =========================================================
@@ -586,10 +594,6 @@ class VehicleDetailView(
             driver=driver
         )
 
-
-# =========================================================
-# RIDE LIST + CREATE
-# =========================================================
 
 # =========================================================
 # RIDE LIST + CREATE
@@ -634,8 +638,13 @@ class RideListCreateView(
 
     def perform_create(self, serializer):
 
-        serializer.save()
+        serializer.save(
+            rider=self.request.user
+        )
 
+
+# =========================================================
+# RIDE FARE API
 # =========================================================
 
 class RideFareView(APIView):

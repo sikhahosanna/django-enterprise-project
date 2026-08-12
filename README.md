@@ -2472,3 +2472,9 @@ http://127.0.0.1:8000/
 * Ride Lifecycle Testing
 * Invalid Transition Testing
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> bdcf3c9 (Complete ride management tasks)

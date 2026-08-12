@@ -13,23 +13,37 @@ def custom_exception_handler(exc, context):
 
     if response is not None:
 
-        logger.error(str(exc))
+        logger.error(
+            "API Exception: %s",
+            exc,
+            exc_info=True,
+        )
 
         return Response(
             {
                 "success": False,
-                "error": response.data
+                "error": response.data,
             },
-            status=response.status_code
+            status=response.status_code,
         )
 
+    # -----------------------------------------
+    # UNHANDLED EXCEPTION
+    # -----------------------------------------
 
-    logger.error(str(exc))
+    logger.exception(
+        "Unhandled API Exception: %s",
+        exc,
+    )
 
     return Response(
         {
             "success": False,
-            "error": "Internal Server Error"
+
+            # TEMPORARY: actual error chudataniki
+            "error": str(exc),
+
+            "exception": exc.__class__.__name__,
         },
-        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )

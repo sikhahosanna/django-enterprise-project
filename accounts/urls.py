@@ -1,5 +1,6 @@
 from django.urls import path
 
+
 from .views import (
     RegisterView,
     LoginView,
@@ -21,6 +22,8 @@ from .views import (
     RideStatusUpdateView,
     RideAcceptView,
     RideCancelView,
+
+    RideFareView,
 )
 
 
@@ -110,31 +113,43 @@ urlpatterns = [
     # RIDES
     # =========================================
 
-    path(
-        "rides/",
-        RideListCreateView.as_view()
-    ),
+    # TASK 4 - FARE
+    # =========================================
+# RIDES
+# =========================================
 
-    path(
-        "rides/<uuid:pk>/",
-        RideDetailView.as_view()
-    ),
+# TASK 4 - FARE
+path(
+    "rides/fare/",
+    RideFareView.as_view(),
+    name="ride-fare"
+),
 
-    path(
-        "rides/<uuid:pk>/status/",
-        RideStatusUpdateView.as_view()
-    ),
+path(
+    "rides/",
+    RideListCreateView.as_view()
+),
 
-    # TASK 6 - ACCEPT RIDE
-    path(
-        "rides/<uuid:pk>/accept/",
-        RideAcceptView.as_view()
-    ),
+path(
+    "rides/<uuid:pk>/",
+    RideDetailView.as_view()
+),
 
-    # TASK 7 - CANCEL RIDE
-    path(
-        "rides/<uuid:pk>/cancel/",
-        RideCancelView.as_view(),
-        name="ride-cancel"
-    ),
+path(
+    "rides/<uuid:pk>/status/",
+    RideStatusUpdateView.as_view()
+),
+
+# TASK 6 - ACCEPT RIDE
+path(
+    "rides/<uuid:pk>/accept/",
+    RideAcceptView.as_view()
+),
+
+# TASK 7 - CANCEL RIDE
+path(
+    "rides/<uuid:pk>/cancel/",
+    RideCancelView.as_view(),
+    name="ride-cancel"
+)
 ]
