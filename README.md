@@ -2472,9 +2472,853 @@ http://127.0.0.1:8000/
 * Ride Lifecycle Testing
 * Invalid Transition Testing
 
-<<<<<<< HEAD
-=======
+13/08/26
 
 
+# Ride Management – Development Documentation
 
->>>>>>> bdcf3c9 (Complete ride management tasks)
+**Date:** August 13, 2026
+**Project:** Django Enterprise Project
+**Module:** `accounts`
+**Feature:** Ride Management
+
+---
+
+## 1. Objective
+
+Implemented and tested the complete ride management flow in the Django REST Framework application.
+
+The implementation covers:
+
+* Ride creation
+* Fare calculation
+* Ride listing
+* Ride details
+* Ride status management
+* Ride acceptance
+* Ride cancellation
+* Driver/vehicle information
+* Ride lifecycle validation
+* Duplicate ride acceptance protection
+* Invalid state transition validation
+* Unit testing
+* Service-layer business logic
+* Database transaction handling
+* Git/README documentation
+
+---
+
+# 2. Ride Creation
+
+Implemented `RideCreateSerializer` for creating rides.
+
+### File
+
+```text
+accounts/serializers.py
+```
+
+### Main responsibilities
+
+* Validate pickup address
+* Validate dropoff address
+* Validate latitude
+* Validate longitude
+* Validate pickup/dropoff are not the same
+* Check whether rider already has an active ride
+* Get `requested` ride status
+* Calculate fare using `FareService`
+* Create the ride with the authenticated user
+* Automatically assign initial status as `requested`
+
+### Initial ride status
+
+```text
+requested
+```
+
+The client does not manually control the initial ride status.
+
+---
+
+# 3. Fare Calculation
+
+Implemented a dedicated fare service.
+
+### File
+
+```text
+accounts/services/fare_service.py
+```
+
+### Service
+
+```python
+FareService
+```
+
+The service calculates:
+
+```text
+Distance
+Base Fare
+Distance Fare
+Time Fare
+Surge
+Total Fare
+```
+
+### Distance calculation
+
+Distance is calculated using the Haversine formula.
+
+```text
+Earth radius = 6371 km
+```
+
+The service calculates distance using:
+
+```text
+pickup latitude
+pickup longitude
+dropoff latitude
+dropoff longitude
+```
+
+---
+
+# 4. Fare Configuration
+
+Fare configuration is maintained in:
+
+```text
+myproject/settings.py
+```
+
+Example configuration:
+
+```python
+RIDE_FARE_CONFIG = {
+
+    "bike": {
+        "base_fare": 30,
+        "per_km": 10,
+        "per_minute": 2,
+    },
+
+    "auto": {
+        "base_fare": 40,
+        "per_km": 15,
+        "per_minute": 3,
+    },
+
+    "car": {
+        "base_fare": 60,
+        "per_km": 20,
+        "per_minute": 4,
+    },
+
+    "suv": {
+        "base_fare": 80,
+        "per_km": 25,
+        "per_minute": 5,
+    },
+}
+```
+
+Surge configuration:
+
+```python
+RIDE_SURGE_MULTIPLIER = 1.00
+```
+
+### Surge examples
+
+```text
+1.00 = No surge
+1.25 = 25% surge
+1.50 = 50% surge
+2.00 = 100% surge
+```
+
+---
+
+# 5. Fare Calculation Formula
+
+The fare calculation follows:
+
+```text
+Distance Fare = Distance × Per KM Rate
+
+Time Fare = Duration × Per Minute Rate
+
+Subtotal =
+    Base Fare
+    + Distance Fare
+    + Time Fare
+
+Surge =
+    Subtotal × (Surge Multiplier - 1)
+
+Total =
+    Subtotal + Surge
+```
+
+Fare values are rounded to two decimal places using:
+
+```python
+ROUND_HALF_UP
+```
+
+---
+
+# 6. Vehicle-Based Pricing
+
+Fare pricing is selected based on:
+
+```python
+vehicle_type.name
+```
+
+Supported vehicle types:
+
+```text
+Bike
+Auto
+Car
+SUV
+```
+
+The service validates that pricing exists for the requested vehicle type.
+
+If configuration is missing, an appropriate validation error is returned.
+
+---
+
+# 7. Ride Models
+
+Ride status is represented by:
+
+```text
+RideStatus
+```
+
+Supported statuses:
+
+```text
+REQUESTED
+ACCEPTED
+DRIVER_ARRIVING
+STARTED
+COMPLETED
+CANCELLED
+```
+
+The `Ride` model contains:
+
+```text
+rider
+driver
+vehicle_type
+status
+pickup_address
+pickup_latitude
+pickup_longitude
+dropoff_address
+dropoff_latitude
+dropoff_longitude
+fare
+created_at
+updated_at
+```
+
+---
+
+# 8. Ride Lifecycle
+
+The ride lifecycle was implemented using controlled status transitions.
+
+### Lifecycle
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+Cancellation is allowed from applicable active states.
+
+```text
+REQUESTED → CANCELLED
+
+ACCEPTED → CANCELLED
+
+DRIVER_ARRIVING → CANCELLED
+```
+
+Invalid transitions are rejected.
+
+Example:
+
+```text
+COMPLETED → STARTED
+```
+
+is not allowed.
+
+---
+
+# 9. Ride Status Update
+
+Implemented:
+
+```text
+RideStatusUpdateSerializer
+```
+
+### File
+
+```text
+accounts/serializers.py
+```
+
+The serializer validates whether a requested status transition is allowed.
+
+Example transition mapping:
+
+```python
+allowed_transitions = {
+
+    REQUESTED: [
+        ACCEPTED,
+        CANCELLED,
+    ],
+
+    ACCEPTED: [
+        DRIVER_ARRIVING,
+        CANCELLED,
+    ],
+
+    DRIVER_ARRIVING: [
+        STARTED,
+        CANCELLED,
+    ],
+
+    STARTED: [
+        COMPLETED,
+    ],
+}
+```
+
+---
+
+# 10. Ride Acceptance
+
+Implemented driver ride acceptance.
+
+Acceptance logic verifies:
+
+* Ride exists
+* Ride is in `requested` state
+* Driver is eligible
+* Ride has not already been accepted
+* Driver is assigned safely
+* Status changes to `accepted`
+
+---
+
+# 11. Concurrent Ride Acceptance
+
+Concurrent ride acceptance was handled safely using database transactions.
+
+The purpose is to prevent two drivers from accepting the same ride simultaneously.
+
+The implementation uses transaction-based locking/atomic operations so that:
+
+```text
+Driver A → accepts ride
+Driver B → attempts same ride
+```
+
+Only one driver can successfully obtain the ride.
+
+The second request receives an appropriate failure response instead of assigning the ride twice.
+
+---
+
+# 12. Database Transactions
+
+Database transaction handling was implemented for operations that modify multiple related records or require atomic state changes.
+
+Transaction handling helps guarantee:
+
+```text
+All operations succeed
+OR
+All operations are rolled back
+```
+
+This prevents partially completed ride operations.
+
+---
+
+# 13. Ride Cancellation
+
+Ride cancellation was implemented with state validation.
+
+Cancellation is allowed only when the current ride state permits cancellation.
+
+Invalid cancellation attempts return validation errors.
+
+Example:
+
+```text
+COMPLETED → CANCELLED
+```
+
+is rejected.
+
+---
+
+# 14. Ride Listing
+
+Implemented:
+
+```python
+RideListCreateView
+```
+
+### File
+
+```text
+accounts/views.py
+```
+
+The API supports:
+
+```text
+GET  → List rides
+POST → Create ride
+```
+
+The queryset uses `select_related()` for related objects such as:
+
+```text
+rider
+profile
+status
+driver
+vehicle_type
+```
+
+This improves database query efficiency.
+
+---
+
+# 15. Ride Details
+
+Implemented:
+
+```python
+RideDetailSerializer
+```
+
+The detail response provides:
+
+```text
+Passenger information
+Driver information
+Vehicle information
+Pickup information
+Dropoff information
+Vehicle type
+Ride status
+Fare
+Created time
+Updated time
+```
+
+---
+
+# 16. Driver Information
+
+Implemented nested driver representation.
+
+Driver response includes:
+
+```text
+Driver ID
+Driver name
+Vehicle
+Vehicle type
+Registration number
+```
+
+This allows ride detail APIs to return driver-related information without exposing unnecessary internal fields.
+
+---
+
+# 17. Vehicle Validation
+
+Vehicle serializer validation was improved.
+
+Registration numbers are normalized:
+
+```python
+value.strip().upper()
+```
+
+Validation uses:
+
+```python
+re.fullmatch()
+```
+
+Duplicate vehicle registration numbers are rejected.
+
+Driver and vehicle type are also validated.
+
+---
+
+# 18. API Business Logic Separation
+
+Business logic was separated from API views.
+
+Instead of keeping fare calculation inside the view, the application uses:
+
+```text
+FareService
+```
+
+Architecture:
+
+```text
+API View
+   ↓
+Serializer
+   ↓
+Service Layer
+   ↓
+Models / Database
+```
+
+This makes the application easier to:
+
+* Test
+* Maintain
+* Reuse
+* Extend
+* Debug
+
+---
+
+# 19. Tests Created
+
+The following tests were created:
+
+```text
+accounts/tests/test_duplicate_acceptance.py
+accounts/tests/test_fare.py
+accounts/tests/test_invalid_state.py
+accounts/tests/test_ride_acceptance.py
+accounts/tests/test_ride_cancellation.py
+accounts/tests/test_ride_creation.py
+```
+
+### Test coverage includes
+
+* Ride creation
+* Fare calculation
+* Ride acceptance
+* Duplicate acceptance
+* Ride cancellation
+* Invalid state transitions
+* Ride lifecycle behavior
+
+---
+
+# 20. Ride Creation Test
+
+Command used:
+
+```powershell
+python manage.py test accounts.tests.test_ride_creation
+```
+
+Final result:
+
+```text
+STATUS: 201
+```
+
+Test result:
+
+```text
+Ran 1 test
+OK
+```
+
+Example successful response included:
+
+```text
+pickup_address: Guntur
+dropoff_address: Vijayawada
+status: requested
+fare: 101.29
+```
+
+This confirms that:
+
+```text
+Request
+   ↓
+Validation
+   ↓
+Fare Calculation
+   ↓
+Ride Creation
+   ↓
+201 Created
+```
+
+works correctly.
+
+---
+
+# 21. Django System Check
+
+Command:
+
+```powershell
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+This confirmed there were no Django configuration/system-check errors.
+
+---
+
+# 22. Exception Handling
+
+A custom exception handler exists in:
+
+```text
+accounts/exceptions.py
+```
+
+It provides a consistent API error format.
+
+Example:
+
+```json
+{
+    "success": false,
+    "error": "..."
+}
+```
+
+This helps maintain consistent error responses across APIs.
+
+---
+
+# 23. README Documentation
+
+Project documentation was updated in:
+
+```text
+README.md
+```
+
+The README includes the implemented features such as:
+
+```text
+JWT Authentication
+User Profile Management
+Driver Management
+Vehicle Management
+Ride Creation
+Ride Listing
+Ride Details
+Ride Status Update
+Ride Acceptance
+Ride Cancellation
+Ride Lifecycle Testing
+Invalid Transition Testing
+```
+
+Git conflict markers were also cleaned from the README.
+
+---
+
+# 24. Git Workflow
+
+Changes were integrated with the remote `main` branch using:
+
+```powershell
+git fetch origin
+git pull --rebase origin main
+```
+
+README changes were committed using:
+
+```powershell
+git add README.md
+git commit -m "Update README"
+```
+
+Finally pushed using:
+
+```powershell
+git push origin main
+```
+
+Latest verified commit:
+
+```text
+92d7869 Update README
+```
+
+Local branch and remote branch were synchronized:
+
+```text
+HEAD -> main
+origin/main
+```
+
+---
+
+# 25. Final Acceptance Criteria
+
+| Acceptance Criteria                                | Status      |
+| -------------------------------------------------- | ----------- |
+| Service layer implemented                          | ✅ Completed |
+| Fare calculation completed                         | ✅ Completed |
+| Database transactions implemented                  | ✅ Completed |
+| Concurrent ride acceptance handled safely          | ✅ Completed |
+| Unit tests created                                 | ✅ Completed |
+| Business logic separated from API views            | ✅ Completed |
+| Code refactored according to Django best practices | ✅ Completed |
+
+---
+
+# 26. Final Project Flow
+
+```text
+                CLIENT
+                   │
+                   ▼
+             Django API
+                   │
+                   ▼
+              View Layer
+                   │
+                   ▼
+           Serializer Layer
+                   │
+          ┌────────┴────────┐
+          ▼                 ▼
+    Validation         Service Layer
+                            │
+                            ▼
+                      FareService
+                            │
+                            ▼
+                       Database
+                            │
+                            ▼
+                     Ride / Status
+```
+
+### Complete Ride Flow
+
+```text
+Create Ride
+     ↓
+Validate Location
+     ↓
+Check Active Ride
+     ↓
+Calculate Distance
+     ↓
+Calculate Fare
+     ↓
+Create REQUESTED Ride
+     ↓
+Driver Accepts
+     ↓
+ACCEPTED
+     ↓
+DRIVER_ARRIVING
+     ↓
+STARTED
+     ↓
+COMPLETED
+```
+
+Cancellation:
+
+```text
+REQUESTED
+     ↓
+CANCELLED
+```
+
+or
+
+```text
+ACCEPTED
+     ↓
+CANCELLED
+```
+
+or
+
+```text
+DRIVER_ARRIVING
+     ↓
+CANCELLED
+```
+
+---
+
+## 27. Final Verification Commands
+
+For future verification:
+
+```powershell
+python manage.py check
+```
+
+```powershell
+python manage.py test accounts.tests.test_ride_creation
+```
+
+Full accounts tests:
+
+```powershell
+python manage.py test accounts
+```
+
+Git verification:
+
+```powershell
+git status
+```
+
+Remote verification:
+
+```powershell
+git log origin/main --oneline -5
+```
+
