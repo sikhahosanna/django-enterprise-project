@@ -2472,8 +2472,3 @@ http://127.0.0.1:8000/
 * Ride Lifecycle Testing
 * Invalid Transition Testing
 
-```
-
-**Idi professional development notes style** lo untundi — project ki em implement chesavo, rules enti, testing ela chesavo clear ga document avutayi.
-```
-
