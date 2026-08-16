@@ -4,6 +4,7 @@ Django settings for myproject project.
 
 import os
 from pathlib import Path
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -206,6 +207,14 @@ AUTH_PASSWORD_VALIDATORS = [
             "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+# =========================================================
+# JWT CONFIGURATION
+# =========================================================
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
 
 
 # =========================================================
@@ -221,8 +230,7 @@ REST_FRAMEWORK = {
     ),
 
     "EXCEPTION_HANDLER":
-        "accounts.exceptions.custom_exception_handler",
-
+        "accounts.utils.exceptions.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS":
         "drf_spectacular.openapi.AutoSchema",
 

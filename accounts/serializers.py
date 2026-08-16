@@ -955,9 +955,11 @@ class RideDetailSerializer(
 # RIDE STATUS UPDATE SERIALIZER
 # =========================================================
 
-class RideStatusUpdateSerializer(
-    serializers.Serializer
-):
+# =========================================================
+# RIDE STATUS UPDATE SERIALIZER
+# =========================================================
+
+class RideStatusUpdateSerializer(serializers.Serializer):
 
     status = serializers.ChoiceField(
         choices=RideStatus.Status.choices
@@ -984,6 +986,8 @@ class RideStatusUpdateSerializer(
 
             RideStatus.Status.ACCEPTED: [
                 RideStatus.Status.DRIVER_ARRIVING,
+                RideStatus.Status.STARTED,
+                RideStatus.Status.COMPLETED,
                 RideStatus.Status.CANCELLED,
             ],
 
@@ -1001,11 +1005,9 @@ class RideStatusUpdateSerializer(
             RideStatus.Status.CANCELLED: [],
         }
 
-        allowed_statuses = (
-            allowed_transitions.get(
-                current_status,
-                []
-            )
+        allowed_statuses = allowed_transitions.get(
+            current_status,
+            []
         )
 
         if new_status not in allowed_statuses:

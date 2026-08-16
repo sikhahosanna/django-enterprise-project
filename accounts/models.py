@@ -399,6 +399,17 @@ class Ride(models.Model):
             models.Index(
                 fields=["created_at"]
             ),
+
+            # Task 2 performance indexes
+            models.Index(
+                fields=["rider", "created_at"]
+            ),
+            models.Index(
+                fields=["driver", "created_at"]
+            ),
+            models.Index(
+                fields=["status", "created_at"]
+            ),
         ]
 
         constraints = [

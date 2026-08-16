@@ -2472,7 +2472,8 @@ http://127.0.0.1:8000/
 * Ride Lifecycle Testing
 * Invalid Transition Testing
 
-13/08/26
+13/08/2026
+
 
 
 # Ride Management – Development Documentation
@@ -3321,4 +3322,899 @@ Remote verification:
 ```powershell
 git log origin/main --oneline -5
 ```
+
+14/08/2026
+
+
+
+````markdown
+# Ride Management API
+
+A Django REST Framework based Ride Management API that provides authentication, user profiles, driver and vehicle management, ride lifecycle management, fare calculation, permissions, automated testing, and database query optimization.
+
+---
+
+## 1. Project Overview
+
+This project is a backend REST API for managing a ride-booking system.
+
+The application supports:
+
+- User registration and authentication
+- JWT login/logout
+- User profile management
+- Driver management
+- Vehicle management
+- Vehicle types
+- Ride creation
+- Ride acceptance
+- Ride status management
+- Ride cancellation
+- Fare calculation
+- Ride history
+- Driver earnings
+- Permissions and ownership validation
+- Exception handling
+- Automated tests
+- Database query optimization
+
+---
+
+## 2. Technology Stack
+
+### Backend
+
+- Python
+- Django
+- Django REST Framework
+
+### Authentication
+
+- JWT Authentication
+- `djangorestframework-simplejwt`
+
+### Database
+
+- Django ORM
+- Relational database
+
+### Testing
+
+- Django Test Framework
+- Django REST Framework APIClient
+
+### API Testing
+
+- Postman
+
+---
+
+## 3. Project Structure
+
+```text
+myproject/
+│
+├── accounts/
+│   │
+│   ├── migrations/
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── fare_service.py
+│   │   └── ride.py
+│   │
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── test_duplicate_acceptance.py
+│   │   ├── test_fare.py
+│   │   ├── test_invalid_state.py
+│   │   ├── test_ride_acceptance.py
+│   │   ├── test_ride_cancellation.py
+│   │   └── test_ride_creation.py
+│   │
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── exceptions.py
+│   │   └── responses.py
+│   │
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── permissions.py
+│   ├── serializers.py
+│   ├── urls.py
+│   └── views.py
+│
+├── manage.py
+├── requirements.txt
+└── README.md
+````
+
+---
+
+# 4. Installation
+
+## Step 1 — Clone or download the project
+
+Place the project in your desired directory.
+
+Example:
+
+```text
+C:\Users\<username>\Desktop\django\myproject
+```
+
+---
+
+## Step 2 — Create virtual environment
+
+```powershell
+python -m venv venv
+```
+
+---
+
+## Step 3 — Activate virtual environment
+
+Windows PowerShell:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+After activation:
+
+```text
+(venv)
+```
+
+should appear in the terminal.
+
+---
+
+## Step 4 — Install dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+---
+
+# 5. Database Setup
+
+Run migrations:
+
+```powershell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+# 6. Create Admin User
+
+```powershell
+python manage.py createsuperuser
+```
+
+Enter:
+
+```text
+Email
+Password
+```
+
+The admin account can be used to manage drivers and other administrative data.
+
+---
+
+# 7. Run Development Server
+
+```powershell
+python manage.py runserver
+```
+
+The API will normally be available at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Django Admin:
+
+```text
+http://127.0.0.1:8000/admin/
+```
+
+---
+
+# 8. Authentication
+
+The API uses JWT authentication.
+
+## Login
+
+Example:
+
+```http
+POST /api/login/
+```
+
+Request:
+
+```json
+{
+    "email": "user@example.com",
+    "password": "password"
+}
+```
+
+Successful response contains:
+
+```json
+{
+    "user": {
+        "id": "USER_ID",
+        "email": "user@example.com"
+    },
+    "refresh": "REFRESH_TOKEN",
+    "access": "ACCESS_TOKEN"
+}
+```
+
+Use the access token for protected APIs.
+
+Postman:
+
+```text
+Authorization
+→ Bearer Token
+→ ACCESS_TOKEN
+```
+
+---
+
+# 9. Main API Features
+
+## Authentication
+
+```text
+Register
+Login
+Logout
+Change Password
+```
+
+---
+
+## User Profile
+
+```text
+Get Profile
+Create/Update Profile
+Delete Profile
+Restore Profile
+Admin Profile List
+```
+
+---
+
+## Driver
+
+```text
+Create Driver
+List Drivers
+Get Driver
+Update Driver
+```
+
+Driver creation and management are restricted according to the configured permissions.
+
+---
+
+## Vehicle
+
+```text
+Create Vehicle
+List Vehicles
+Get Vehicle
+Update Vehicle
+Delete Vehicle
+```
+
+Drivers can manage their own vehicles.
+
+Administrators can manage vehicles according to the configured permissions.
+
+---
+
+# 10. Ride Lifecycle
+
+A ride follows a controlled lifecycle.
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+A ride may also be cancelled when the current state allows cancellation.
+
+Example:
+
+```text
+REQUESTED
+    ↓
+CANCELLED
+```
+
+Invalid state transitions are rejected by the application.
+
+---
+
+# 11. Create Ride
+
+Example:
+
+```http
+POST /api/rides/
+```
+
+Request:
+
+```json
+{
+    "pickup_address": "Guntur",
+    "pickup_latitude": "16.306700",
+    "pickup_longitude": "80.436500",
+    "dropoff_address": "Vijayawada",
+    "dropoff_latitude": "16.320000",
+    "dropoff_longitude": "80.450000",
+    "vehicle_type": "VEHICLE_TYPE_UUID"
+}
+```
+
+Successful response:
+
+```text
+201 Created
+```
+
+The authenticated user is automatically associated with the ride as the rider.
+
+---
+
+# 12. Accept Ride
+
+Driver authentication is required.
+
+Example:
+
+```http
+POST /api/rides/{ride_id}/accept/
+```
+
+Successful response:
+
+```json
+{
+    "success": true,
+    "message": "Ride accepted successfully."
+}
+```
+
+A ride that has already been accepted cannot be accepted again.
+
+---
+
+# 13. Update Ride Status
+
+Example:
+
+```http
+PATCH /api/rides/{ride_id}/status/
+```
+
+Request:
+
+```json
+{
+    "status": "started"
+}
+```
+
+Later:
+
+```json
+{
+    "status": "completed"
+}
+```
+
+The service layer validates whether the requested state transition is allowed.
+
+---
+
+# 14. Cancel Ride
+
+Example:
+
+```http
+POST /api/rides/{ride_id}/cancel/
+```
+
+Only the appropriate authenticated rider can cancel the ride according to the configured business rules.
+
+---
+
+# 15. Fare Calculation
+
+Example:
+
+```http
+POST /api/rides/fare/
+```
+
+Request:
+
+```json
+{
+    "vehicle_type": "VEHICLE_TYPE_UUID",
+    "pickup_latitude": "16.306700",
+    "pickup_longitude": "80.436500",
+    "dropoff_latitude": "16.320000",
+    "dropoff_longitude": "80.450000",
+    "duration_minutes": 10
+}
+```
+
+Response contains:
+
+```json
+{
+    "success": true,
+    "message": "Fare calculated successfully.",
+    "data": {
+        "base_fare": "...",
+        "distance_fare": "...",
+        "time_fare": "...",
+        "surge": "...",
+        "total": "..."
+    }
+}
+```
+
+Fare calculation is implemented in:
+
+```text
+accounts/services/fare_service.py
+```
+
+---
+
+# 16. Ride History
+
+The application provides APIs for:
+
+```text
+Active rides
+Completed rides
+Cancelled rides
+Driver ride history
+```
+
+Additional statistics include:
+
+```text
+Daily ride count
+Total completed rides
+Driver total fare earned
+```
+
+---
+
+# 17. Permissions
+
+The API uses authentication and permission checks.
+
+Examples:
+
+### Unauthenticated user
+
+Protected endpoints return:
+
+```text
+401 Unauthorized
+```
+
+### Authenticated user without required permission
+
+Returns:
+
+```text
+403 Forbidden
+```
+
+### Admin-only functionality
+
+Restricted using:
+
+```python
+IsAdminUser
+```
+
+### Driver ownership
+
+Driver/vehicle resources are protected using ownership permissions.
+
+---
+
+# 18. Exception Handling
+
+The project uses a custom DRF exception handler:
+
+```text
+accounts/utils/exceptions.py
+```
+
+The exception handler provides a consistent API response format.
+
+Example:
+
+```json
+{
+    "success": false,
+    "message": "Request failed.",
+    "error_code": "API_ERROR",
+    "data": null
+}
+```
+
+Internal server errors return:
+
+```json
+{
+    "success": false,
+    "message": "Internal server error.",
+    "error_code": "INTERNAL_SERVER_ERROR",
+    "data": null
+}
+```
+
+Detailed exception information should be logged internally rather than exposed to API clients.
+
+---
+
+# 19. Standard Response Format
+
+Successful responses generally follow:
+
+```json
+{
+    "success": true,
+    "message": "Operation completed successfully.",
+    "data": {}
+}
+```
+
+Error responses generally follow:
+
+```json
+{
+    "success": false,
+    "message": "Request failed.",
+    "error_code": "ERROR_CODE",
+    "data": null
+}
+```
+
+---
+
+# 20. Automated Testing
+
+Tests are located in:
+
+```text
+accounts/tests/
+```
+
+Current test areas include:
+
+```text
+Ride creation
+Ride acceptance
+Duplicate ride acceptance
+Ride cancellation
+Invalid ride states
+Fare calculation
+```
+
+Run all accounts tests:
+
+```powershell
+python manage.py test accounts.tests
+```
+
+Run a specific test:
+
+```powershell
+python manage.py test accounts.tests.test_ride_creation
+```
+
+Example successful result:
+
+```text
+Found 1 test(s).
+...
+Ran 1 test
+OK
+```
+
+---
+
+# 21. Postman Regression Testing
+
+The complete API should be tested using Postman.
+
+Recommended execution order:
+
+```text
+1. Register
+2. Login
+3. Create Driver
+4. Create Vehicle
+5. Create Ride
+6. Accept Ride
+7. Start Ride
+8. Complete Ride
+9. Calculate Fare
+10. Ride History
+11. Permission Tests
+12. Invalid Request Tests
+```
+
+Each request should be checked for:
+
+```text
+HTTP status code
+Response body
+success value
+message
+error_code
+data
+```
+
+---
+
+# 22. Database Query Optimization
+
+The project includes optimized ride history queries using:
+
+```python
+select_related()
+```
+
+Example:
+
+```python
+Ride.objects.filter(
+    rider=request.user
+).select_related(
+    "rider",
+    "vehicle_type",
+    "status",
+)
+```
+
+This reduces unnecessary database queries when accessing related objects.
+
+The project also contains a slow/optimized comparison for demonstrating query optimization.
+
+---
+
+# 23. Architecture
+
+The project follows a layered architecture.
+
+```text
+                CLIENT
+                  |
+                  v
+                POSTMAN
+                  |
+                  v
+                URLS
+                  |
+                  v
+                VIEWS
+                  |
+          +-------+-------+
+          |               |
+          v               v
+     SERIALIZERS     PERMISSIONS
+          |
+          v
+        SERVICES
+       /         \
+      v           v
+RideService   FareService
+      \           /
+       \         /
+          v
+        MODELS
+          |
+          v
+       DATABASE
+```
+
+### URLs
+
+Routes incoming API requests to the appropriate view.
+
+### Views
+
+Handle HTTP requests and responses.
+
+### Serializers
+
+Validate request data and convert model data to API responses.
+
+### Permissions
+
+Control access to protected resources.
+
+### Services
+
+Contain business logic such as:
+
+```text
+Ride acceptance
+Ride cancellation
+Ride status transitions
+Fare calculation
+```
+
+### Models
+
+Define database entities and relationships.
+
+### Database
+
+Stores application data persistently.
+
+---
+
+# 24. Security
+
+The application uses:
+
+* JWT authentication
+* Django password hashing
+* DRF permissions
+* Driver ownership checks
+* Admin access controls
+* Validation of incoming request data
+* Custom exception handling
+
+Production deployments should use:
+
+```text
+DEBUG = False
+```
+
+Sensitive configuration such as:
+
+```text
+SECRET_KEY
+Database credentials
+JWT configuration
+```
+
+should be stored securely using environment variables.
+
+---
+
+# 25. Code Quality
+
+The project was reviewed for:
+
+```text
+Naming
+Folder structure
+Functions
+Serializers
+Views
+Services
+Models
+Database queries
+Exception handling
+Security
+```
+
+
+---
+
+# 26. Final Demonstration
+
+The complete project can be demonstrated using the following flow:
+
+```text
+Login
+  ↓
+Create Driver
+  ↓
+Create Vehicle
+  ↓
+Create Ride
+  ↓
+Accept Ride
+  ↓
+Start Ride
+  ↓
+Complete Ride
+  ↓
+Calculate Fare
+  ↓
+Show Database Records
+  ↓
+Explain Architecture
+```
+
+---
+
+# 27. Final Verification
+
+Before final submission, run:
+
+```powershell
+python manage.py check
+```
+
+Then:
+
+```powershell
+python manage.py test accounts.tests
+```
+
+Then start the server:
+
+```powershell
+python manage.py runserver
+```
+
+Finally execute the complete Postman collection from beginning to end.
+
+---
+
+# 28. Expected Final Status
+
+The project is considered ready for demonstration when:
+
+```text
+Django system check      → PASS
+Automated tests          → PASS
+Postman regression       → PASS
+Authentication           → PASS
+Driver management        → PASS
+Vehicle management       → PASS
+Ride lifecycle           → PASS
+Fare calculation         → PASS
+Permissions              → PASS
+Invalid requests         → Proper errors
+Database records         → Correct
+Architecture             → Explainable
+```
+
+---
+
+## Author
+
+Ride Management API
+Django REST Framework Project
 
