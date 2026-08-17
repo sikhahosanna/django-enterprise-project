@@ -468,3 +468,55 @@ class Ride(models.Model):
 
     def __str__(self):
         return str(self.id)
+# =========================================================
+# DRIVER LOCATION
+# =========================================================
+
+class DriverLocation(models.Model):
+
+    class AvailabilityStatus(models.TextChoices):
+        ONLINE = "online", "Online"
+        OFFLINE = "offline", "Offline"
+        BUSY = "busy", "Busy"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    driver = models.OneToOneField(
+        DriverProfile,
+        on_delete=models.CASCADE,
+        related_name="location"
+    )
+
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
+
+    last_updated = models.DateTimeField(
+        auto_now=True
+    )
+
+    availability_status = models.CharField(
+        max_length=20,
+        choices=AvailabilityStatus.choices,
+        default=AvailabilityStatus.OFFLINE
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["availability_status"]
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.driver} - {self.latitude}, {self.longitude}"

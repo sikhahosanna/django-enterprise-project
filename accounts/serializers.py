@@ -11,6 +11,7 @@ from .models import (
     User,
     Profile,
     DriverProfile,
+    DriverLocation,
     Vehicle,
     VehicleType,
     Ride,
@@ -922,7 +923,47 @@ class RideDetailSerializer(
                 "last_name": "",
                 "phone": "",
             }
+# =========================================================
+# DRIVER LOCATION SERIALIZER
+# =========================================================
 
+class DriverLocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = DriverLocation
+
+        fields = [
+            "id",
+            "driver",
+            "latitude",
+            "longitude",
+            "last_updated",
+            "availability_status",
+        ]
+
+        read_only_fields = [
+            "id",
+            "last_updated",
+        ]
+
+    def validate_latitude(self, value):
+
+        if not -90 <= float(value) <= 90:
+            raise serializers.ValidationError(
+                "Latitude must be between -90 and 90."
+            )
+
+        return value
+
+    def validate_longitude(self, value):
+
+        if not -180 <= float(value) <= 180:
+            raise serializers.ValidationError(
+                "Longitude must be between -180 and 180."
+            )
+
+        return value
     # =====================================================
     # VEHICLE
     # =====================================================
@@ -1025,3 +1066,12 @@ class RideStatusUpdateSerializer(serializers.Serializer):
             })
 
         return attrs
+class DriverLocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DriverLocation
+
+        fields = [
+            "latitude",
+            "longitude",
+        ]

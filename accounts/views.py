@@ -28,6 +28,14 @@ from django_filters.rest_framework import (
 from rest_framework_simplejwt.tokens import (
     RefreshToken,
 )
+from math import (
+    radians,
+    sin,
+    cos,
+    sqrt,
+    atan2,
+)
+from django.db import connection, reset_queries
 
 from django.db.models import (
     Count,
@@ -36,7 +44,10 @@ from django.db.models import (
     Min,
     Max,
     Q,
+    
 )
+
+ 
 
 from django.utils import timezone
 
@@ -51,6 +62,7 @@ from .models import (
     User,
     Profile,
     DriverProfile,
+    DriverLocation,
     Vehicle,
     VehicleType,
 )
@@ -67,6 +79,8 @@ from .serializers import (
     LoginSerializer,
     ChangePasswordSerializer,
     ProfileSerializer,
+    DriverLocationSerializer,
+    DriverLocation,
 )
 
 from .services.fare_service import (
@@ -512,8 +526,8 @@ class RestoreProfileView(APIView):
             data=None,
 
             status_code=status.HTTP_200_OK,
-        )
 
+        )
 
 # =========================================================
 # DRIVER LIST + CREATE
@@ -2142,82 +2156,7 @@ class RideAggregationView(APIView):
                 ),
             }
         )
-    # =========================================================
-# SLOW RIDE HISTORY
-# =========================================================
-
-class SlowRideHistoryView(
-    generics.ListAPIView
-):
-    """
-    Basic / slow ride-history implementation.
-
-    Returns rides belonging to the currently authenticated
-    rider.
-    """
-
-    permission_classes = [
-        IsAuthenticated
-    ]
-
-    pagination_class = CustomPagination
-
-    serializer_class = RideDetailSerializer
-
-    def get_queryset(self):
-
-        return (
-            Ride.objects
-            .filter(
-                rider=self.request.user
-            )
-            .order_by(
-                "-created_at"
-            )
-        )
-
-
-# =========================================================
-# OPTIMIZED RIDE HISTORY
-# =========================================================
-
-class OptimizedRideHistoryView(
-    generics.ListAPIView
-):
-    """
-    Optimized ride-history implementation.
-
-    Uses select_related() to reduce unnecessary
-    database queries.
-    """
-
-    permission_classes = [
-        IsAuthenticated
-    ]
-
-    pagination_class = CustomPagination
-
-    serializer_class = RideDetailSerializer
-
-    def get_queryset(self):
-
-        return (
-            Ride.objects
-            .filter(
-                rider=self.request.user
-            )
-            .select_related(
-                "rider",
-                "rider__profile",
-                "driver",
-                "driver__user",
-                "status",
-                "vehicle_type",
-            )
-            .order_by(
-                "-created_at"
-            )
-        )
+ 
     # =========================================================
 # TASK 4 - SLOW RIDE HISTORY
 # =========================================================
@@ -2394,3 +2333,303 @@ class OptimizedRideHistoryView(APIView):
             "count": len(data),
             "results": data,
         })
+# =========================================================
+# DRIVER LOCATION
+# =========================================================
+
+class DriverLocationView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request):
+
+        try:
+
+            driver = request.user.driver_profile
+
+        except DriverProfile.DoesNotExist:
+
+            return error_response(
+                message="You are not registered as a driver.",
+
+                error_code="DRIVER_NOT_FOUND",
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
+            )
+
+        serializer = DriverLocationSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        location, created = (
+            DriverLocation.objects.update_or_create(
+                driver=driver,
+
+                defaults={
+                    "latitude":
+                        serializer.validated_data[
+                            "latitude"
+                        ],
+
+                    "longitude":
+                        serializer.validated_data[
+                            "longitude"
+                        ],
+                },
+            )
+        )
+
+        return success_response(
+            message="Driver location updated successfully.",
+
+            data={
+                "driver_id":
+                    str(driver.id),
+
+                "latitude":
+                    location.latitude,
+
+                "longitude":
+                    location.longitude,
+
+                "last_updated":
+                    location.last_updated,
+
+                "availability_status":
+                    location.availability_status,
+            },
+
+            status_code=status.HTTP_200_OK,
+        )
+def calculate_distance_km(lat1, lon1, lat2, lon2):
+    R = 6371.0
+
+    lat1 = math.radians(float(lat1))
+    lon1 = math.radians(float(lon1))
+    lat2 = math.radians(float(lat2))
+    lon2 = math.radians(float(lon2))
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1)
+        * math.cos(lat2)
+        * math.sin(dlon / 2) ** 2
+    )
+
+    c = 2 * math.atan2(
+        math.sqrt(a),
+        math.sqrt(1 - a)
+    )
+
+    return R * c
+# =========================================================
+# TASK 4 - NEARBY DRIVER API
+# =========================================================
+
+class NearbyDriverView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get(self, request):
+
+        latitude = request.query_params.get("latitude")
+        longitude = request.query_params.get("longitude")
+        radius = request.query_params.get("radius")
+
+        # -----------------------------------------
+        # VALIDATION
+        # -----------------------------------------
+
+        if not latitude or not longitude or not radius:
+
+            return error_response(
+                message="latitude, longitude and radius are required.",
+
+                error_code="MISSING_REQUIRED_FIELD",
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+
+            latitude = float(latitude)
+            longitude = float(longitude)
+            radius = float(radius)
+
+        except (ValueError, TypeError):
+
+            return error_response(
+                message="latitude, longitude and radius must be valid numbers.",
+
+                error_code="INVALID_LOCATION_DATA",
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not (-90 <= latitude <= 90):
+
+            return error_response(
+                message="Invalid latitude.",
+
+                error_code="INVALID_LATITUDE",
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not (-180 <= longitude <= 180):
+
+            return error_response(
+                message="Invalid longitude.",
+
+                error_code="INVALID_LONGITUDE",
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if radius <= 0:
+
+            return error_response(
+                message="Radius must be greater than 0.",
+
+                error_code="INVALID_RADIUS",
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # -----------------------------------------
+        # GET AVAILABLE DRIVERS
+        # -----------------------------------------
+
+        locations = (
+            DriverLocation.objects
+            .filter(
+                availability_status=(
+                    DriverLocation.AvailabilityStatus.ONLINE
+                    
+                ),
+                driver__status=(
+                    DriverProfile.DriverStatus.ACTIVE
+                ),
+            )
+            .select_related(
+                "driver",
+                "driver__user",
+            )
+        )
+
+        nearby_drivers = []
+
+        # -----------------------------------------
+        # DISTANCE CALCULATION
+        # -----------------------------------------
+
+        for location in locations:
+
+            driver_latitude = float(
+                location.latitude
+            )
+
+            driver_longitude = float(
+                location.longitude
+            )
+
+            earth_radius_km = 6371.0
+
+            lat1 = radians(latitude)
+            lat2 = radians(driver_latitude)
+
+            delta_lat = radians(
+                driver_latitude - latitude
+            )
+
+            delta_lon = radians(
+                driver_longitude - longitude
+            )
+
+            a = (
+                sin(delta_lat / 2) ** 2
+                +
+                cos(lat1)
+                * cos(lat2)
+                * sin(delta_lon / 2) ** 2
+            )
+
+            c = 2 * atan2(
+                sqrt(a),
+                sqrt(1 - a)
+            )
+
+            distance_km = (
+                earth_radius_km * c
+            )
+
+            if distance_km <= radius:
+
+                nearby_drivers.append(
+                    {
+                        "driver_id": str(
+                            location.driver.id
+                        ),
+
+                        "email":
+                            location.driver.user.email,
+
+                        "latitude":
+                            float(location.latitude),
+
+                        "longitude":
+                            float(location.longitude),
+
+                        "distance_km":
+                            round(distance_km, 2),
+
+                        "availability_status":
+                            location.availability_status,
+
+                        "last_updated":
+                            location.last_updated,
+                    }
+                )
+
+        # -----------------------------------------
+        # SORT BY NEAREST
+        # -----------------------------------------
+
+        nearby_drivers.sort(
+            key=lambda driver:
+                driver["distance_km"]
+        )
+
+        return success_response(
+            message="Nearby drivers retrieved successfully.",
+
+            data={
+                "latitude": latitude,
+
+                "longitude": longitude,
+
+                "radius_km": radius,
+
+                "count": len(
+                    nearby_drivers
+                ),
+
+                "drivers":
+                    nearby_drivers,
+            },
+
+            status_code=status.HTTP_200_OK,
+        )

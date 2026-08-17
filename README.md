@@ -4220,6 +4220,7 @@ Django REST Framework Project
  
  17/08/26
  
+ 
 # Django Ride Management API
 
 A Django REST Framework based Ride Management API with authentication,
@@ -4877,5 +4878,356 @@ This project uses Django's development server for development and testing only.
 
 For production deployment, use a proper WSGI or ASGI server and production database configuration.
 
+```
+18/08/26
+
+````markdown
+# Driver Location & Nearby Driver API
+
+## Overview
+
+This module provides driver location tracking, driver availability management,
+nearby-driver search, distance calculation, validation, and performance testing.
+
+The system finds eligible drivers near a passenger's pickup location and
+returns them sorted by distance.
+
+---
+
+## Features
+
+- Driver location update
+- Driver availability management
+- Nearby driver search
+- Distance calculation using Haversine formula
+- Nearest driver sorting
+- Location validation
+- Active driver filtering
+- Online driver filtering
+- Busy/offline driver exclusion
+- Large dataset performance testing
+
+---
+
+## Driver Availability
+
+Drivers can have one of the following availability statuses:
+
+```text
+ONLINE
+OFFLINE
+BUSY
+````
+
+Only `ONLINE` drivers are eligible for new ride requests.
+
+---
+
+## Driver Location API
+
+### Endpoint
+
+```http
+POST /api/drivers/location/
+```
+
+### Authentication
+
+Requires a valid Bearer access token.
+
+```http
+Authorization: Bearer <ACCESS_TOKEN>
+```
+
+### Example Request
+
+```json
+{
+    "latitude": 17.385,
+    "longitude": 78.4867,
+    "availability_status": "online"
+}
+```
+
+### Example Response
+
+```json
+{
+    "success": true,
+    "message": "Driver location updated successfully.",
+    "error_code": null,
+    "data": {
+        "driver_id": "d40f766b-1947-4eec-97ed-d01ffe0a6282",
+        "latitude": 17.385,
+        "longitude": 78.4867,
+        "availability_status": "online"
+    }
+}
+```
+
+---
+
+## Nearby Driver API
+
+### Endpoint
+
+```http
+GET /api/drivers/nearby/
+```
+
+### Query Parameters
+
+| Parameter | Required | Description         |
+| --------- | -------- | ------------------- |
+| latitude  | Yes      | Passenger latitude  |
+| longitude | Yes      | Passenger longitude |
+| radius    | Yes      | Search radius in KM |
+
+### Example
+
+```http
+GET /api/drivers/nearby/?latitude=17.385&longitude=78.4867&radius=5
+```
+
+### Authentication
+
+```http
+Authorization: Bearer <ACCESS_TOKEN>
+```
+
+### Example Response
+
+```json
+{
+    "success": true,
+    "message": "Nearby drivers retrieved successfully.",
+    "error_code": null,
+    "data": {
+        "latitude": 17.385,
+        "longitude": 78.4867,
+        "radius_km": 5.0,
+        "count": 3,
+        "drivers": [
+            {
+                "driver_id": "driver-b",
+                "distance_km": 1.4,
+                "availability_status": "online"
+            },
+            {
+                "driver_id": "driver-c",
+                "distance_km": 2.7,
+                "availability_status": "online"
+            },
+            {
+                "driver_id": "driver-a",
+                "distance_km": 4.2,
+                "availability_status": "online"
+            }
+        ]
+    }
+}
+```
+
+---
+
+## Distance Calculation
+
+Distance is calculated using the Haversine formula.
+
+Earth radius:
+
+```text
+6371 KM
+```
+
+The calculated distance is used to:
+
+1. Check whether the driver is within the requested radius.
+2. Return `distance_km`.
+3. Sort drivers from nearest to farthest.
+
+Example:
+
+```text
+Driver B → 1.4 KM
+Driver C → 2.7 KM
+Driver A → 4.2 KM
+```
+
+The API returns Driver B first because it is the nearest driver.
+
+---
+
+## Driver Eligibility
+
+A driver is returned only when:
+
+```text
+Driver status = ACTIVE
+AND
+Availability status = ONLINE
+AND
+Driver location is within requested radius
+```
+
+The following drivers are excluded:
+
+```text
+INACTIVE drivers
+SUSPENDED drivers
+OFFLINE drivers
+BUSY drivers
+Drivers outside the requested radius
+```
+
+---
+
+## Location Validation
+
+The API validates all location parameters.
+
+### Missing coordinates
+
+```json
+{
+    "success": false,
+    "message": "latitude, longitude and radius are required.",
+    "error_code": "MISSING_REQUIRED_FIELD",
+    "data": null
+}
+```
+
+### Invalid latitude
+
+Latitude must be between:
+
+```text
+-90 and 90
+```
+
+Example:
+
+```json
+{
+    "success": false,
+    "message": "Invalid latitude.",
+    "error_code": "INVALID_LATITUDE",
+    "data": null
+}
+```
+
+### Invalid longitude
+
+Longitude must be between:
+
+```text
+-180 and 180
+```
+
+Example:
+
+```json
+{
+    "success": false,
+    "message": "Invalid longitude.",
+    "error_code": "INVALID_LONGITUDE",
+    "data": null
+}
+```
+
+### Invalid radius
+
+Radius must be greater than `0`.
+
+Example:
+
+```json
+{
+    "success": false,
+    "message": "Radius must be greater than 0.",
+    "error_code": "INVALID_RADIUS",
+    "data": null
+}
+```
+
+---
+
+## Performance Testing
+
+A large dataset was created for performance testing.
+
+### Test Dataset
+
+```text
+Drivers created: 1000
+```
+
+Nearby-driver search was tested with:
+
+```text
+Latitude: 17.385
+Longitude: 78.4867
+Radius: 5 KM
+```
+
+Example result:
+
+```text
+HTTP Status: 200 OK
+Nearby drivers found: 669
+```
+
+The API successfully handled the large test dataset and returned nearby
+eligible drivers sorted by distance.
+
+---
+
+## Database Optimization
+
+`DriverLocation` has an index on availability status:
+
+```python
+class Meta:
+    indexes = [
+        models.Index(
+            fields=["availability_status"]
+        ),
+    ]
+```
+
+The query also uses:
+
+```python
+.select_related(
+    "driver",
+    "driver__user",
+)
+```
+
+This reduces additional database queries when accessing driver and user
+information.
+
+---
+
+## Acceptance Criteria
+
+* [x] Driver location API completed
+* [x] Nearby driver API completed
+* [x] Distance calculated correctly
+* [x] Driver availability integrated
+* [x] Invalid coordinates rejected
+* [x] Only eligible drivers returned
+* [x] Location search tested with large datasets
+
+---
+
+## Task Status
+
+```text
+Task 4 - Distance Calculation       COMPLETED
+Task 5 - Nearby Driver Sorting      COMPLETED
+Task 6 - Driver Availability        COMPLETED
+Task 7 - Location Validation        COMPLETED
+Task 8 - Performance Testing        COMPLETED
 ```
 

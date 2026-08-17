@@ -18,6 +18,7 @@ from .views import (
     DriverDetailView,
     DriverTotalFareEarnedView,
     DriverRideHistoryView,
+    DriverLocationView,
 
     # VEHICLE
     VehicleListCreateView,
@@ -43,6 +44,7 @@ from .views import (
     OptimizedRideHistoryView,
     SlowRideHistoryView,
     RideAggregationView,
+    NearbyDriverView,
 )
 
 
@@ -242,5 +244,15 @@ path(
     "rides/driver/history/",
     DriverRideHistoryView.as_view(),
     name="driver-ride-history",
+),
+path(
+    "drivers/location/",
+    DriverLocationView.as_view(),
+    name="driver-location",
+),
+path(
+    "drivers/nearby/",
+    NearbyDriverView.as_view(),
+    name="nearby-drivers",
 ),
 ]
