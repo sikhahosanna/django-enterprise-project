@@ -25,14 +25,21 @@ from django_filters.rest_framework import (
     DjangoFilterBackend,
 )
 
-from django.db import connection
-
 from rest_framework_simplejwt.tokens import (
     RefreshToken,
 )
 
-from django.db.models import Sum
+from django.db.models import (
+    Count,
+    Sum,
+    Avg,
+    Min,
+    Max,
+    Q,
+)
+
 from django.utils import timezone
+
 
 from .permissions import (
     IsAdminOrDriverOwner,
@@ -83,8 +90,71 @@ from .utils.responses import (
 class CustomPagination(PageNumberPagination):
 
     page_size = 10
+
     page_size_query_param = "page_size"
+
     max_page_size = 50
+
+
+# =========================================================
+# RIDE RESPONSE HELPER
+# =========================================================
+
+def build_ride_data(ride):
+
+    driver_data = None
+
+    if ride.driver:
+
+        driver_user = getattr(
+            ride.driver,
+            "user",
+            None,
+        )
+
+        driver_data = {
+            "id": str(ride.driver.id),
+
+            "email": (
+                driver_user.email
+                if driver_user
+                else None
+            ),
+        }
+
+    return {
+        "id": str(ride.id),
+
+        "pickup_address":
+            ride.pickup_address,
+
+        "dropoff_address":
+            ride.dropoff_address,
+
+        "vehicle_type": (
+            ride.vehicle_type.name
+            if ride.vehicle_type
+            else None
+        ),
+
+        "status": (
+            ride.status.name
+            if ride.status
+            else None
+        ),
+
+        "fare":
+            str(ride.fare),
+
+        "driver":
+            driver_data,
+
+        "created_at":
+            ride.created_at,
+
+        "updated_at":
+            ride.updated_at,
+    }
 
 
 # =========================================================
@@ -94,6 +164,7 @@ class CustomPagination(PageNumberPagination):
 class RegisterView(generics.CreateAPIView):
 
     queryset = User.objects.all()
+
     serializer_class = RegisterSerializer
 
 
@@ -123,11 +194,14 @@ class LoginView(APIView):
                     "id": str(user.id),
                     "email": user.email,
                 },
+
                 "refresh": str(refresh),
+
                 "access": str(
                     refresh.access_token
                 ),
             },
+
             status=status.HTTP_200_OK,
         )
 
@@ -150,13 +224,16 @@ class ProfileView(APIView):
     def get(self, request):
 
         try:
+
             profile = request.user.profile
 
         except Profile.DoesNotExist:
 
             return error_response(
                 message="Profile not created.",
+
                 error_code="PROFILE_NOT_FOUND",
+
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
@@ -166,7 +243,9 @@ class ProfileView(APIView):
 
         return success_response(
             message="Profile retrieved successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -198,7 +277,9 @@ class ProfileView(APIView):
 
         return success_response(
             message="Profile saved successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -219,10 +300,13 @@ class ProfileListView(
     queryset = (
         Profile.objects
         .select_related("user")
-        .filter(is_deleted=False)
+        .filter(
+            is_deleted=False
+        )
     )
 
     serializer_class = ProfileSerializer
+
     pagination_class = CustomPagination
 
     filter_backends = [
@@ -263,6 +347,7 @@ class ChangePasswordView(APIView):
 
         serializer = ChangePasswordSerializer(
             data=request.data,
+
             context={
                 "request": request
             },
@@ -287,6 +372,7 @@ class ChangePasswordView(APIView):
                 "message":
                     "Password changed successfully"
             },
+
             status=status.HTTP_200_OK,
         )
 
@@ -314,6 +400,7 @@ class LogoutView(APIView):
                     "error":
                         "Refresh token is required"
                 },
+
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -330,6 +417,7 @@ class LogoutView(APIView):
                     "message":
                         "Logout successfully"
                 },
+
                 status=status.HTTP_200_OK,
             )
 
@@ -340,6 +428,7 @@ class LogoutView(APIView):
                     "error":
                         "Invalid refresh token"
                 },
+
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -364,7 +453,9 @@ class DeleteProfileView(APIView):
 
             return error_response(
                 message="Profile not found.",
+
                 error_code="PROFILE_NOT_FOUND",
+
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
@@ -376,7 +467,9 @@ class DeleteProfileView(APIView):
 
         return success_response(
             message="Profile deleted successfully.",
+
             data=None,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -401,7 +494,9 @@ class RestoreProfileView(APIView):
 
             return error_response(
                 message="Profile not found.",
+
                 error_code="PROFILE_NOT_FOUND",
+
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
@@ -413,7 +508,9 @@ class RestoreProfileView(APIView):
 
         return success_response(
             message="Profile restored successfully.",
+
             data=None,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -501,6 +598,7 @@ class DriverDetailView(
     def get_serializer_class(self):
 
         if self.request.method == "GET":
+
             return DriverNestedSerializer
 
         return DriverSerializer
@@ -554,9 +652,12 @@ class VehicleListCreateView(
 
     def get_queryset(self):
 
-        queryset = self.get_vehicle_queryset()
+        queryset = (
+            self.get_vehicle_queryset()
+        )
 
         if self.request.user.is_staff:
+
             return queryset
 
         return queryset.filter(
@@ -594,11 +695,16 @@ class VehicleListCreateView(
 
         return success_response(
             message="Vehicles retrieved successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_200_OK,
         )
 
-    def perform_create(self, serializer):
+    def perform_create(
+        self,
+        serializer
+    ):
 
         if self.request.user.is_staff:
 
@@ -633,7 +739,9 @@ class VehicleListCreateView(
 
         return success_response(
             message="Vehicle created successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -651,9 +759,12 @@ class VehicleDetailView(
 
     def get_queryset(self):
 
-        queryset = self.get_vehicle_queryset()
+        queryset = (
+            self.get_vehicle_queryset()
+        )
 
         if self.request.user.is_staff:
+
             return queryset
 
         return queryset.filter(
@@ -675,7 +786,9 @@ class VehicleDetailView(
 
         return success_response(
             message="Vehicle retrieved successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -709,7 +822,9 @@ class VehicleDetailView(
 
         return success_response(
             message="Vehicle updated successfully.",
+
             data=serializer.data,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -728,7 +843,9 @@ class VehicleDetailView(
 
         return success_response(
             message="Vehicle deleted successfully.",
+
             data=None,
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -754,6 +871,10 @@ class VehicleDetailView(
 # RIDE LIST + CREATE
 # =========================================================
 
+# =========================================================
+# TASK 6 - ADVANCED RIDE FILTERING
+# =========================================================
+
 class RideListCreateView(
     generics.ListCreateAPIView
 ):
@@ -766,7 +887,7 @@ class RideListCreateView(
 
     def get_queryset(self):
 
-        return (
+        queryset = (
             Ride.objects
             .select_related(
                 "rider",
@@ -779,26 +900,135 @@ class RideListCreateView(
             .filter(
                 rider=self.request.user
             )
-            .order_by(
+        )
+
+        # =================================================
+        # STATUS FILTER
+        # =================================================
+
+        status_value = self.request.query_params.get(
+            "status"
+        )
+
+        if status_value:
+
+            queryset = queryset.filter(
+                status__name=status_value
+            )
+
+        # =================================================
+        # DRIVER FILTER
+        # =================================================
+
+        driver_id = self.request.query_params.get(
+            "driver"
+        )
+
+        if driver_id:
+
+            queryset = queryset.filter(
+                driver_id=driver_id
+            )
+
+        # =================================================
+        # START DATE FILTER
+        # =================================================
+
+        start_date = self.request.query_params.get(
+            "start_date"
+        )
+
+        if start_date:
+
+            queryset = queryset.filter(
+                created_at__date__gte=start_date
+            )
+
+        # =================================================
+        # END DATE FILTER
+        # =================================================
+
+        end_date = self.request.query_params.get(
+            "end_date"
+        )
+
+        if end_date:
+
+            queryset = queryset.filter(
+                created_at__date__lte=end_date
+            )
+
+        # =================================================
+        # MIN FARE FILTER
+        # =================================================
+
+        min_fare = self.request.query_params.get(
+            "min_fare"
+        )
+
+        if min_fare:
+
+            queryset = queryset.filter(
+                fare__gte=min_fare
+            )
+
+        # =================================================
+        # MAX FARE FILTER
+        # =================================================
+
+        max_fare = self.request.query_params.get(
+            "max_fare"
+        )
+
+        if max_fare:
+
+            queryset = queryset.filter(
+                fare__lte=max_fare
+            )
+
+        # =================================================
+        # ORDERING
+        # =================================================
+
+        ordering = self.request.query_params.get(
+            "ordering"
+        )
+
+        allowed_ordering = [
+            "created_at",
+            "-created_at",
+            "fare",
+            "-fare",
+        ]
+
+        if ordering in allowed_ordering:
+
+            queryset = queryset.order_by(
+                ordering
+            )
+
+        else:
+
+            queryset = queryset.order_by(
                 "-created_at"
             )
-        )
+
+        return queryset
 
     def get_serializer_class(self):
 
         if self.request.method == "POST":
+
             return RideCreateSerializer
 
         return RideSerializer
 
-    # IMPORTANT:
-    # RideCreateSerializer already handles rider.
-    # Do NOT pass rider=self.request.user here.
-    def perform_create(self, serializer):
+    def perform_create(
+        self,
+        serializer
+    ):
 
         serializer.save()
-
-
 # =========================================================
 # RIDE FARE
 # =========================================================
@@ -817,7 +1047,10 @@ class RideFareView(APIView):
         "dropoff_longitude",
     ]
 
-    def _validate_request_data(self, data):
+    def _validate_request_data(
+        self,
+        data
+    ):
 
         for field in self.REQUIRED_FIELDS:
 
@@ -826,7 +1059,9 @@ class RideFareView(APIView):
                 or data.get(field) is None
             ):
 
-                return f"{field} is required."
+                return (
+                    f"{field} is required."
+                )
 
         return None
 
@@ -845,58 +1080,93 @@ class RideFareView(APIView):
 
             return None
 
-    def post(self, request):
+    def post(
+        self,
+        request
+    ):
 
-        error = self._validate_request_data(
-            request.data
+        error = (
+            self._validate_request_data(
+                request.data
+            )
         )
 
         if error:
 
             return error_response(
                 message=error,
-                error_code="MISSING_REQUIRED_FIELD",
-                status_code=status.HTTP_400_BAD_REQUEST,
+
+                error_code=(
+                    "MISSING_REQUIRED_FIELD"
+                ),
+
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
-        vehicle_type = self._get_vehicle_type(
-            request.data.get("vehicle_type")
+        vehicle_type = (
+            self._get_vehicle_type(
+                request.data.get(
+                    "vehicle_type"
+                )
+            )
         )
 
         if vehicle_type is None:
 
             return error_response(
-                message="Vehicle type not found.",
-                error_code="VEHICLE_TYPE_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
+                message=(
+                    "Vehicle type not found."
+                ),
+
+                error_code=(
+                    "VEHICLE_TYPE_NOT_FOUND"
+                ),
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
             )
 
         try:
 
-            fare_details = FareService.calculate_fare(
+            fare_details = (
+                FareService.calculate_fare(
 
-                vehicle_type=vehicle_type,
+                    vehicle_type=vehicle_type,
 
-                pickup_latitude=request.data.get(
-                    "pickup_latitude"
-                ),
+                    pickup_latitude=(
+                        request.data.get(
+                            "pickup_latitude"
+                        )
+                    ),
 
-                pickup_longitude=request.data.get(
-                    "pickup_longitude"
-                ),
+                    pickup_longitude=(
+                        request.data.get(
+                            "pickup_longitude"
+                        )
+                    ),
 
-                dropoff_latitude=request.data.get(
-                    "dropoff_latitude"
-                ),
+                    dropoff_latitude=(
+                        request.data.get(
+                            "dropoff_latitude"
+                        )
+                    ),
 
-                dropoff_longitude=request.data.get(
-                    "dropoff_longitude"
-                ),
+                    dropoff_longitude=(
+                        request.data.get(
+                            "dropoff_longitude"
+                        )
+                    ),
 
-                duration_minutes=request.data.get(
-                    "duration_minutes",
-                    0,
-                ),
+                    duration_minutes=(
+                        request.data.get(
+                            "duration_minutes",
+                            0,
+                        )
+                    ),
+                )
             )
 
         except (
@@ -907,12 +1177,19 @@ class RideFareView(APIView):
 
             return error_response(
                 message=str(e),
-                error_code="FARE_CALCULATION_ERROR",
-                status_code=status.HTTP_400_BAD_REQUEST,
+
+                error_code=(
+                    "FARE_CALCULATION_ERROR"
+                ),
+
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
         return success_response(
             message="Fare calculated successfully.",
+
             data={
                 "base_fare":
                     fare_details["base_fare"],
@@ -929,6 +1206,7 @@ class RideFareView(APIView):
                 "total":
                     fare_details["total"],
             },
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -975,7 +1253,11 @@ class RideAcceptView(APIView):
         IsAuthenticated
     ]
 
-    def post(self, request, pk):
+    def post(
+        self,
+        request,
+        pk
+    ):
 
         try:
 
@@ -986,12 +1268,21 @@ class RideAcceptView(APIView):
 
             return success_response(
                 message="Ride accepted successfully.",
+
                 data={
                     "ride_id": str(ride.id),
-                    "driver_id": str(ride.driver.id),
-                    "driver_email": ride.driver.user.email,
-                    "status": ride.status.name,
+
+                    "driver_id": str(
+                        ride.driver.id
+                    ),
+
+                    "driver_email":
+                        ride.driver.user.email,
+
+                    "status":
+                        ride.status.name,
                 },
+
                 status_code=status.HTTP_200_OK,
             )
 
@@ -999,24 +1290,38 @@ class RideAcceptView(APIView):
 
             return error_response(
                 message=str(e),
+
                 error_code="PERMISSION_DENIED",
-                status_code=status.HTTP_403_FORBIDDEN,
+
+                status_code=(
+                    status.HTTP_403_FORBIDDEN
+                ),
             )
 
         except Ride.DoesNotExist:
 
             return error_response(
                 message="Ride not found.",
+
                 error_code="RIDE_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
             )
 
         except ValueError as e:
 
             return error_response(
                 message=str(e),
-                error_code="INVALID_RIDE_STATUS",
-                status_code=status.HTTP_400_BAD_REQUEST,
+
+                error_code=(
+                    "INVALID_RIDE_STATUS"
+                ),
+
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
 
@@ -1030,7 +1335,11 @@ class RideStatusUpdateView(APIView):
         IsAuthenticated
     ]
 
-    def patch(self, request, pk):
+    def patch(
+        self,
+        request,
+        pk
+    ):
 
         try:
 
@@ -1048,12 +1357,17 @@ class RideStatusUpdateView(APIView):
 
             return error_response(
                 message="Ride not found.",
+
                 error_code="RIDE_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
             )
 
         serializer = RideStatusUpdateSerializer(
             data=request.data,
+
             context={
                 "ride": ride,
                 "request": request,
@@ -1066,44 +1380,70 @@ class RideStatusUpdateView(APIView):
 
         try:
 
-            updated_ride = RideService.update_status(
-                ride_id=pk,
-                driver=request.user,
-                new_status_name=(
-                    serializer.validated_data["status"]
-                ),
+            updated_ride = (
+                RideService.update_status(
+
+                    ride_id=pk,
+
+                    driver=request.user,
+
+                    new_status_name=(
+                        serializer.validated_data[
+                            "status"
+                        ]
+                    ),
+                )
             )
 
         except Ride.DoesNotExist:
 
             return error_response(
                 message="Ride not found.",
+
                 error_code="RIDE_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
             )
 
         except PermissionError as e:
 
             return error_response(
                 message=str(e),
+
                 error_code="PERMISSION_DENIED",
-                status_code=status.HTTP_403_FORBIDDEN,
+
+                status_code=(
+                    status.HTTP_403_FORBIDDEN
+                ),
             )
 
         except ValueError as e:
 
             return error_response(
                 message=str(e),
-                error_code="INVALID_RIDE_STATUS",
-                status_code=status.HTTP_400_BAD_REQUEST,
+
+                error_code=(
+                    "INVALID_RIDE_STATUS"
+                ),
+
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
         return success_response(
             message="Ride status updated successfully.",
+
             data={
-                "ride_id": str(updated_ride.id),
-                "status": updated_ride.status.name,
+                "ride_id":
+                    str(updated_ride.id),
+
+                "status":
+                    updated_ride.status.name,
             },
+
             status_code=status.HTTP_200_OK,
         )
 
@@ -1118,7 +1458,11 @@ class RideCancelView(APIView):
         IsAuthenticated
     ]
 
-    def post(self, request, pk):
+    def post(
+        self,
+        request,
+        pk
+    ):
 
         try:
 
@@ -1129,10 +1473,15 @@ class RideCancelView(APIView):
 
             return success_response(
                 message="Ride cancelled successfully.",
+
                 data={
-                    "ride_id": str(ride.id),
-                    "status": ride.status.name,
+                    "ride_id":
+                        str(ride.id),
+
+                    "status":
+                        ride.status.name,
                 },
+
                 status_code=status.HTTP_200_OK,
             )
 
@@ -1140,24 +1489,38 @@ class RideCancelView(APIView):
 
             return error_response(
                 message="Ride not found.",
+
                 error_code="RIDE_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
+
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
             )
 
         except PermissionError as e:
 
             return error_response(
                 message=str(e),
+
                 error_code="PERMISSION_DENIED",
-                status_code=status.HTTP_403_FORBIDDEN,
+
+                status_code=(
+                    status.HTTP_403_FORBIDDEN
+                ),
             )
 
         except ValueError as e:
 
             return error_response(
                 message=str(e),
-                error_code="INVALID_RIDE_STATUS",
-                status_code=status.HTTP_400_BAD_REQUEST,
+
+                error_code=(
+                    "INVALID_RIDE_STATUS"
+                ),
+
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
 
@@ -1188,7 +1551,10 @@ class UserActiveRidesView(
             Ride.objects
             .filter(
                 rider=self.request.user,
-                status__name__in=active_statuses,
+
+                status__name__in=(
+                    active_statuses
+                ),
             )
             .select_related(
                 "driver",
@@ -1259,6 +1625,7 @@ class UserCompletedRidesView(
             Ride.objects
             .filter(
                 rider=self.request.user,
+
                 status__name=(
                     RideStatus.Status.COMPLETED
                 ),
@@ -1332,6 +1699,7 @@ class UserCancelledRidesView(
             Ride.objects
             .filter(
                 rider=self.request.user,
+
                 status__name=(
                     RideStatus.Status.CANCELLED
                 ),
@@ -1431,7 +1799,11 @@ class DriverRideHistoryView(
             queryset
         )
 
-        rides = page if page is not None else queryset
+        rides = (
+            page
+            if page is not None
+            else queryset
+        )
 
         data = []
 
@@ -1445,12 +1817,12 @@ class DriverRideHistoryView(
 
             data.append(
                 {
-                    "id": str(ride.id),
+                    "id":
+                        str(ride.id),
 
                     "passenger": {
-                        "id": str(
-                            ride.rider.id
-                        ),
+                        "id":
+                            str(ride.rider.id),
 
                         "email":
                             ride.rider.email,
@@ -1500,7 +1872,9 @@ class DriverRideHistoryView(
         return Response(
             {
                 "success": True,
+
                 "count": len(data),
+
                 "results": data,
             }
         )
@@ -1524,6 +1898,7 @@ class DailyRideCountView(APIView):
             Ride.objects
             .filter(
                 rider=request.user,
+
                 created_at__date=today,
             )
             .count()
@@ -1532,7 +1907,9 @@ class DailyRideCountView(APIView):
         return Response(
             {
                 "success": True,
+
                 "date": today,
+
                 "ride_count": count,
             }
         )
@@ -1554,6 +1931,7 @@ class TotalCompletedRidesView(APIView):
             Ride.objects
             .filter(
                 rider=request.user,
+
                 status__name=(
                     RideStatus.Status.COMPLETED
                 ),
@@ -1564,7 +1942,9 @@ class TotalCompletedRidesView(APIView):
         return Response(
             {
                 "success": True,
-                "total_completed_rides": total,
+
+                "total_completed_rides":
+                    total,
             }
         )
 
@@ -1585,6 +1965,7 @@ class DriverTotalFareEarnedView(APIView):
             Ride.objects
             .filter(
                 driver__user=request.user,
+
                 status__name=(
                     RideStatus.Status.COMPLETED
                 ),
@@ -1603,6 +1984,7 @@ class DriverTotalFareEarnedView(APIView):
         return Response(
             {
                 "success": True,
+
                 "total_fare_earned":
                     str(total_fare),
             }
@@ -1610,7 +1992,234 @@ class DriverTotalFareEarnedView(APIView):
 
 
 # =========================================================
-# TASK 5 - DATABASE OPTIMIZATION
+# TASK 3 - RIDE AGGREGATIONS
+# =========================================================
+
+class RideAggregationView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get(self, request):
+
+        # -------------------------------------------------
+        # Rider rides
+        # -------------------------------------------------
+
+        rides = Ride.objects.filter(
+            rider=request.user
+        )
+
+        completed_status = (
+            RideStatus.Status.COMPLETED
+        )
+
+        cancelled_status = (
+            RideStatus.Status.CANCELLED
+        )
+
+        # -------------------------------------------------
+        # Rider aggregations
+        # -------------------------------------------------
+
+        result = rides.aggregate(
+
+            total_rides=Count(
+                "id"
+            ),
+
+            completed_rides=Count(
+                "id",
+
+                filter=Q(
+                    status__name=(
+                        completed_status
+                    )
+                ),
+            ),
+
+            cancelled_rides=Count(
+                "id",
+
+                filter=Q(
+                    status__name=(
+                        cancelled_status
+                    )
+                ),
+            ),
+
+            average_fare=Avg(
+                "fare"
+            ),
+
+            maximum_fare=Max(
+                "fare"
+            ),
+
+            minimum_fare=Min(
+                "fare"
+            ),
+        )
+
+        # -------------------------------------------------
+        # Driver earnings
+        # -------------------------------------------------
+
+        driver_earnings = (
+            Ride.objects
+            .filter(
+                driver__user=request.user,
+
+                status__name=(
+                    completed_status
+                ),
+            )
+            .aggregate(
+                total_driver_earnings=Sum(
+                    "fare"
+                )
+            )
+        )
+
+        # -------------------------------------------------
+        # Response
+        # -------------------------------------------------
+
+        return Response(
+            {
+                "success": True,
+
+                "total_rides":
+                    result["total_rides"],
+
+                "completed_rides":
+                    result["completed_rides"],
+
+                "cancelled_rides":
+                    result["cancelled_rides"],
+
+                "average_fare": (
+                    str(
+                        result["average_fare"]
+                    )
+                    if result[
+                        "average_fare"
+                    ] is not None
+                    else "0"
+                ),
+
+                "maximum_fare": (
+                    str(
+                        result["maximum_fare"]
+                    )
+                    if result[
+                        "maximum_fare"
+                    ] is not None
+                    else "0"
+                ),
+
+                "minimum_fare": (
+                    str(
+                        result["minimum_fare"]
+                    )
+                    if result[
+                        "minimum_fare"
+                    ] is not None
+                    else "0"
+                ),
+
+                "total_driver_earnings": (
+                    str(
+                        driver_earnings[
+                            "total_driver_earnings"
+                        ]
+                    )
+                    if driver_earnings[
+                        "total_driver_earnings"
+                    ] is not None
+                    else "0"
+                ),
+            }
+        )
+    # =========================================================
+# SLOW RIDE HISTORY
+# =========================================================
+
+class SlowRideHistoryView(
+    generics.ListAPIView
+):
+    """
+    Basic / slow ride-history implementation.
+
+    Returns rides belonging to the currently authenticated
+    rider.
+    """
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = CustomPagination
+
+    serializer_class = RideDetailSerializer
+
+    def get_queryset(self):
+
+        return (
+            Ride.objects
+            .filter(
+                rider=self.request.user
+            )
+            .order_by(
+                "-created_at"
+            )
+        )
+
+
+# =========================================================
+# OPTIMIZED RIDE HISTORY
+# =========================================================
+
+class OptimizedRideHistoryView(
+    generics.ListAPIView
+):
+    """
+    Optimized ride-history implementation.
+
+    Uses select_related() to reduce unnecessary
+    database queries.
+    """
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = CustomPagination
+
+    serializer_class = RideDetailSerializer
+
+    def get_queryset(self):
+
+        return (
+            Ride.objects
+            .filter(
+                rider=self.request.user
+            )
+            .select_related(
+                "rider",
+                "rider__profile",
+                "driver",
+                "driver__user",
+                "status",
+                "vehicle_type",
+            )
+            .order_by(
+                "-created_at"
+            )
+        )
+    # =========================================================
+# TASK 4 - SLOW RIDE HISTORY
 # =========================================================
 
 class SlowRideHistoryView(APIView):
@@ -1621,11 +2230,11 @@ class SlowRideHistoryView(APIView):
 
     def get(self, request):
 
+        reset_queries()
+
         rides = (
             Ride.objects
-            .filter(
-                rider=request.user
-            )
+            .filter(rider=request.user)
             .order_by("-created_at")
         )
 
@@ -1633,45 +2242,71 @@ class SlowRideHistoryView(APIView):
 
         for ride in rides:
 
-            data.append(
-                {
-                    "id": str(ride.id),
+            # Deliberately accessing related objects
+            # without select_related()
+            driver = ride.driver
 
-                    "pickup_address":
-                        ride.pickup_address,
-
-                    "dropoff_address":
-                        ride.dropoff_address,
-
-                    "rider_email":
-                        ride.rider.email,
-
-                    "vehicle_type": (
-                        ride.vehicle_type.name
-                        if ride.vehicle_type
-                        else None
-                    ),
-
-                    "status":
-                        ride.status.name,
-
-                    "fare":
-                        str(ride.fare),
-                }
+            driver_user = (
+                driver.user
+                if driver
+                else None
             )
 
-        return success_response(
-            message="Slow ride history fetched successfully.",
-            data={
-                "query_count":
-                    len(connection.queries),
+            vehicle_type = (
+                ride.vehicle_type
+                if ride.vehicle_type
+                else None
+            )
 
-                "results":
-                    data,
-            },
-            status_code=status.HTTP_200_OK,
-        )
+            data.append({
+                "id": str(ride.id),
 
+                "pickup_address":
+                    ride.pickup_address,
+
+                "dropoff_address":
+                    ride.dropoff_address,
+
+                "status": (
+                    ride.status.name
+                    if ride.status
+                    else None
+                ),
+
+                "fare": str(ride.fare),
+
+                "vehicle_type": (
+                    vehicle_type.name
+                    if vehicle_type
+                    else None
+                ),
+
+                "driver": (
+                    {
+                        "id": str(driver.id),
+                        "email": (
+                            driver_user.email
+                            if driver_user
+                            else None
+                        ),
+                    }
+                    if driver
+                    else None
+                ),
+            })
+
+        query_count = len(connection.queries)
+
+        return Response({
+            "success": True,
+            "optimization": "slow",
+            "query_count": query_count,
+            "count": len(data),
+            "results": data,
+        })
+# =========================================================
+# TASK 4 - OPTIMIZED RIDE HISTORY
+# =========================================================
 
 class OptimizedRideHistoryView(APIView):
 
@@ -1681,13 +2316,14 @@ class OptimizedRideHistoryView(APIView):
 
     def get(self, request):
 
+        reset_queries()
+
         rides = (
             Ride.objects
-            .filter(
-                rider=request.user
-            )
+            .filter(rider=request.user)
             .select_related(
-                "rider",
+                "driver",
+                "driver__user",
                 "vehicle_type",
                 "status",
             )
@@ -1698,41 +2334,63 @@ class OptimizedRideHistoryView(APIView):
 
         for ride in rides:
 
-            data.append(
-                {
-                    "id": str(ride.id),
+            driver = ride.driver
 
-                    "pickup_address":
-                        ride.pickup_address,
-
-                    "dropoff_address":
-                        ride.dropoff_address,
-
-                    "rider_email":
-                        ride.rider.email,
-
-                    "vehicle_type": (
-                        ride.vehicle_type.name
-                        if ride.vehicle_type
-                        else None
-                    ),
-
-                    "status":
-                        ride.status.name,
-
-                    "fare":
-                        str(ride.fare),
-                }
+            driver_user = (
+                driver.user
+                if driver
+                else None
             )
 
-        return success_response(
-            message="Optimized ride history fetched successfully.",
-            data={
-                "query_count":
-                    len(connection.queries),
+            vehicle_type = (
+                ride.vehicle_type
+                if ride.vehicle_type
+                else None
+            )
 
-                "results":
-                    data,
-            },
-            status_code=status.HTTP_200_OK,
-        )
+            data.append({
+                "id": str(ride.id),
+
+                "pickup_address":
+                    ride.pickup_address,
+
+                "dropoff_address":
+                    ride.dropoff_address,
+
+                "status": (
+                    ride.status.name
+                    if ride.status
+                    else None
+                ),
+
+                "fare": str(ride.fare),
+
+                "vehicle_type": (
+                    vehicle_type.name
+                    if vehicle_type
+                    else None
+                ),
+
+                "driver": (
+                    {
+                        "id": str(driver.id),
+                        "email": (
+                            driver_user.email
+                            if driver_user
+                            else None
+                        ),
+                    }
+                    if driver
+                    else None
+                ),
+            })
+
+        query_count = len(connection.queries)
+
+        return Response({
+            "success": True,
+            "optimization": "optimized",
+            "query_count": query_count,
+            "count": len(data),
+            "results": data,
+        })

@@ -4217,4 +4217,665 @@ Architecture             → Explainable
 
 Ride Management API
 Django REST Framework Project
+ 
+ 17/08/26
+ 
+# Django Ride Management API
+
+A Django REST Framework based Ride Management API with authentication,
+driver management, vehicle management, ride management, ORM optimization,
+filtering, indexing, pagination, and performance testing.
+
+---
+
+## Tech Stack
+
+- Python 3.13
+- Django 6.0.8
+- Django REST Framework
+- Django Filter
+- Simple JWT
+- SQLite / Database configured in project settings
+
+---
+
+# Project Features
+
+## 1. Authentication
+
+The project supports:
+
+- User registration
+- User login
+- JWT access token
+- JWT refresh token
+- Logout
+- Change password
+
+Authentication is based on email instead of username.
+
+---
+
+## 2. Profile Management
+
+Users can:
+
+- Create profile
+- View profile
+- Update profile
+- Upload profile image
+- Soft delete profile
+- Restore profile
+
+Admin users can view profiles.
+
+---
+
+## 3. Driver Management
+
+Admin users can:
+
+- Create drivers
+- List drivers
+- View driver details
+- Update drivers
+- Search drivers
+- Filter drivers by status
+- Order drivers by different fields
+
+Example ordering:
+
+```text
+?ordering=-created_at
+````
+
+---
+
+## 4. Vehicle Management
+
+Drivers can manage their vehicles.
+
+Supported operations:
+
+* Create vehicle
+* List vehicles
+* View vehicle
+* Update vehicle
+* Delete vehicle
+
+Vehicles are related to:
+
+* Driver
+* Vehicle Type
+
+`select_related()` is used to optimize related-object queries.
+
+---
+
+# Task 3 — ORM Aggregations
+
+Ride statistics are calculated using Django ORM aggregation functions.
+
+Implemented:
+
+* Total rides
+* Completed rides
+* Cancelled rides
+* Average fare
+* Maximum fare
+* Minimum fare
+* Total driver earnings
+
+ORM functions used:
+
+```python
+Count()
+Sum()
+Avg()
+Min()
+Max()
+Q()
+```
+
+Example:
+
+```python
+Ride.objects.filter(
+    rider=request.user
+).aggregate(
+    total_rides=Count("id"),
+    average_fare=Avg("fare"),
+    maximum_fare=Max("fare"),
+    minimum_fare=Min("fare"),
+)
+```
+
+---
+
+# Task 4 — Optimize Relationships
+
+The project contains both slow and optimized ride-history APIs.
+
+## Slow API
+
+The slow implementation accesses related objects inside a loop.
+
+Example:
+
+```python
+for ride in rides:
+    driver = ride.driver
+    driver_user = driver.user
+    status = ride.status
+    vehicle_type = ride.vehicle_type
+```
+
+This can generate multiple database queries.
+
+## Optimized API
+
+The optimized implementation uses:
+
+```python
+select_related()
+```
+
+Example:
+
+```python
+Ride.objects.filter(
+    rider=request.user
+).select_related(
+    "driver",
+    "driver__user",
+    "vehicle_type",
+    "status",
+)
+```
+
+This loads related ForeignKey / OneToOne objects together.
+
+The API returns the query count so the slow and optimized implementations can be compared.
+
+Example response:
+
+```json
+{
+    "success": true,
+    "optimization": "optimized",
+    "query_count": 1,
+    "count": 10,
+    "results": []
+}
+```
+
+---
+
+# Task 5 — Database Indexing
+
+Frequently searched and filtered fields were identified and indexed.
+
+Important fields include:
+
+```text
+rider
+driver
+status
+created_at
+vehicle_type
+```
+
+Indexes were added using Django's `Meta.indexes`.
+
+Example:
+
+```python
+class Meta:
+
+    indexes = [
+        models.Index(fields=["rider"]),
+        models.Index(fields=["driver"]),
+        models.Index(fields=["status"]),
+        models.Index(fields=["created_at"]),
+    ]
+```
+
+Composite indexes were also added for common queries:
+
+```python
+models.Index(
+    fields=["rider", "created_at"]
+)
+
+models.Index(
+    fields=["driver", "created_at"]
+)
+
+models.Index(
+    fields=["status", "created_at"]
+)
+```
+
+These indexes help improve filtering and ordering performance for large datasets.
+
+After modifying indexes, run:
+
+```powershell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+# Task 6 — Advanced Filtering
+
+Ride APIs support advanced filtering.
+
+Implemented filters:
+
+* Date filtering
+* Status filtering
+* Driver filtering
+* Minimum fare
+* Maximum fare
+* Multiple filters together
+* Ordering
+
+Example query parameters:
+
+```text
+?status=completed
+```
+
+```text
+?driver=<driver_uuid>
+```
+
+```text
+?min_fare=100
+```
+
+```text
+?max_fare=500
+```
+
+Multiple filters can be combined:
+
+```text
+?status=completed&driver=<driver_uuid>&min_fare=100&max_fare=500
+```
+
+Ordering examples:
+
+```text
+?ordering=created_at
+```
+
+```text
+?ordering=-created_at
+```
+
+Descending ordering is represented using:
+
+```text
+- 
+```
+
+Example:
+
+```text
+?ordering=-created_at
+```
+
+---
+
+# Task 7 — Large Dataset Testing
+
+The API was tested with a large number of ride records.
+
+The purpose of this task is to verify:
+
+* API response performance
+* Pagination
+* Database query count
+* ORM performance
+* Index performance
+
+Pagination is configured using:
+
+```python
+class CustomPagination(PageNumberPagination):
+
+    page_size = 10
+
+    page_size_query_param = "page_size"
+
+    max_page_size = 50
+```
+
+Example:
+
+```text
+?page=1
+```
+
+Custom page size:
+
+```text
+?page=1&page_size=20
+```
+
+Maximum page size:
+
+```text
+50
+```
+
+This prevents the API from returning thousands of records in one response.
+
+---
+
+# Task 8 — Code Review
+
+The ORM code was reviewed for unnecessary database operations.
+
+The following problems were identified and optimized:
+
+## Duplicate Queries
+
+Repeated queries for the same related objects were reduced using:
+
+```python
+select_related()
+```
+
+---
+
+## Queries Inside Loops
+
+Avoid:
+
+```python
+for ride in rides:
+    driver = ride.driver
+    status = ride.status
+```
+
+when relationships can be loaded beforehand.
+
+Use:
+
+```python
+rides = Ride.objects.select_related(
+    "driver",
+    "status",
+    "vehicle_type",
+)
+```
+
+---
+
+## Unnecessary Database Calls
+
+Avoid unnecessary calls such as:
+
+```python
+Ride.objects.get(id=id)
+```
+
+when the same object is already available.
+
+Reuse the existing object whenever possible.
+
+---
+
+## Repeated Calculations
+
+Repeated calculations were moved to ORM aggregation where appropriate.
+
+Example:
+
+```python
+Ride.objects.aggregate(
+    total=Sum("fare"),
+    average=Avg("fare"),
+)
+```
+
+instead of repeatedly calculating values in Python.
+
+---
+
+# ORM Optimization Summary
+
+The project uses:
+
+### select_related()
+
+Used for ForeignKey and OneToOne relationships.
+
+Example:
+
+```python
+Ride.objects.select_related(
+    "driver",
+    "driver__user",
+    "status",
+    "vehicle_type",
+)
+```
+
+### prefetch_related()
+
+Used when loading reverse relationships or many-to-many relationships.
+
+Example:
+
+```python
+DriverProfile.objects.prefetch_related(
+    "vehicles"
+)
+```
+
+---
+
+# Database Index Summary
+
+Important indexes:
+
+```text
+Ride.rider
+Ride.driver
+Ride.status
+Ride.created_at
+Ride.vehicle_type
+```
+
+Composite indexes:
+
+```text
+rider + created_at
+driver + created_at
+status + created_at
+```
+
+---
+
+# Pagination
+
+API pagination uses:
+
+```text
+page_size = 10
+max_page_size = 50
+```
+
+Example:
+
+```text
+GET /api/rides/?page=1
+```
+
+```text
+GET /api/rides/?page=2
+```
+
+```text
+GET /api/rides/?page=1&page_size=20
+```
+
+---
+
+# Running the Project
+
+Activate the virtual environment:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Run migrations:
+
+```powershell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Run the development server:
+
+```powershell
+python manage.py runserver
+```
+
+Server:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+# Useful Django Commands
+
+Check project:
+
+```powershell
+python manage.py check
+```
+
+Create migrations:
+
+```powershell
+python manage.py makemigrations
+```
+
+Apply migrations:
+
+```powershell
+python manage.py migrate
+```
+
+Open Django shell:
+
+```powershell
+python manage.py shell
+```
+
+Create admin user:
+
+```powershell
+python manage.py createsuperuser
+```
+
+Run server:
+
+```powershell
+python manage.py runserver
+```
+
+---
+
+# Testing ORM Queries
+
+Django shell can be used to inspect queries.
+
+Example:
+
+```python
+from django.db import connection, reset_queries
+from accounts.models import Ride
+
+reset_queries()
+
+rides = Ride.objects.select_related(
+    "driver",
+    "driver__user",
+    "status",
+    "vehicle_type",
+)
+
+list(rides)
+
+print(len(connection.queries))
+```
+
+This can be used to compare slow and optimized queries.
+
+---
+
+# API Testing
+
+The APIs can be tested using:
+
+* Postman
+* Browser
+* Django REST Framework browsable API
+
+For authenticated APIs, send the JWT access token:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+---
+
+# Project Goals
+
+The main goal of this project is to demonstrate:
+
+1. Django REST Framework API development
+2. Authentication and authorization
+3. Django ORM relationships
+4. Query optimization
+5. Database indexing
+6. Advanced filtering
+7. Pagination
+8. Aggregations
+9. Large dataset testing
+10. Database performance improvement
+
+---
+
+# Tasks Completed
+
+| Task   | Description                   | Status    |
+| ------ | ----------------------------- | --------- |
+| Task 1 | Basic Django / API setup      | Completed |
+| Task 2 | ORM relationships and indexes | Completed |
+| Task 3 | ORM aggregations              | Completed |
+| Task 4 | Relationship optimization     | Completed |
+| Task 5 | Database indexing             | Completed |
+| Task 6 | Advanced filtering            | Completed |
+| Task 7 | Large dataset testing         | Completed |
+| Task 8 | ORM code review               | Completed |
+
+---
+
+# Important Note
+
+This project uses Django's development server for development and testing only.
+
+For production deployment, use a proper WSGI or ASGI server and production database configuration.
+
+```
 

@@ -100,6 +100,13 @@ class Profile(models.Model):
         default=False
     )
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["is_deleted"]
+            ),
+        ]
+
     def __str__(self):
         return self.user.email
 
@@ -151,6 +158,9 @@ class DriverProfile(models.Model):
         indexes = [
             models.Index(
                 fields=["status"]
+            ),
+            models.Index(
+                fields=["status", "created_at"]
             ),
         ]
 
@@ -251,6 +261,9 @@ class Vehicle(models.Model):
             models.Index(
                 fields=["vehicle_type"]
             ),
+            models.Index(
+                fields=["driver", "vehicle_type"]
+            ),
         ]
 
     def __str__(self):
@@ -302,6 +315,10 @@ class RideStatus(models.Model):
     def __str__(self):
         return self.name
 
+
+# =========================================================
+# RIDE
+# =========================================================
 
 # =========================================================
 # RIDE
@@ -387,32 +404,60 @@ class Ride(models.Model):
     class Meta:
 
         indexes = [
+
+            # Frequently searched fields
             models.Index(
                 fields=["rider"]
             ),
+
             models.Index(
                 fields=["driver"]
             ),
+
             models.Index(
                 fields=["status"]
             ),
+
+            models.Index(
+                fields=["vehicle_type"]
+            ),
+
             models.Index(
                 fields=["created_at"]
             ),
 
-            # Task 2 performance indexes
+            # Frequently combined queries
             models.Index(
-                fields=["rider", "created_at"]
+                fields=[
+                    "rider",
+                    "created_at"
+                ]
             ),
+
             models.Index(
-                fields=["driver", "created_at"]
+                fields=[
+                    "driver",
+                    "created_at"
+                ]
             ),
+
             models.Index(
-                fields=["status", "created_at"]
+                fields=[
+                    "status",
+                    "created_at"
+                ]
+            ),
+
+            models.Index(
+                fields=[
+                    "vehicle_type",
+                    "created_at"
+                ]
             ),
         ]
 
         constraints = [
+
             models.CheckConstraint(
                 condition=models.Q(
                     fare__gte=0

@@ -16,6 +16,8 @@ from .views import (
     # DRIVER
     DriverListCreateView,
     DriverDetailView,
+    DriverTotalFareEarnedView,
+    DriverRideHistoryView,
 
     # VEHICLE
     VehicleListCreateView,
@@ -28,10 +30,20 @@ from .views import (
     RideAcceptView,
     RideCancelView,
     RideFareView,
-    SlowRideHistoryView,
-    OptimizedRideHistoryView,
-)
 
+    # RIDE HISTORY
+    UserActiveRidesView,
+    UserCompletedRidesView,
+    UserCancelledRidesView,
+    DailyRideCountView,
+    TotalCompletedRidesView,
+
+    # DATABASE OPTIMIZATION
+    DriverRideHistoryView,
+    OptimizedRideHistoryView,
+    SlowRideHistoryView,
+    RideAggregationView,
+)
 
 
 urlpatterns = [
@@ -100,6 +112,18 @@ urlpatterns = [
         DriverDetailView.as_view(),
     ),
 
+    path(
+        "driver/ride-history/",
+        DriverRideHistoryView.as_view(),
+        name="driver-ride-history",
+    ),
+
+    path(
+        "driver/total-fare/",
+        DriverTotalFareEarnedView.as_view(),
+        name="driver-total-fare",
+    ),
+
 
     # =====================================================
     # VEHICLE
@@ -133,6 +157,41 @@ urlpatterns = [
         RideListCreateView.as_view(),
     ),
 
+    # Active rides
+    path(
+        "rides/active/",
+        UserActiveRidesView.as_view(),
+        name="user-active-rides",
+    ),
+
+    # Completed rides
+    path(
+        "rides/completed/",
+        UserCompletedRidesView.as_view(),
+        name="user-completed-rides",
+    ),
+
+    # Cancelled rides
+    path(
+        "rides/cancelled/",
+        UserCancelledRidesView.as_view(),
+        name="user-cancelled-rides",
+    ),
+
+    # Daily ride count
+    path(
+        "rides/daily-count/",
+        DailyRideCountView.as_view(),
+        name="daily-ride-count",
+    ),
+
+    # Total completed rides
+    path(
+        "rides/total-completed/",
+        TotalCompletedRidesView.as_view(),
+        name="total-completed-rides",
+    ),
+
     # Ride detail
     path(
         "rides/<uuid:pk>/",
@@ -157,13 +216,31 @@ urlpatterns = [
         RideCancelView.as_view(),
         name="ride-cancel",
     ),
-    path(
-    "rides/slow-history/",
-    SlowRideHistoryView.as_view(),
-),
 
+
+    # =====================================================
+    # DATABASE OPTIMIZATION
+    # =====================================================
+
+    path(
+        "rides/slow-history/",
+        SlowRideHistoryView.as_view(),
+        name="slow-ride-history",
+    ),
+
+    path(
+        "rides/optimized-history/",
+        OptimizedRideHistoryView.as_view(),
+        name="optimized-ride-history",
+    ),
+    path(
+    "rides/aggregations/",
+    RideAggregationView.as_view(),
+    name="ride-aggregations",
+),
 path(
-    "rides/optimized-history/",
-    OptimizedRideHistoryView.as_view(),
+    "rides/driver/history/",
+    DriverRideHistoryView.as_view(),
+    name="driver-ride-history",
 ),
 ]
