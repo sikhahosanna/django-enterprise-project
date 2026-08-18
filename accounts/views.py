@@ -1,3 +1,5 @@
+import math
+
 from rest_framework import (
     generics,
     status,
@@ -26,16 +28,15 @@ from django_filters.rest_framework import (
 )
 
 from rest_framework_simplejwt.tokens import (
+
     RefreshToken,
 )
-from math import (
-    radians,
-    sin,
-    cos,
-    sqrt,
-    atan2,
-)
+
+
 from django.db import connection, reset_queries
+from asgiref.sync import async_to_sync
+
+from channels.layers import get_channel_layer
 
 from django.db.models import (
     Count,
@@ -2518,7 +2519,7 @@ class NearbyDriverView(APIView):
             .filter(
                 availability_status=(
                     DriverLocation.AvailabilityStatus.ONLINE
-                    
+
                 ),
                 driver__status=(
                     DriverProfile.DriverStatus.ACTIVE
@@ -2532,7 +2533,7 @@ class NearbyDriverView(APIView):
 
         nearby_drivers = []
 
-        # -----------------------------------------
+         # -----------------------------------------
         # DISTANCE CALCULATION
         # -----------------------------------------
 
@@ -2548,28 +2549,27 @@ class NearbyDriverView(APIView):
 
             earth_radius_km = 6371.0
 
-            lat1 = radians(latitude)
-            lat2 = radians(driver_latitude)
+            lat1 = math.radians(latitude)
+            lat2 = math.radians(driver_latitude)
 
-            delta_lat = radians(
+            delta_lat = math.radians(
                 driver_latitude - latitude
             )
 
-            delta_lon = radians(
+            delta_lon = math.radians(
                 driver_longitude - longitude
             )
 
             a = (
-                sin(delta_lat / 2) ** 2
-                +
-                cos(lat1)
-                * cos(lat2)
-                * sin(delta_lon / 2) ** 2
+                math.sin(delta_lat / 2) ** 2
+                + math.cos(lat1)
+                * math.cos(lat2)
+                * math.sin(delta_lon / 2) ** 2
             )
 
-            c = 2 * atan2(
-                sqrt(a),
-                sqrt(1 - a)
+            c = 2 * math.atan2(
+                math.sqrt(a),
+                math.sqrt(1 - a)
             )
 
             distance_km = (

@@ -520,3 +520,62 @@ class DriverLocation(models.Model):
 
     def __str__(self):
         return f"{self.driver} - {self.latitude}, {self.longitude}"
+class Notification(models.Model):
+
+    class NotificationType(models.TextChoices):
+        RIDE_REQUESTED = "ride_requested", "Ride Requested"
+        RIDE_ACCEPTED = "ride_accepted", "Ride Accepted"
+        DRIVER_ARRIVING = "driver_arriving", "Driver Arriving"
+        RIDE_STARTED = "ride_started", "Ride Started"
+        RIDE_COMPLETED = "ride_completed", "Ride Completed"
+        RIDE_CANCELLED = "ride_cancelled", "Ride Cancelled"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    ride = models.ForeignKey(
+        Ride,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=NotificationType.choices
+    )
+
+    message = models.CharField(
+        max_length=255
+    )
+
+    is_read = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "user",
+                    "ride",
+                    "notification_type",
+                ],
+                name="unique_ride_notification"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.notification_type}"

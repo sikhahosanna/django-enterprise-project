@@ -50,6 +50,7 @@ ALLOWED_HOSTS = []
 # =========================================================
 
 INSTALLED_APPS = [
+     "daphne",
 
     # Django
     "django.contrib.admin",
@@ -63,6 +64,7 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "common",
+    "channels",
 
     # REST Framework
     "rest_framework",
@@ -77,8 +79,18 @@ INSTALLED_APPS = [
     # JWT blacklist
     "rest_framework_simplejwt.token_blacklist",
 ]
+ASGI_APPLICATION = "myproject.asgi.application"
+ASGI_APPLICATION = "myproject.asgi.application"
 
+# =========================================================
+# CHANNEL LAYERS
+# =========================================================
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 # =========================================================
 # MIDDLEWARE
 # =========================================================
