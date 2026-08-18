@@ -5230,4 +5230,318 @@ Task 6 - Driver Availability        COMPLETED
 Task 7 - Location Validation        COMPLETED
 Task 8 - Performance Testing        COMPLETED
 ```
+19/08/26
+
+Sure 👍 Nee current Jira story **Real-Time Communication Using Django Channels & WebSockets** ki suitable ga `README.md` first create cheddam.
+
+Project root:
+
+```text
+C:\Users\BlackRoth\Desktop\django\myproject
+```
+
+### 1. `README.md` create cheyyi
+
+VS Code lo project root folder meeda:
+
+**Right Click → New File → `README.md`**
+
+### 2. `README.md` lo idi complete ga paste cheyyi
+
+````markdown
+# Real-Time Communication Using Django Channels & WebSockets
+
+## Overview
+
+This project implements real-time communication for a ride-booking application using Django Channels and WebSockets.
+
+The main objective is to allow mobile applications to receive real-time ride updates without repeatedly calling REST APIs.
+
+## Technology Stack
+
+- Python
+- Django
+- Django REST Framework
+- Django Channels
+- Daphne
+- WebSockets
+- Simple JWT
+- SQLite
+
+## REST API vs WebSocket
+
+### REST API
+
+```text
+Mobile Application → Request → Backend
+Mobile Application ← Response ← Backend
+````
+
+REST APIs are suitable for normal request-response operations.
+
+### WebSocket
+
+```text
+Mobile Application ←→ WebSocket Server
+        Real-time connection
+```
+
+WebSockets are useful when the application needs continuous real-time updates.
+
+## WebSocket Use Cases
+
+WebSockets are used for:
+
+* Ride status updates
+* Driver location updates
+* Real-time ride communication
+* Driver connection status
+* Passenger connection status
+
+## WebSocket Endpoints
+
+### Ride WebSocket
+
+```text
+ws://127.0.0.1:8000/ws/ride/<ride_id>/?token=<access_token>
+```
+
+This WebSocket allows authorized users to connect to a specific ride.
+
+### Driver Location WebSocket
+
+```text
+ws://127.0.0.1:8000/ws/driver/location/?token=<access_token>
+```
+
+This WebSocket is used for driver location communication.
+
+## Authentication
+
+WebSocket connections are protected using JWT access tokens.
+
+The connection verifies:
+
+1. JWT token
+2. User identity
+3. Ride existence
+4. Ride ownership
+5. Assigned driver authorization
+
+Unauthorized users are rejected.
+
+## Ride Authorization
+
+A user can connect to a ride WebSocket only when:
+
+* The user is the rider of the ride, or
+* The user is the assigned driver of the ride.
+
+Other users are rejected.
+
+## Real-Time Ride Status Updates
+
+Ride status updates are broadcast through the WebSocket channel group.
+
+Example statuses:
+
+* requested
+* accepted
+* driver_arriving
+* started
+* completed
+* cancelled
+
+## Driver Location Updates
+
+Driver location information can be communicated through WebSockets so that connected clients can receive real-time location updates.
+
+## Disconnect Handling
+
+The WebSocket implementation handles:
+
+* Mobile application closed
+* Network disconnection
+* Driver disconnection
+* Passenger disconnection
+* Invalid JWT token
+* Unauthorized connection attempts
+
+When a client disconnects, it is removed from the appropriate WebSocket channel group.
+
+## Multiple Client Testing
+
+The system is tested with multiple users:
+
+* Passenger
+* Driver
+* Admin / unauthorized user
+
+The tests verify that only authorized users receive ride-specific events.
+
+## Unauthorized User Test
+
+An unauthorized passenger attempting to connect to another user's ride is rejected.
+
+Expected result:
+
+```text
+403 Access Denied
+```
+
+This prevents users from accessing another user's ride WebSocket.
+
+## Database Models
+
+Important models include:
+
+* User
+* Profile
+* DriverProfile
+* Vehicle
+* VehicleType
+* RideStatus
+* Ride
+* DriverLocation
+* Notification
+
+## Notification Handling
+
+The notification system is designed to prevent duplicate notifications for the same event.
+
+Notifications can be retrieved and marked as read.
+
+## Running the Project
+
+### Activate Virtual Environment
+
+Windows PowerShell:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+### Run Migrations
+
+```powershell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### Check Django Configuration
+
+```powershell
+python manage.py check
+```
+
+### Start Development Server
+
+```powershell
+python manage.py runserver
+```
+
+The server runs at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Testing
+
+WebSocket connections can be tested using Postman WebSocket requests.
+
+Example:
+
+```text
+ws://127.0.0.1:8000/ws/ride/<ride_id>/?token=<access_token>
+```
+
+Test cases include:
+
+* Successful passenger connection
+* Successful driver connection
+* Invalid token
+* Unauthorized user
+* Ride ownership validation
+* Driver authorization
+* Ride status broadcast
+* Driver location broadcast
+* Disconnect
+* Reconnect
+* Multiple clients
+
+## Security
+
+The following security checks are implemented:
+
+* JWT authentication
+* User identity validation
+* Ride ownership validation
+* Driver authorization
+* Unauthorized WebSocket rejection
+
+### Important
+
+Do not commit sensitive information such as:
+
+* `.env`
+* JWT access tokens
+* Secret keys
+* Passwords
+* Database credentials
+
+## Project Status
+
+### Completed
+
+* WebSocket server configuration
+* Django Channels integration
+* Daphne ASGI server
+* JWT authentication
+* Ride ownership validation
+* Driver authorization
+* Unauthorized user rejection
+* WebSocket disconnect handling
+* Multiple-client testing setup
+* Notification model and migration
+
+### Testing / Verification
+
+* Ride status broadcast
+* Driver location broadcast
+* Passenger and driver simultaneous connections
+* Disconnect/reconnect scenarios
+* Duplicate notification prevention
+
+## Acceptance Criteria
+
+* [x] WebSocket server configured
+* [x] Authenticated WebSocket connection implemented
+* [x] Unauthorized users rejected
+* [x] Disconnect handling implemented
+* [ ] Ride status updates fully tested
+* [ ] Driver location updates fully tested
+* [ ] Multiple clients fully tested
+* [ ] Disconnect/reconnect scenarios fully verified
+
+## Author
+
+Django Real-Time Communication Project
+
+````
+
+### 3. Save
+
+```text
+Ctrl + S
+````
+
+### 4. Check Git
+
+PowerShell lo:
+
+```powershell
+git status
+```
+
 
