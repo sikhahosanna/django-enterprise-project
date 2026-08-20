@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
+
 from dotenv import load_dotenv
 
 
@@ -240,6 +241,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
 
     ),
+    
 
     "EXCEPTION_HANDLER":
         "accounts.utils.exceptions.custom_exception_handler",
@@ -259,7 +261,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS":
         "rest_framework.pagination.PageNumberPagination",
 
-    "PAGE_SIZE": 5,
+    "PAGE_SIZE": 10,
 }
 
 
@@ -434,3 +436,5 @@ LOGGING = {
         },
     },
 }
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"

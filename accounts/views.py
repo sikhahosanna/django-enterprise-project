@@ -1,4 +1,5 @@
 import math
+from .tasks import ride_notification
 
 from rest_framework import (
     generics,
@@ -28,10 +29,8 @@ from django_filters.rest_framework import (
 )
 
 from rest_framework_simplejwt.tokens import (
-
     RefreshToken,
 )
-
 
 from django.db import connection, reset_queries
 from asgiref.sync import async_to_sync
@@ -45,10 +44,7 @@ from django.db.models import (
     Min,
     Max,
     Q,
-    
 )
-
- 
 
 from django.utils import timezone
 
@@ -66,6 +62,7 @@ from .models import (
     DriverLocation,
     Vehicle,
     VehicleType,
+    Notification,              
 )
 
 from .serializers import (
@@ -81,7 +78,7 @@ from .serializers import (
     ChangePasswordSerializer,
     ProfileSerializer,
     DriverLocationSerializer,
-    DriverLocation,
+    NotificationSerializer,
 )
 
 from .services.fare_service import (
@@ -1280,6 +1277,11 @@ class RideAcceptView(APIView):
                 ride_id=pk,
                 user=request.user,
             )
+            ride_notification.delay(
+    ride_id=str(ride.id),
+    user_id=str(ride.rider.id),
+    message="Your driver has accepted the ride."
+)
 
             return success_response(
                 message="Ride accepted successfully.",
@@ -2632,4 +2634,97 @@ class NearbyDriverView(APIView):
             },
 
             status_code=status.HTTP_200_OK,
+        )
+# =========================================================
+# NOTIFICATION LIST VIEW
+# =========================================================
+class NotificationListView(generics.ListAPIView):
+
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+
+        return Notification.objects.filter(
+            user=self.request.user
+        ).order_by("-created_at")
+
+
+# =========================================================
+# NOTIFICATION MARK READ VIEW
+# =========================================================
+
+class NotificationMarkReadView(
+    generics.UpdateAPIView
+):
+
+    serializer_class = NotificationSerializer
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+
+        return Notification.objects.filter(
+            user=self.request.user
+        )
+
+    def update(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        notification = self.get_object()
+
+        notification.is_read = True
+
+        notification.save(
+            update_fields=["is_read"]
+        )
+
+        return Response(
+            {
+                "success": True,
+
+                "message":
+                    "Notification marked as read.",
+
+                "data":
+                    NotificationSerializer(
+                        notification
+                    ).data,
+            },
+
+            status=status.HTTP_200_OK,
+        )
+
+
+# =========================================================
+# NOTIFICATION MARK ALL READ VIEW
+# =========================================================
+
+class NotificationMarkAllReadView(
+    generics.GenericAPIView
+):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        updated_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).update(
+            is_read=True
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": "All notifications marked as read.",
+                "updated_count": updated_count,
+            },
+            status=status.HTTP_200_OK,
         )

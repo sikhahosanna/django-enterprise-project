@@ -45,6 +45,9 @@ from .views import (
     SlowRideHistoryView,
     RideAggregationView,
     NearbyDriverView,
+    NotificationListView,
+    NotificationMarkReadView,
+    NotificationMarkAllReadView,
 )
 
 
@@ -254,5 +257,21 @@ path(
     "drivers/nearby/",
     NearbyDriverView.as_view(),
     name="nearby-drivers",
+),
+path(
+    "notifications/",
+    NotificationListView.as_view(),
+    name="notifications",
+),
+
+path(
+    "notifications/<uuid:pk>/read/",
+    NotificationMarkReadView.as_view(),
+    name="notification-read",
+),
+path(
+    "notifications/read-all/",
+    NotificationMarkAllReadView.as_view(),
+    name="notification-read-all",
 ),
 ]

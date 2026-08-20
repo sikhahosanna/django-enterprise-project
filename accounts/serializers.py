@@ -16,11 +16,13 @@ from .models import (
     VehicleType,
     Ride,
     RideStatus,
+    Notification,
 )
 
 from .services.fare_service import (
     FareService,
 )
+
 from .utils.responses import (
     success_response,
     error_response,
@@ -534,10 +536,6 @@ class RideCreateSerializer(
             "updated_at",
         ]
 
-    # =====================================================
-    # ADDRESS VALIDATION
-    # =====================================================
-
     def validate_pickup_address(self, value):
 
         value = value.strip()
@@ -562,10 +560,6 @@ class RideCreateSerializer(
 
         return value
 
-    # =====================================================
-    # LATITUDE VALIDATION
-    # =====================================================
-
     def validate_pickup_latitude(self, value):
 
         if not -90 <= float(value) <= 90:
@@ -585,10 +579,6 @@ class RideCreateSerializer(
             )
 
         return value
-
-    # =====================================================
-    # LONGITUDE VALIDATION
-    # =====================================================
 
     def validate_pickup_longitude(self, value):
 
@@ -610,10 +600,6 @@ class RideCreateSerializer(
 
         return value
 
-    # =====================================================
-    # RIDE VALIDATION
-    # =====================================================
-
     def validate(self, attrs):
 
         request = self.context["request"]
@@ -634,10 +620,6 @@ class RideCreateSerializer(
             "dropoff_longitude"
         )
 
-        # -------------------------------------------------
-        # SAME LOCATION
-        # -------------------------------------------------
-
         if (
             pickup_latitude == dropoff_latitude
             and
@@ -649,10 +631,6 @@ class RideCreateSerializer(
                     "Pickup and drop locations "
                     "cannot be the same."
             })
-
-        # -------------------------------------------------
-        # ACTIVE RIDE
-        # -------------------------------------------------
 
         active_statuses = [
             RideStatus.Status.REQUESTED,
@@ -679,17 +657,9 @@ class RideCreateSerializer(
 
         return attrs
 
-    # =====================================================
-    # CREATE RIDE
-    # =====================================================
-
     def create(self, validated_data):
 
         request = self.context["request"]
-
-        # -------------------------------------------------
-        # GET REQUESTED STATUS
-        # -------------------------------------------------
 
         try:
 
@@ -703,10 +673,6 @@ class RideCreateSerializer(
                 "status":
                     "Requested ride status is not configured."
             })
-
-        # -------------------------------------------------
-        # CALCULATE FARE
-        # -------------------------------------------------
 
         try:
 
@@ -748,15 +714,7 @@ class RideCreateSerializer(
                     f"Fare configuration is incomplete: {exc}"
             })
 
-        # -------------------------------------------------
-        # FINAL FARE
-        # -------------------------------------------------
-
         final_fare = fare_details["total"]
-
-        # -------------------------------------------------
-        # CREATE RIDE
-        # -------------------------------------------------
 
         ride = Ride.objects.create(
 
@@ -896,10 +854,6 @@ class RideDetailSerializer(
             "updated_at",
         ]
 
-    # =====================================================
-    # PASSENGER
-    # =====================================================
-
     def get_passenger(self, obj):
 
         try:
@@ -923,50 +877,6 @@ class RideDetailSerializer(
                 "last_name": "",
                 "phone": "",
             }
-# =========================================================
-# DRIVER LOCATION SERIALIZER
-# =========================================================
-
-class DriverLocationSerializer(serializers.ModelSerializer):
-
-    class Meta:
-
-        model = DriverLocation
-
-        fields = [
-            "id",
-            "driver",
-            "latitude",
-            "longitude",
-            "last_updated",
-            "availability_status",
-        ]
-
-        read_only_fields = [
-            "id",
-            "last_updated",
-        ]
-
-    def validate_latitude(self, value):
-
-        if not -90 <= float(value) <= 90:
-            raise serializers.ValidationError(
-                "Latitude must be between -90 and 90."
-            )
-
-        return value
-
-    def validate_longitude(self, value):
-
-        if not -180 <= float(value) <= 180:
-            raise serializers.ValidationError(
-                "Longitude must be between -180 and 180."
-            )
-
-        return value
-    # =====================================================
-    # VEHICLE
-    # =====================================================
 
     def get_vehicle(self, obj):
 
@@ -997,14 +907,59 @@ class DriverLocationSerializer(serializers.ModelSerializer):
 
 
 # =========================================================
-# RIDE STATUS UPDATE SERIALIZER
+# DRIVER LOCATION SERIALIZER
 # =========================================================
+
+class DriverLocationSerializer(
+    serializers.ModelSerializer
+):
+
+    class Meta:
+
+        model = DriverLocation
+
+        fields = [
+            "id",
+            "driver",
+            "latitude",
+            "longitude",
+            "last_updated",
+            "availability_status",
+        ]
+
+        read_only_fields = [
+            "id",
+            "last_updated",
+        ]
+
+    def validate_latitude(self, value):
+
+        if not -90 <= float(value) <= 90:
+
+            raise serializers.ValidationError(
+                "Latitude must be between -90 and 90."
+            )
+
+        return value
+
+    def validate_longitude(self, value):
+
+        if not -180 <= float(value) <= 180:
+
+            raise serializers.ValidationError(
+                "Longitude must be between -180 and 180."
+            )
+
+        return value
+
 
 # =========================================================
 # RIDE STATUS UPDATE SERIALIZER
 # =========================================================
 
-class RideStatusUpdateSerializer(serializers.Serializer):
+class RideStatusUpdateSerializer(
+    serializers.Serializer
+):
 
     status = serializers.ChoiceField(
         choices=RideStatus.Status.choices
@@ -1017,10 +972,6 @@ class RideStatusUpdateSerializer(serializers.Serializer):
         ride = self.context["ride"]
 
         current_status = ride.status.name
-
-        # -------------------------------------------------
-        # ALLOWED TRANSITIONS
-        # -------------------------------------------------
 
         allowed_transitions = {
 
@@ -1066,12 +1017,32 @@ class RideStatusUpdateSerializer(serializers.Serializer):
             })
 
         return attrs
-class DriverLocationSerializer(serializers.ModelSerializer):
+
+
+# =========================================================
+# NOTIFICATION SERIALIZER
+# =========================================================
+
+class NotificationSerializer(
+    serializers.ModelSerializer
+):
 
     class Meta:
-        model = DriverLocation
+
+        model = Notification
 
         fields = [
-            "latitude",
-            "longitude",
+            "id",
+            "user",
+            "title",
+            "message",
+            "notification_type",
+            "is_read",
+            "created_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "user",
+            "created_at",
         ]
