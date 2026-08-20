@@ -5543,5 +5543,390 @@ PowerShell lo:
 ```powershell
 git status
 ```
+20/8/26
+
+
+
+## 1. Project Overview
+
+This module implements **asynchronous notification processing** for the ride-booking application.
+
+The main objective is to process notification events in the background so that API requests can return quickly without waiting for notification processing to complete.
+
+### Processing Flow
+
+```text
+Mobile App
+    ↓
+API Request
+    ↓
+Create Background Job
+    ↓
+Immediate API Response
+    ↓
+Background Worker
+    ↓
+Create Notification
+    ↓
+Mobile User Receives Notification
+```
+
+---
+
+# 2. Features Implemented
+
+* Notification model
+* Notification REST APIs
+* Pagination
+* Background task processing
+* Ride notification handling
+* Driver assignment notification
+* Ride completion notification
+* Reminder notification
+* Retry handling
+* Duplicate notification prevention
+* Notification retrieval
+* Mark notification as read
+* Read all notifications
+* Testing
+
+---
+
+# 3. Notification Model
+
+The `Notification` model contains the following fields:
+
+| Field             | Description                                 |
+| ----------------- | ------------------------------------------- |
+| User              | User who receives the notification          |
+| Ride              | Related ride                                |
+| Notification Type | Type of notification                        |
+| Message           | Notification message                        |
+| Is Read           | Indicates whether the notification was read |
+| Created At        | Notification creation time                  |
+
+### Notification Types
+
+Examples:
+
+```text
+JOB_SUCCESS
+JOB_FAILED
+JOB_RETRY
+```
+
+---
+
+# 4. Notification APIs
+
+### Get Notifications
+
+```http
+GET /api/notifications/
+```
+
+Returns notifications for the authenticated user.
+
+Pagination is supported.
+
+---
+
+### Mark Notification as Read
+
+```http
+PATCH /api/notifications/{id}/read/
+```
+
+Marks a specific notification as read.
+
+Example:
+
+```text
+is_read: false
+        ↓
+PATCH request
+        ↓
+is_read: true
+```
+
+---
+
+### Mark All Notifications as Read
+
+```http
+POST /api/notifications/read-all/
+```
+
+Marks all notifications belonging to the authenticated user as read.
+
+---
+
+# 5. Background Processing
+
+Background processing is used so notification creation does not block the main API request.
+
+### Ride Notification
+
+```text
+Ride Event
+    ↓
+Background Task
+    ↓
+Create Notification
+    ↓
+Notify User
+```
+
+### Driver Assignment
+
+```text
+Driver Assigned
+    ↓
+Background Task
+    ↓
+Passenger Notification
+```
+
+### Ride Completion
+
+```text
+Ride Completed
+    ↓
+Background Task
+    ↓
+Passenger Notification
+```
+
+### Reminder
+
+```text
+Reminder Event
+    ↓
+Background Task
+    ↓
+Create Reminder Notification
+```
+
+---
+
+# 6. Retry Handling
+
+Failed background jobs are retried automatically.
+
+### Retry Flow
+
+```text
+Attempt 1
+   ↓
+ Failed
+   ↓
+Retry
+   ↓
+Attempt 2
+   ↓
+ Failed
+   ↓
+Retry
+   ↓
+Attempt 3
+   ↓
+ Success
+```
+
+Retry handling prevents temporary failures from permanently stopping notification processing.
+
+---
+
+# 7. Duplicate Notification Prevention
+
+Duplicate notifications are prevented using a unique constraint based on:
+
+```text
+User
++
+Ride
++
+Notification Type
+```
+
+The database constraint used is:
+
+```text
+unique_ride_notification
+```
+
+### Example
+
+```text
+First Event
+    ↓
+JOB_SUCCESS Notification
+    ↓
+Created Successfully
+```
+
+If the same event occurs again:
+
+```text
+Same User + Same Ride + Same Notification Type
+                    ↓
+              Duplicate Request
+                    ↓
+                Rejected
+```
+
+This ensures that the same ride event does not create multiple identical notifications.
+
+---
+
+# 8. Testing
+
+The notification system was tested for the following scenarios.
+
+## 8.1 Successful Job
+
+A successful job notification was created successfully.
+
+```text
+JOB_SUCCESS
+```
+
+**Expected Result:** Notification is stored successfully.
+
+**Result:** ✅ PASS
+
+---
+
+## 8.2 Failed Job
+
+A failed job notification was created.
+
+```text
+JOB_FAILED
+```
+
+**Expected Result:** Failed notification is stored correctly.
+
+**Result:** ✅ PASS
+
+---
+
+## 8.3 Retry
+
+Retry handling was tested for failed jobs.
+
+```text
+Attempt 1 → Failed
+Attempt 2 → Failed
+Attempt 3 → Success
+```
+
+**Expected Result:** Failed jobs are retried according to the configured retry mechanism.
+
+**Result:** ✅ PASS
+
+---
+
+## 8.4 Duplicate Prevention
+
+The same `JOB_SUCCESS` notification was attempted twice for the same user and ride.
+
+The second notification was rejected because of:
+
+```text
+unique_ride_notification
+```
+
+**Expected Result:** Only one notification exists for the same event.
+
+**Result:** ✅ PASS
+
+---
+
+## 8.5 Notification Retrieval
+
+The following API was tested:
+
+```http
+GET /api/notifications/
+```
+
+**Expected Result:**
+
+* Authenticated user can retrieve notifications.
+* Notifications are returned with pagination.
+* User receives only their own notifications.
+
+**Result:** ✅ PASS
+
+---
+
+## 8.6 Mark as Read
+
+The following API was tested:
+
+```http
+PATCH /api/notifications/{id}/read/
+```
+
+### Before
+
+```json
+{
+    "is_read": false
+}
+```
+
+### After
+
+```json
+{
+    "is_read": true
+}
+```
+
+**Expected Result:** Notification is successfully marked as read.
+
+**Result:** ✅ PASS
+
+---
+
+# 9. Test Summary
+
+| Test Case              | Result |
+| ---------------------- | ------ |
+| Successful Job         | ✅ PASS |
+| Failed Job             | ✅ PASS |
+| Retry                  | ✅ PASS |
+| Duplicate Prevention   | ✅ PASS |
+| Notification Retrieval | ✅ PASS |
+| Mark as Read           | ✅ PASS |
+
+---
+
+# 10. Acceptance Criteria
+
+| Acceptance Criteria                | Status      |
+| ---------------------------------- | ----------- |
+| Notification module completed      | ✅ Completed |
+| Background worker configured       | ✅ Completed |
+| Redis integration completed        | ✅ Completed |
+| Asynchronous notifications working | ✅ Completed |
+| Retry mechanism implemented        | ✅ Completed |
+| Duplicate notifications prevented  | ✅ Completed |
+| Notification APIs tested           | ✅ Completed |
+
+---
+
+# 11. Final Status
+
+```text
+Notifications & Background Processing
+                ↓
+             COMPLETED
+```
+
+
+
 
 
