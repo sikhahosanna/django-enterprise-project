@@ -5926,6 +5926,558 @@ Notifications & Background Processing
              COMPLETED
 ```
 
+21/8/26
+
+
+# 21-Aug-2026 — Friday
+
+# Jira Story: Caching, API Performance & Advanced Backend Testing
+
+## Objective
+
+Combine the concepts learned during the week to improve backend performance,
+reliability, security, and code quality.
+
+---
+
+# Task 1 — Understand Caching
+
+## Definition
+
+Caching is a technique used to temporarily store frequently requested data
+in a fast storage system such as Redis.
+
+Instead of requesting the same data from PostgreSQL every time, the application
+can retrieve it from the cache.
+
+## Flow
+
+Database
+    ↓
+Cache
+    ↓
+API
+
+## Cache Benefits
+
+- Reduces database queries
+- Improves API response time
+- Reduces database load
+- Improves application performance
+
+## Example
+
+Frequently requested data such as driver locations can be stored in Redis
+and reused for a short period of time.
+
+---
+
+# Task 2 — Configure Redis Cache
+
+## Definition
+
+Redis is an in-memory data store that can be used as a caching system.
+
+It stores frequently accessed data in memory, making data retrieval much
+faster than querying the database repeatedly.
+
+## Suitable APIs for Caching
+
+- Nearby drivers
+- Vehicle types
+- Ride configuration
+- Frequently accessed profile information
+
+## Cache Configuration
+
+The Django application was configured to use Redis as the cache backend.
+
+## Example
+
+```python
+from django.core.cache import cache
+
+cache.set("example_key", data, 300)
+
+data = cache.get("example_key")
+````
+
+The value is stored for 300 seconds.
+
+---
+
+# Task 3 — Cache Nearby Drivers
+
+## Definition
+
+Nearby driver information can be requested frequently by passengers.
+Caching this information reduces repeated database queries.
+
+## Cache Strategy
+
+```text
+Nearby Drivers API
+        ↓
+Check Cache
+        ↓
+   Cache exists?
+    /       \
+  Yes        No
+   ↓          ↓
+Cache Hit   Database
+              ↓
+        Calculate Distance
+              ↓
+          Store in Cache
+              ↓
+           Response
+```
+
+## Cache Hit
+
+A cache hit occurs when the requested data already exists in Redis.
+
+```text
+API Request
+    ↓
+Redis
+    ↓
+Data Found
+    ↓
+Cache HIT
+    ↓
+Response
+```
+
+## Cache Miss
+
+A cache miss occurs when the requested data is not available in Redis.
+
+```text
+API Request
+    ↓
+Redis
+    ↓
+Data Not Found
+    ↓
+Cache MISS
+    ↓
+Database
+    ↓
+Store Data in Cache
+    ↓
+Response
+```
+
+## Cache Expiration
+
+Cache expiration defines how long cached data remains valid.
+
+Example:
+
+```python
+cache.set(cache_key, nearby_drivers, 60)
+```
+
+The cached nearby driver data expires after 60 seconds.
+
+---
+
+# Task 4 — Cache Invalidation
+
+## Definition
+
+Cache invalidation is the process of removing or updating outdated data
+from the cache.
+
+This is important when the underlying database data changes.
+
+## Driver Location Update
+
+```text
+Driver Location Update
+        ↓
+Invalidate Old Cache
+        ↓
+Create / Refresh New Cache
+        ↓
+Updated Driver Information
+```
+
+## Why Cache Invalidation Is Required
+
+Without invalidation, the API may return old driver locations or outdated
+availability information.
+
+## Example
+
+When a driver's location changes:
+
+```python
+cache.delete(cache_key)
+```
+
+The next API request will fetch fresh information from the database and
+store the updated result in Redis.
+
+---
+
+# Task 5 — API Performance Benchmark
+
+## Definition
+
+API performance benchmarking is the process of measuring and comparing
+API performance before and after optimization.
+
+## Comparison
+
+```text
+Without Cache
+      vs
+With Cache
+```
+
+## Metrics
+
+The following metrics are measured:
+
+* Response time
+* Database query count
+* Cache hits
+* Cache misses
+
+## Without Cache
+
+```text
+API
+ ↓
+PostgreSQL
+ ↓
+Response
+```
+
+Every request may require database queries.
+
+## With Cache
+
+```text
+API
+ ↓
+Redis
+ ↓
+Response
+```
+
+When the cache contains the required data, the database query can be avoided.
+
+## Expected Result
+
+With caching:
+
+* Response time should decrease
+* Database queries should decrease
+* Cache hits should increase
+* Database load should decrease
+
+---
+
+# Task 6 — Complete Backend Test Suite
+
+## Definition
+
+A backend test suite is a collection of automated tests used to verify
+that different parts of the application work correctly.
+
+## Areas Tested
+
+```text
+Authentication
+Profiles
+Drivers
+Vehicles
+Rides
+Fare
+Location
+Notifications
+WebSockets
+Permissions
+```
+
+## Positive Tests
+
+Positive tests verify that valid requests produce the expected result.
+
+Example:
+
+```text
+Valid JWT
+    ↓
+Authenticated API Request
+    ↓
+200 OK
+```
+
+## Negative Tests
+
+Negative tests verify that invalid or unauthorized requests are handled
+correctly.
+
+Example:
+
+```text
+Invalid JWT
+    ↓
+401 Unauthorized
+```
+
+Another example:
+
+```text
+User A tries to access User B's ride
+    ↓
+403 Forbidden
+```
+
+## Testing Goals
+
+* Verify correct functionality
+* Detect bugs
+* Verify error handling
+* Verify permissions
+* Prevent regressions
+
+---
+
+# Task 7 — Security Testing
+
+## Definition
+
+Security testing verifies that APIs and WebSocket connections cannot be
+accessed or manipulated by unauthorized users.
+
+## Security Tests
+
+### Unauthorized API Access
+
+Verify that protected APIs cannot be accessed without authentication.
+
+```text
+No JWT
+    ↓
+API Request
+    ↓
+401 Unauthorized
+```
+
+### Invalid JWT
+
+Verify that invalid or expired JWT tokens are rejected.
+
+```text
+Invalid JWT
+    ↓
+API Request
+    ↓
+401 Unauthorized
+```
+
+### User Accessing Another User's Ride
+
+Verify that users can access only their own rides.
+
+```text
+User A
+  ↓
+User B's Ride
+  ↓
+Access Denied
+```
+
+### Driver Accessing Another Driver's Data
+
+Verify that drivers cannot access or modify another driver's information.
+
+### Invalid WebSocket Connection
+
+Verify that invalid WebSocket authentication or unauthorized connections
+are rejected.
+
+### Invalid Request Payloads
+
+Test missing, invalid, or incorrect request values.
+
+Example:
+
+```text
+Invalid Latitude
+Invalid Longitude
+Missing Required Field
+Invalid Ride Status
+```
+
+### Excessive API Requests
+
+Test whether APIs can handle excessive requests safely and determine
+whether rate limiting or throttling is required.
+
+## Security Goal
+
+Every discovered security issue should be fixed and tested again.
+
+---
+
+# Task 8 — Final Weekly Code Review
+
+## Definition
+
+A final code review is the process of reviewing the complete backend
+application to ensure that the code is clean, secure, maintainable,
+and follows good development practices.
+
+## Review Areas
+
+### Architecture
+
+Check whether the application structure is organized correctly and whether
+business logic is separated from API views where appropriate.
+
+### Naming
+
+Check that classes, functions, variables, models, and files use clear
+and meaningful names.
+
+### Database Queries
+
+Check for:
+
+* Unnecessary queries
+* N+1 query problems
+* Missing select_related()
+* Missing prefetch_related()
+* Unnecessary database access
+
+### API Responses
+
+Check that APIs return consistent:
+
+* Status codes
+* Response formats
+* Success messages
+* Error messages
+
+### Error Handling
+
+Verify that expected errors are handled properly without exposing
+unnecessary internal information.
+
+### Security
+
+Review:
+
+* Authentication
+* Authorization
+* JWT validation
+* Object-level permissions
+* WebSocket authentication
+* Input validation
+
+### Logging
+
+Verify that important application events and errors can be tracked
+through appropriate logging.
+
+### Tests
+
+Check that important functionality has both positive and negative tests.
+
+### Documentation
+
+Verify that important APIs, architecture decisions, setup instructions,
+and configuration details are documented.
+
+### Git Commits
+
+Review Git history to ensure commits are meaningful and changes are
+properly tracked.
+
+## Architectural Decision Review
+
+Each major architectural decision should have a clear reason.
+
+Examples:
+
+### Redis
+
+Redis was selected for caching because it provides fast in-memory data
+access and helps reduce repeated database queries.
+
+### Cache Expiration
+
+A short cache expiration time is used for frequently changing driver
+location data to reduce the chance of serving stale information.
+
+### Database Optimization
+
+`select_related()` is used where appropriate to reduce unnecessary
+database queries for related objects.
+
+### Background Processing
+
+Background tasks are used for operations that do not need to block the
+main API response.
+
+---
+
+# Acceptance Criteria
+
+* Redis caching implemented
+* Cache invalidation handled
+* API performance benchmark completed
+* Complete backend test suite created
+* Positive and negative tests implemented
+* Security testing completed
+* Bugs identified and fixed
+* Code reviewed and refactored
+* Architecture documentation updated
+* Git changes committed and pushed
+
+---
+
+# Key Concepts
+
+| Concept            | Definition                                                      |
+| ------------------ | --------------------------------------------------------------- |
+| Cache              | Temporary storage for frequently accessed data                  |
+| Redis              | In-memory data store commonly used for caching                  |
+| Cache Hit          | Requested data is found in the cache                            |
+| Cache Miss         | Requested data is not found in the cache                        |
+| Cache Expiration   | Time after which cached data becomes invalid                    |
+| Cache Invalidation | Removing or updating outdated cached data                       |
+| Benchmark          | Measuring and comparing system performance                      |
+| Positive Test      | Test using valid input and expected behavior                    |
+| Negative Test      | Test using invalid input or unauthorized behavior               |
+| Security Testing   | Testing the system for security vulnerabilities                 |
+| Code Review        | Reviewing code for quality, security, and maintainability       |
+| API Performance    | Measuring how quickly and efficiently an API responds           |
+| N+1 Query          | Problem where one query causes many additional database queries |
+
+---
+
+# Final Outcome
+
+The backend was reviewed and improved for:
+
+* Performance
+* Reliability
+* Security
+* Scalability
+* Maintainability
+* Testing
+* Documentation
+* Code quality
+
+```
+```
 
 
 
