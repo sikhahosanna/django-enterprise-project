@@ -4,12 +4,22 @@ from .models import Notification
 
 
 @shared_task
+
 def ride_notification(ride_id, user_id, message):
-    print(
-        f"Ride notification: ride={ride_id}, "
-        f"user={user_id}, message={message}"
+
+    notification, created = Notification.objects.get_or_create(
+        user_id=user_id,
+        ride_id=ride_id,
+        notification_type=Notification.NotificationType.RIDE_ACCEPTED,
+        defaults={
+            "message": message,
+        },
     )
-    return "Ride notification sent"
+
+    return {
+        "notification_id": str(notification.id),
+        "created": created,
+    }
 
 
 @shared_task

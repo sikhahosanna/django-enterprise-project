@@ -1,0 +1,230 @@
+[1mdiff --git a/accounts/models.py b/accounts/models.py[m
+[1mindex e08dc32..5756393 100644[m
+[1m--- a/accounts/models.py[m
+[1m+++ b/accounts/models.py[m
+[36m@@ -578,4 +578,5 @@[m [mclass Notification(models.Model):[m
+         ][m
+ [m
+     def __str__(self):[m
+[31m-        return f"{self.user.email} - {self.notification_type}"[m
+\ No newline at end of file[m
+[32m+[m[32m        return f"{self.user.email} - {self.notification_type}"[m
+[41m+  [m
+\ No newline at end of file[m
+[1mdiff --git a/accounts/serializers.py b/accounts/serializers.py[m
+[1mindex a73f4c1..d28b15f 100644[m
+[1m--- a/accounts/serializers.py[m
+[1m+++ b/accounts/serializers.py[m
+[36m@@ -1034,9 +1034,9 @@[m [mclass NotificationSerializer([m
+         fields = [[m
+             "id",[m
+             "user",[m
+[31m-            "title",[m
+[31m-            "message",[m
+[32m+[m[32m            "ride",[m
+             "notification_type",[m
+[32m+[m[32m            "message",[m
+             "is_read",[m
+             "created_at",[m
+         ][m
+[36m@@ -1044,5 +1044,6 @@[m [mclass NotificationSerializer([m
+         read_only_fields = [[m
+             "id",[m
+             "user",[m
+[32m+[m[32m            "ride",[m
+             "created_at",[m
+         ][m
+\ No newline at end of file[m
+[1mdiff --git a/accounts/tasks.py b/accounts/tasks.py[m
+[1mindex df7907a..a779e83 100644[m
+[1m--- a/accounts/tasks.py[m
+[1m+++ b/accounts/tasks.py[m
+[36m@@ -4,12 +4,22 @@[m [mfrom .models import Notification[m
+ [m
+ [m
+ @shared_task[m
+[32m+[m
+ def ride_notification(ride_id, user_id, message):[m
+[31m-    print([m
+[31m-        f"Ride notification: ride={ride_id}, "[m
+[31m-        f"user={user_id}, message={message}"[m
+[32m+[m
+[32m+[m[32m    notification, created = Notification.objects.get_or_create([m
+[32m+[m[32m        user_id=user_id,[m
+[32m+[m[32m        ride_id=ride_id,[m
+[32m+[m[32m        notification_type=Notification.NotificationType.RIDE_ACCEPTED,[m
+[32m+[m[32m        defaults={[m
+[32m+[m[32m            "message": message,[m
+[32m+[m[32m        },[m
+     )[m
+[31m-    return "Ride notification sent"[m
+[32m+[m
+[32m+[m[32m    return {[m
+[32m+[m[32m        "notification_id": str(notification.id),[m
+[32m+[m[32m        "created": created,[m
+[32m+[m[32m    }[m
+ [m
+ [m
+ @shared_task[m
+[1mdiff --git a/accounts/urls.py b/accounts/urls.py[m
+[1mindex 86b3fca..d927f56 100644[m
+[1m--- a/accounts/urls.py[m
+[1m+++ b/accounts/urls.py[m
+[36m@@ -33,11 +33,13 @@[m [mfrom .views import ([m
+     RideFareView,[m
+ [m
+     # RIDE HISTORY[m
+[32m+[m[32m    RideHistoryView,[m
+     UserActiveRidesView,[m
+     UserCompletedRidesView,[m
+     UserCancelledRidesView,[m
+     DailyRideCountView,[m
+     TotalCompletedRidesView,[m
+[32m+[m[41m    [m
+ [m
+     # DATABASE OPTIMIZATION[m
+     DriverRideHistoryView,[m
+[36m@@ -65,6 +67,7 @@[m [murlpatterns = [[m
+     path([m
+         "login/",[m
+         LoginView.as_view(),[m
+[32m+[m[32m        name="login",[m
+     ),[m
+ [m
+     path([m
+[36m@@ -168,6 +171,12 @@[m [murlpatterns = [[m
+         UserActiveRidesView.as_view(),[m
+         name="user-active-rides",[m
+     ),[m
+[32m+[m[32m    # Ride history[m
+[32m+[m[32mpath([m
+[32m+[m[32m    "rides/history/",[m
+[32m+[m[32m    RideHistoryView.as_view(),[m
+[32m+[m[32m    name="ride-history",[m
+[32m+[m[32m),[m
+ [m
+     # Completed rides[m
+     path([m
+[1mdiff --git a/accounts/views.py b/accounts/views.py[m
+[1mindex 6f08729..002fb74 100644[m
+[1m--- a/accounts/views.py[m
+[1m+++ b/accounts/views.py[m
+[36m@@ -1,13 +1,14 @@[m
+ import math[m
+[32m+[m[32mimport time[m
+ from .tasks import ride_notification[m
+[32m+[m[32mfrom django.core.cache import cache[m
+ [m
+ from rest_framework import ([m
+     generics,[m
+     status,[m
+     filters,[m
+ )[m
+[31m-[m
+[31m-from rest_framework.parsers import ([m
+[32m+[m[32mfrom rest_framework.parsers import([m
+     MultiPartParser,[m
+     FormParser,[m
+ )[m
+[36m@@ -33,8 +34,8 @@[m [mfrom rest_framework_simplejwt.tokens import ([m
+ )[m
+ [m
+ from django.db import connection, reset_queries[m
+[31m-from asgiref.sync import async_to_sync[m
+ [m
+[32m+[m[32mfrom asgiref.sync import async_to_sync[m
+ from channels.layers import get_channel_layer[m
+ [m
+ from django.db.models import ([m
+[36m@@ -95,6 +96,7 @@[m [mfrom .utils.responses import ([m
+ )[m
+ [m
+ [m
+[32m+[m
+ # =========================================================[m
+ # PAGINATION[m
+ # =========================================================[m
+[36m@@ -878,11 +880,6 @@[m [mclass VehicleDetailView([m
+             driver=driver[m
+         )[m
+ [m
+[31m-[m
+[31m-# =========================================================[m
+[31m-# RIDE LIST + CREATE[m
+[31m-# =========================================================[m
+[31m-[m
+ # =========================================================[m
+ # TASK 6 - ADVANCED RIDE FILTERING[m
+ # =========================================================[m
+[36m@@ -913,10 +910,9 @@[m [mclass RideListCreateView([m
+                 rider=self.request.user[m
+             )[m
+         )[m
+[31m-[m
+[31m-        # =================================================[m
+[31m-        # STATUS FILTER[m
+[31m-        # =================================================[m
+[32m+[m[32m# =================================================[m
+[32m+[m[32m# STATUS FILTER[m
+[32m+[m[32m# =================================================[m
+ [m
+         status_value = self.request.query_params.get([m
+             "status"[m
+[36m@@ -928,9 +924,9 @@[m [mclass RideListCreateView([m
+                 status__name=status_value[m
+             )[m
+ [m
+[31m-        # =================================================[m
+[31m-        # DRIVER FILTER[m
+[31m-        # =================================================[m
+[32m+[m[32m# =================================================[m
+[32m+[m[32m# DRIVER FILTER[m
+[32m+[m[32m# =================================================[m
+ [m
+         driver_id = self.request.query_params.get([m
+             "driver"[m
+[36m@@ -942,9 +938,9 @@[m [mclass RideListCreateView([m
+                 driver_id=driver_id[m
+             )[m
+ [m
+[31m-        # =================================================[m
+[31m-        # START DATE FILTER[m
+[31m-        # =================================================[m
+[32m+[m[32m# =================================================[m
+[32m+[m[32m# START DATE FILTER[m
+[32m+[m[32m# =================================================[m
+ [m
+         start_date = self.request.query_params.get([m
+             "start_date"[m
+[36m@@ -956,9 +952,9 @@[m [mclass RideListCreateView([m
+                 created_at__date__gte=start_date[m
+             )[m
+ [m
+[31m-        # =================================================[m
+[31m-        # END DATE FILTER[m
+[31m-        # =================================================[m
+[32m+[m[32m# =================================================[m
+[32m+[m[32m# END DATE FILTER[m
+[32m+[m[32m# # =================================================[m
+ [m
+         end_date = self.request.query_params.get([m
+             "end_date"[m
+[36m@@ -969,10 +965,9 @@[m [mclass RideListCreateView([m
+             queryset = queryset.filter([m
+                 created_at__date__lte=end_date[m
+             )[m
+[31m-[m
+[31m-        # =================================================[m
+[31m-        # MIN FARE FILTER[m
+[31m-        # =================================================[m
+[32m+[m[32m# =================================================[m
+[32m+[m[32m# MIN FARE FILTER[m
+[32m+[m[32m# =================================================[m
+ [m
+         min_fare = self.request.query_params.get([m
+             "min_fare"[m
+[36m@@ -984,9 +979,9 @@[m [mclass RideListCreateView([m
+                 fare__gte=min_fare[m
+             )[m
+ [m
+[31m-        # =======================================

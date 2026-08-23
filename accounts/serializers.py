@@ -1034,9 +1034,9 @@ class NotificationSerializer(
         fields = [
             "id",
             "user",
-            "title",
-            "message",
+            "ride",
             "notification_type",
+            "message",
             "is_read",
             "created_at",
         ]
@@ -1044,5 +1044,6 @@ class NotificationSerializer(
         read_only_fields = [
             "id",
             "user",
+            "ride",
             "created_at",
         ]

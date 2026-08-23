@@ -6478,6 +6478,576 @@ The backend was reviewed and improved for:
 
 ```
 ```
+24/8/26
+
+
+````markdown
+# Important Definitions
+
+## 1. API
+
+### Definition
+API (Application Programming Interface) is a way for two applications to communicate with each other.
+
+### Example
+A mobile application sends:
+
+```text
+GET /api/rides/
+````
+
+The Django backend returns ride information as JSON.
+
+---
+
+## 2. REST API
+
+### Definition
+
+REST API is an API style that uses HTTP methods such as GET, POST, PATCH, and DELETE to work with resources.
+
+### Example
+
+```text
+GET    /api/rides/              -> Get rides
+POST   /api/rides/              -> Create a ride
+PATCH  /api/rides/{id}/         -> Update data
+DELETE /api/vehicles/{id}/      -> Delete a vehicle
+```
+
+---
+
+## 3. JWT Authentication
+
+### Definition
+
+JWT (JSON Web Token) is a token-based authentication method used to securely identify a logged-in user.
+
+### Example
+
+After login:
+
+```json
+{
+    "access": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+The client sends this token with protected API requests:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+---
+
+## 4. QuerySet
+
+### Definition
+
+A QuerySet is Django ORM's representation of a collection of database records.
+
+### Example
+
+```python
+rides = Ride.objects.filter(
+    rider=request.user
+)
+```
+
+This retrieves rides belonging to the logged-in user.
+
+---
+
+## 5. Advanced QuerySet
+
+### Definition
+
+Advanced QuerySets allow filtering, ordering, aggregation, and optimization of database queries using Django ORM.
+
+### Example
+
+```python
+Ride.objects.filter(
+    rider=request.user,
+    fare__gte=100
+).order_by("-created_at")
+```
+
+This retrieves the user's rides with fare greater than or equal to 100 and sorts them by newest first.
+
+---
+
+## 6. ORM
+
+### Definition
+
+ORM (Object Relational Mapping) allows developers to interact with the database using Python objects instead of writing raw SQL.
+
+### Example
+
+Instead of:
+
+```sql
+SELECT * FROM ride WHERE fare >= 100;
+```
+
+Django ORM uses:
+
+```python
+Ride.objects.filter(
+    fare__gte=100
+)
+```
+
+---
+
+## 7. `select_related()`
+
+### Definition
+
+`select_related()` is a Django ORM optimization technique that loads related foreign-key objects using a SQL JOIN.
+
+It reduces additional database queries.
+
+### Example
+
+Without optimization:
+
+```python
+rides = Ride.objects.all()
+
+for ride in rides:
+    print(ride.driver.user.email)
+```
+
+This can cause additional queries.
+
+Optimized:
+
+```python
+rides = Ride.objects.select_related(
+    "driver",
+    "driver__user"
+)
+```
+
+Now related driver and user data are fetched efficiently.
+
+---
+
+## 8. N+1 Query Problem
+
+### Definition
+
+N+1 query problem happens when one query retrieves a list of records and additional queries are executed for each record to retrieve related data.
+
+### Example
+
+```python
+rides = Ride.objects.all()
+
+for ride in rides:
+    print(ride.driver.user.email)
+```
+
+If there are 100 rides, this can result in many database queries.
+
+### Solution
+
+```python
+rides = Ride.objects.select_related(
+    "driver",
+    "driver__user"
+)
+```
+
+This reduces the number of database queries.
+
+---
+
+## 9. Database Index
+
+### Definition
+
+A database index is a data structure that helps the database find records faster.
+
+### Example
+
+If rides are frequently searched by creation date:
+
+```python
+class Meta:
+    indexes = [
+        models.Index(
+            fields=["created_at"]
+        ),
+    ]
+```
+
+The database can find records based on `created_at` more efficiently.
+
+---
+
+## 10. Aggregation
+
+### Definition
+
+Aggregation calculates summary information from multiple database records.
+
+Common Django aggregation functions are:
+
+```text
+Count
+Sum
+Avg
+Min
+Max
+```
+
+### Example
+
+```python
+Ride.objects.aggregate(
+    total_rides=Count("id"),
+    average_fare=Avg("fare"),
+    maximum_fare=Max("fare"),
+    minimum_fare=Min("fare")
+)
+```
+
+Example result:
+
+```json
+{
+    "total_rides": 50,
+    "average_fare": "250.00",
+    "maximum_fare": "600.00",
+    "minimum_fare": "100.00"
+}
+```
+
+---
+
+## 11. Filtering
+
+### Definition
+
+Filtering means retrieving only records that satisfy specific conditions.
+
+### Example
+
+```python
+Ride.objects.filter(
+    status__name="COMPLETED"
+)
+```
+
+This returns only completed rides.
+
+---
+
+## 12. Pagination
+
+### Definition
+
+Pagination divides a large number of records into smaller pages.
+
+### Example
+
+```text
+GET /api/rides/history/?page=1&page_size=10
+```
+
+If there are 100 rides:
+
+```text
+Page 1 -> Rides 1-10
+Page 2 -> Rides 11-20
+Page 3 -> Rides 21-30
+...
+```
+
+This improves API performance and reduces response size.
+
+---
+
+## 13. Caching
+
+### Definition
+
+Caching stores frequently requested data temporarily so that it can be returned faster without querying the database every time.
+
+### Example
+
+```python
+data = cache.get(cache_key)
+
+if data is None:
+    data = get_data_from_database()
+    cache.set(cache_key, data, 60)
+```
+
+First request:
+
+```text
+Cache MISS -> Database -> Cache
+```
+
+Second request:
+
+```text
+Cache HIT -> Cache
+```
+
+---
+
+## 14. Cache Hit
+
+### Definition
+
+A cache hit happens when requested data already exists in the cache.
+
+### Example
+
+```text
+Request
+   ↓
+Redis Cache
+   ↓
+Data found
+   ↓
+Return cached data
+```
+
+---
+
+## 15. Cache Miss
+
+### Definition
+
+A cache miss happens when requested data is not available in the cache.
+
+### Example
+
+```text
+Request
+   ↓
+Redis Cache
+   ↓
+Data not found
+   ↓
+Database
+   ↓
+Save result to cache
+```
+
+---
+
+## 16. Cache Expiration
+
+### Definition
+
+Cache expiration determines how long cached data remains available.
+
+### Example
+
+```python
+cache.set(
+    cache_key,
+    data,
+    60
+)
+```
+
+The cached data expires after 60 seconds.
+
+---
+
+## 17. Background Processing
+
+### Definition
+
+Background processing executes time-consuming tasks outside the main API request.
+
+### Example
+
+Celery can process notifications asynchronously:
+
+```python
+ride_notification.delay(
+    ride_id=str(ride.id),
+    user_id=str(ride.rider.id),
+    message="Your driver has accepted the ride."
+)
+```
+
+The API can respond without waiting for the notification task to finish.
+
+---
+
+## 18. Celery
+
+### Definition
+
+Celery is a distributed task queue used to execute background tasks asynchronously.
+
+### Example
+
+```python
+ride_notification.delay(...)
+```
+
+The task is sent to Celery instead of being executed directly during the API request.
+
+---
+
+## 19. Redis
+
+### Definition
+
+Redis is an in-memory data store commonly used for caching and as a message broker.
+
+### Example
+
+The nearby driver API can store results in Redis:
+
+```python
+cache.set(
+    cache_key,
+    response_data,
+    60
+)
+```
+
+---
+
+## 20. WebSocket
+
+### Definition
+
+WebSocket provides a persistent two-way communication channel between the client and server.
+
+Unlike normal REST APIs, the server can send updates to the client in real time.
+
+### Example
+
+```text
+Mobile App
+    ↕
+WebSocket
+    ↕
+Django Channels
+```
+
+A driver location update can be sent to the passenger without repeatedly calling the REST API.
+
+---
+
+## 21. Django Channels
+
+### Definition
+
+Django Channels extends Django to support WebSockets and other asynchronous protocols.
+
+### Example
+
+```text
+ws://127.0.0.1:8000/ws/ride/<ride_id>/
+```
+
+This can be used for real-time ride updates.
+
+---
+
+## 22. Notification
+
+### Definition
+
+A notification is a message generated by the backend to inform a user about an event.
+
+### Example
+
+```text
+Title: Ride Accepted
+
+Message:
+Your driver has accepted the ride.
+```
+
+---
+
+## 23. Query Optimization
+
+### Definition
+
+Query optimization means reducing unnecessary database queries and improving database access performance.
+
+### Example
+
+Instead of repeatedly loading related objects:
+
+```python
+rides = Ride.objects.all()
+```
+
+Use:
+
+```python
+rides = Ride.objects.select_related(
+    "driver",
+    "driver__user",
+    "vehicle_type",
+    "status"
+)
+```
+
+---
+
+## 24. Large Dataset
+
+### Definition
+
+A large dataset means a large number of records that can affect API response time and database performance.
+
+### Example
+
+If the database contains 10,000 rides, returning all rides in one API response is inefficient.
+
+Pagination can be used:
+
+```text
+GET /api/rides/history/?page=1&page_size=10
+```
+
+Only 10 records are returned per page.
+
+---
+
+## 25. Database Query Count
+
+### Definition
+
+Database query count is the number of database queries executed while processing an API request.
+
+### Example
+
+The optimized ride history API measures queries using:
+
+```python
+reset_queries()
+
+# database operations
+
+query_count = len(
+    connection.queries
+)
+```
+
+This helps compare slow and optimized implementations.
+
+```
+
 
 
 

@@ -33,11 +33,13 @@ from .views import (
     RideFareView,
 
     # RIDE HISTORY
+    RideHistoryView,
     UserActiveRidesView,
     UserCompletedRidesView,
     UserCancelledRidesView,
     DailyRideCountView,
     TotalCompletedRidesView,
+    
 
     # DATABASE OPTIMIZATION
     DriverRideHistoryView,
@@ -65,6 +67,7 @@ urlpatterns = [
     path(
         "login/",
         LoginView.as_view(),
+        name="login",
     ),
 
     path(
@@ -168,6 +171,12 @@ urlpatterns = [
         UserActiveRidesView.as_view(),
         name="user-active-rides",
     ),
+    # Ride history
+path(
+    "rides/history/",
+    RideHistoryView.as_view(),
+    name="ride-history",
+),
 
     # Completed rides
     path(

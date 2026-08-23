@@ -1,13 +1,14 @@
 import math
+import time
 from .tasks import ride_notification
+from django.core.cache import cache
 
 from rest_framework import (
     generics,
     status,
     filters,
 )
-
-from rest_framework.parsers import (
+from rest_framework.parsers import(
     MultiPartParser,
     FormParser,
 )
@@ -33,8 +34,8 @@ from rest_framework_simplejwt.tokens import (
 )
 
 from django.db import connection, reset_queries
-from asgiref.sync import async_to_sync
 
+from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 from django.db.models import (
@@ -93,6 +94,7 @@ from .utils.responses import (
     success_response,
     error_response,
 )
+
 
 
 # =========================================================
@@ -878,11 +880,6 @@ class VehicleDetailView(
             driver=driver
         )
 
-
-# =========================================================
-# RIDE LIST + CREATE
-# =========================================================
-
 # =========================================================
 # TASK 6 - ADVANCED RIDE FILTERING
 # =========================================================
@@ -913,10 +910,9 @@ class RideListCreateView(
                 rider=self.request.user
             )
         )
-
-        # =================================================
-        # STATUS FILTER
-        # =================================================
+# =================================================
+# STATUS FILTER
+# =================================================
 
         status_value = self.request.query_params.get(
             "status"
@@ -928,9 +924,9 @@ class RideListCreateView(
                 status__name=status_value
             )
 
-        # =================================================
-        # DRIVER FILTER
-        # =================================================
+# =================================================
+# DRIVER FILTER
+# =================================================
 
         driver_id = self.request.query_params.get(
             "driver"
@@ -942,9 +938,9 @@ class RideListCreateView(
                 driver_id=driver_id
             )
 
-        # =================================================
-        # START DATE FILTER
-        # =================================================
+# =================================================
+# START DATE FILTER
+# =================================================
 
         start_date = self.request.query_params.get(
             "start_date"
@@ -956,9 +952,9 @@ class RideListCreateView(
                 created_at__date__gte=start_date
             )
 
-        # =================================================
-        # END DATE FILTER
-        # =================================================
+# =================================================
+# END DATE FILTER
+# # =================================================
 
         end_date = self.request.query_params.get(
             "end_date"
@@ -969,10 +965,9 @@ class RideListCreateView(
             queryset = queryset.filter(
                 created_at__date__lte=end_date
             )
-
-        # =================================================
-        # MIN FARE FILTER
-        # =================================================
+# =================================================
+# MIN FARE FILTER
+# =================================================
 
         min_fare = self.request.query_params.get(
             "min_fare"
@@ -984,9 +979,9 @@ class RideListCreateView(
                 fare__gte=min_fare
             )
 
-        # =================================================
-        # MAX FARE FILTER
-        # =================================================
+# =================================================
+# MAX FARE FILTER
+# =================================================
 
         max_fare = self.request.query_params.get(
             "max_fare"
@@ -998,9 +993,9 @@ class RideListCreateView(
                 fare__lte=max_fare
             )
 
-        # =================================================
-        # ORDERING
-        # =================================================
+# =================================================
+# ORDERING
+# =================================================
 
         ordering = self.request.query_params.get(
             "ordering"
@@ -2389,6 +2384,10 @@ class DriverLocationView(APIView):
                 },
             )
         )
+        
+
+        # Invalidate cached nearby driver data
+        cache.clear()
 
         return success_response(
             message="Driver location updated successfully.",
@@ -2412,7 +2411,10 @@ class DriverLocationView(APIView):
 
             status_code=status.HTTP_200_OK,
         )
+
+
 def calculate_distance_km(lat1, lon1, lat2, lon2):
+
     R = 6371.0
 
     lat1 = math.radians(float(lat1))
@@ -2437,7 +2439,7 @@ def calculate_distance_km(lat1, lon1, lat2, lon2):
 
     return R * c
 # =========================================================
-# TASK 4 - NEARBY DRIVER API
+# TASK 3 - NEARBY DRIVER API WITH REDIS CACHE
 # =========================================================
 
 class NearbyDriverView(APIView):
@@ -2446,24 +2448,43 @@ class NearbyDriverView(APIView):
         IsAuthenticated
     ]
 
+    CACHE_TIMEOUT = 60  # 60 seconds
+
     def get(self, request):
 
-        latitude = request.query_params.get("latitude")
-        longitude = request.query_params.get("longitude")
-        radius = request.query_params.get("radius")
+        print("DEBUG: NearbyDriverView started")
 
-        # -----------------------------------------
+        latitude = request.query_params.get(
+            "latitude"
+        )
+
+        longitude = request.query_params.get(
+            "longitude"
+        )
+
+        radius = request.query_params.get(
+            "radius"
+        )
+        
+        # -------------------------------------------------
         # VALIDATION
-        # -----------------------------------------
+        # -------------------------------------------------
 
         if not latitude or not longitude or not radius:
 
             return error_response(
-                message="latitude, longitude and radius are required.",
+                message=(
+                    "latitude, longitude and radius "
+                    "are required."
+                ),
 
-                error_code="MISSING_REQUIRED_FIELD",
+                error_code=(
+                    "MISSING_REQUIRED_FIELD"
+                ),
 
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
         try:
@@ -2472,59 +2493,151 @@ class NearbyDriverView(APIView):
             longitude = float(longitude)
             radius = float(radius)
 
-        except (ValueError, TypeError):
+        except (
+            ValueError,
+            TypeError,
+        ):
 
             return error_response(
-                message="latitude, longitude and radius must be valid numbers.",
+                message=(
+                    "latitude, longitude and radius "
+                    "must be valid numbers."
+                ),
 
-                error_code="INVALID_LOCATION_DATA",
+                error_code=(
+                    "INVALID_LOCATION_DATA"
+                ),
 
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
-        if not (-90 <= latitude <= 90):
+        # -------------------------------------------------
+        # LATITUDE VALIDATION
+        # -------------------------------------------------
+
+        if not (
+            -90 <= latitude <= 90
+        ):
 
             return error_response(
                 message="Invalid latitude.",
 
-                error_code="INVALID_LATITUDE",
+                error_code=(
+                    "INVALID_LATITUDE"
+                ),
 
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
-        if not (-180 <= longitude <= 180):
+        # -------------------------------------------------
+        # LONGITUDE VALIDATION
+        # -------------------------------------------------
+
+        if not (
+            -180 <= longitude <= 180
+        ):
 
             return error_response(
                 message="Invalid longitude.",
 
-                error_code="INVALID_LONGITUDE",
+                error_code=(
+                    "INVALID_LONGITUDE"
+                ),
 
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
+
+        # -------------------------------------------------
+        # RADIUS VALIDATION
+        # -------------------------------------------------
 
         if radius <= 0:
 
             return error_response(
-                message="Radius must be greater than 0.",
+                message=(
+                    "Radius must be greater than 0."
+                ),
 
-                error_code="INVALID_RADIUS",
+                error_code=(
+                    "INVALID_RADIUS"
+                ),
 
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
             )
 
-        # -----------------------------------------
-        # GET AVAILABLE DRIVERS
-        # -----------------------------------------
+        # -------------------------------------------------
+        # CACHE KEY
+        # -------------------------------------------------
+
+        cache_key = (
+            f"nearby_drivers:"
+            f"{latitude:.4f}:"
+            f"{longitude:.4f}:"
+            f"{radius:.2f}"
+        )
+
+        # -------------------------------------------------
+        # CHECK CACHE
+        # -------------------------------------------------
+
+        cached_data = cache.get(
+            cache_key
+        )
+
+        if cached_data is not None:
+
+         query_count = len(connection.queries)
+
+         response_time = time.perf_counter() - start_time
+
+        return success_response(
+        message=(
+            "Nearby drivers retrieved "
+            "from cache."
+        ),
+
+        data={
+            **cached_data,
+
+            "cache_status": "HIT",
+
+            "query_count": query_count,
+
+            "response_time_ms": round(
+                response_time * 1000,
+                2
+            ),
+        },
+
+        status_code=(
+            status.HTTP_200_OK
+        ),
+    )
+        # -------------------------------------------------
+        # CACHE MISS
+        # -------------------------------------------------
 
         locations = (
             DriverLocation.objects
             .filter(
                 availability_status=(
-                    DriverLocation.AvailabilityStatus.ONLINE
-
+                    DriverLocation
+                    .AvailabilityStatus
+                    .ONLINE
                 ),
+
                 driver__status=(
-                    DriverProfile.DriverStatus.ACTIVE
+                    DriverProfile
+                    .DriverStatus
+                    .ACTIVE
                 ),
             )
             .select_related(
@@ -2535,9 +2648,9 @@ class NearbyDriverView(APIView):
 
         nearby_drivers = []
 
-         # -----------------------------------------
+        # -------------------------------------------------
         # DISTANCE CALCULATION
-        # -----------------------------------------
+        # -------------------------------------------------
 
         for location in locations:
 
@@ -2549,33 +2662,13 @@ class NearbyDriverView(APIView):
                 location.longitude
             )
 
-            earth_radius_km = 6371.0
-
-            lat1 = math.radians(latitude)
-            lat2 = math.radians(driver_latitude)
-
-            delta_lat = math.radians(
-                driver_latitude - latitude
-            )
-
-            delta_lon = math.radians(
-                driver_longitude - longitude
-            )
-
-            a = (
-                math.sin(delta_lat / 2) ** 2
-                + math.cos(lat1)
-                * math.cos(lat2)
-                * math.sin(delta_lon / 2) ** 2
-            )
-
-            c = 2 * math.atan2(
-                math.sqrt(a),
-                math.sqrt(1 - a)
-            )
-
             distance_km = (
-                earth_radius_km * c
+                calculate_distance_km(
+                    latitude,
+                    longitude,
+                    driver_latitude,
+                    driver_longitude,
+                )
             )
 
             if distance_km <= radius:
@@ -2586,69 +2679,118 @@ class NearbyDriverView(APIView):
                             location.driver.id
                         ),
 
-                        "email":
-                            location.driver.user.email,
+                        "email": (
+                            location.driver.user.email
+                        ),
 
-                        "latitude":
-                            float(location.latitude),
+                        "latitude": (
+                            driver_latitude
+                        ),
 
-                        "longitude":
-                            float(location.longitude),
+                        "longitude": (
+                            driver_longitude
+                        ),
 
-                        "distance_km":
-                            round(distance_km, 2),
+                        "distance_km": round(
+                            distance_km,
+                            2,
+                        ),
 
-                        "availability_status":
-                            location.availability_status,
+                        "availability_status": (
+                            location
+                            .availability_status
+                        ),
 
-                        "last_updated":
-                            location.last_updated,
+                        "last_updated": (
+                            location.last_updated
+                        ),
                     }
                 )
 
-        # -----------------------------------------
-        # SORT BY NEAREST
-        # -----------------------------------------
+        # -------------------------------------------------
+        # SORT BY DISTANCE
+        # -------------------------------------------------
 
         nearby_drivers.sort(
             key=lambda driver:
                 driver["distance_km"]
         )
 
-        return success_response(
-            message="Nearby drivers retrieved successfully.",
+        # -------------------------------------------------
+        # RESPONSE DATA
+        # -------------------------------------------------
 
-            data={
-                "latitude": latitude,
+        response_data = {
 
-                "longitude": longitude,
+            "latitude": latitude,
 
-                "radius_km": radius,
+            "longitude": longitude,
 
-                "count": len(
-                    nearby_drivers
-                ),
+            "radius_km": radius,
 
-                "drivers":
-                    nearby_drivers,
-            },
+            "count": len(
+                nearby_drivers
+            ),
 
-            status_code=status.HTTP_200_OK,
+            "drivers": nearby_drivers,
+        }
+
+        # -------------------------------------------------
+        # SAVE RESULT TO CACHE
+        # -------------------------------------------------
+
+        cache.set(
+            cache_key,
+            response_data,
+            self.CACHE_TIMEOUT,
         )
+
+        # -------------------------------------------------
+        # RESPONSE
+        # -------------------------------------------------
+
+        return success_response(
+
+            message=(
+                "Nearby drivers retrieved "
+                "successfully."
+            ),
+
+            data=response_data,
+
+            status_code=(
+                status.HTTP_200_OK
+            ),
+        )
+
+
 # =========================================================
 # NOTIFICATION LIST VIEW
 # =========================================================
-class NotificationListView(generics.ListAPIView):
+
+class NotificationListView(
+    generics.ListAPIView
+):
 
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
     pagination_class = CustomPagination
 
     def get_queryset(self):
 
-        return Notification.objects.filter(
-            user=self.request.user
-        ).order_by("-created_at")
+        return (
+            Notification.objects
+            .filter(
+                user=self.request.user
+            )
+            .order_by(
+                "-created_at"
+            )
+        )
 
 
 # =========================================================
@@ -2661,7 +2803,9 @@ class NotificationMarkReadView(
 
     serializer_class = NotificationSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated
+    ]
 
     def get_queryset(self):
 
@@ -2681,20 +2825,25 @@ class NotificationMarkReadView(
         notification.is_read = True
 
         notification.save(
-            update_fields=["is_read"]
+            update_fields=[
+                "is_read"
+            ]
         )
 
         return Response(
             {
                 "success": True,
 
-                "message":
-                    "Notification marked as read.",
+                "message": (
+                    "Notification marked "
+                    "as read."
+                ),
 
-                "data":
+                "data": (
                     NotificationSerializer(
                         notification
-                    ).data,
+                    ).data
+                ),
             },
 
             status=status.HTTP_200_OK,
@@ -2709,22 +2858,218 @@ class NotificationMarkAllReadView(
     generics.GenericAPIView
 ):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated
+    ]
 
-    def post(self, request):
+    def post(
+        self,
+        request
+    ):
 
-        updated_count = Notification.objects.filter(
-            user=request.user,
-            is_read=False,
-        ).update(
-            is_read=True
+        updated_count = (
+            Notification.objects
+            .filter(
+                user=request.user,
+                is_read=False,
+            )
+            .update(
+                is_read=True
+            )
         )
 
         return Response(
             {
                 "success": True,
-                "message": "All notifications marked as read.",
-                "updated_count": updated_count,
+
+                "message": (
+                    "All notifications marked "
+                    "as read."
+                ),
+
+                "updated_count": (
+                    updated_count
+                ),
             },
+
             status=status.HTTP_200_OK,
+        )
+
+
+# =========================================================
+# CACHED PROFILE
+# =========================================================
+
+def cached_profile(request):
+
+    cache_key = (
+        f"profile_{request.user.id}"
+    )
+
+    data = cache.get(
+        cache_key
+    )
+
+    if data is None:
+
+        data = {
+            "id": str(
+                request.user.id
+            ),
+
+            "email": (
+                request.user.email
+            ),
+        }
+
+        cache.set(
+            cache_key,
+            data,
+            300,
+        )
+
+    return Response(
+        data
+    )
+# =========================================================
+# TASK 2 - RIDE HISTORY
+# =========================================================
+
+class RideHistoryView(
+    generics.ListAPIView
+):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+
+        queryset = (
+            Ride.objects
+            .filter(
+                rider=self.request.user
+            )
+            .select_related(
+                "driver",
+                "driver__user",
+                "vehicle_type",
+                "status",
+            )
+            .order_by(
+                "-created_at"
+            )
+        )
+
+        # -------------------------------------------------
+        # DATE FILTER
+        # Example: ?date=2026-08-24
+        # -------------------------------------------------
+
+        date = self.request.query_params.get(
+            "date"
+        )
+
+        if date:
+            queryset = queryset.filter(
+                created_at__date=date
+            )
+
+        # -------------------------------------------------
+        # STATUS FILTER
+        # Example: ?status=COMPLETED
+        # -------------------------------------------------
+
+        status_filter = (
+            self.request.query_params.get(
+                "status"
+            )
+        )
+
+        if status_filter:
+            queryset = queryset.filter(
+                status__name=status_filter
+            )
+
+        # -------------------------------------------------
+        # DRIVER FILTER
+        # Example: ?driver=<driver_id>
+        # -------------------------------------------------
+
+        driver = self.request.query_params.get(
+            "driver"
+        )
+
+        if driver:
+            queryset = queryset.filter(
+                driver__id=driver
+            )
+
+        # -------------------------------------------------
+        # MIN FARE FILTER
+        # Example: ?min_fare=100
+        # -------------------------------------------------
+
+        min_fare = self.request.query_params.get(
+            "min_fare"
+        )
+
+        if min_fare:
+            queryset = queryset.filter(
+                fare__gte=min_fare
+            )
+
+        # -------------------------------------------------
+        # MAX FARE FILTER
+        # Example: ?max_fare=500
+        # -------------------------------------------------
+
+        max_fare = self.request.query_params.get(
+            "max_fare"
+        )
+
+        if max_fare:
+            queryset = queryset.filter(
+                fare__lte=max_fare
+            )
+
+        return queryset
+
+    def list(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        queryset = self.get_queryset()
+
+        page = self.paginate_queryset(
+            queryset
+        )
+
+        if page is not None:
+
+            data = [
+                build_ride_data(ride)
+                for ride in page
+            ]
+
+            return self.get_paginated_response(
+                data
+            )
+
+        data = [
+            build_ride_data(ride)
+            for ride in queryset
+        ]
+
+        return Response(
+            {
+                "success": True,
+                "count": len(data),
+                "results": data,
+            }
         )
