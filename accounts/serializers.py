@@ -929,9 +929,13 @@ class DriverLocationSerializer(
 
         read_only_fields = [
             "id",
-            "last_updated",
-        ]
+            "driver",
+            
+            "availability_status",
 
+            "last_updated",
+        
+]
     def validate_latitude(self, value):
 
         if not -90 <= float(value) <= 90:

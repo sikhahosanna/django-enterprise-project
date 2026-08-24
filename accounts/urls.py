@@ -14,45 +14,41 @@ from .views import (
     RestoreProfileView,
 
     # DRIVER
-    DriverListCreateView,
-    DriverDetailView,
-    DriverTotalFareEarnedView,
-    DriverRideHistoryView,
-    DriverLocationView,
+DriverListCreateView,
+DriverDetailView,
+DriverTotalFareEarnedView,
+DriverRideHistoryView,
+DriverLocationView,
+DriverAvailabilityView,
 
-    # VEHICLE
-    VehicleListCreateView,
-    VehicleDetailView,
+# VEHICLE
+VehicleListCreateView,
+VehicleDetailView,
 
-    # RIDES
-    RideListCreateView,
-    RideDetailView,
-    RideStatusUpdateView,
-    RideAcceptView,
-    RideCancelView,
-    RideFareView,
+# RIDES
+RideListCreateView,
+RideDetailView,
+RideStatusUpdateView,
+RideAcceptView,
+RideCancelView,
+RideFareView,
 
-    # RIDE HISTORY
-    RideHistoryView,
-    UserActiveRidesView,
-    UserCompletedRidesView,
-    UserCancelledRidesView,
-    DailyRideCountView,
-    TotalCompletedRidesView,
-    
+# RIDE HISTORY
+UserActiveRidesView,
+UserCompletedRidesView,
+UserCancelledRidesView,
+DailyRideCountView,
+TotalCompletedRidesView,
 
-    # DATABASE OPTIMIZATION
-    DriverRideHistoryView,
-    OptimizedRideHistoryView,
-    SlowRideHistoryView,
-    RideAggregationView,
-    NearbyDriverView,
-    NotificationListView,
-    NotificationMarkReadView,
-    NotificationMarkAllReadView,
+# DATABASE OPTIMIZATION
+OptimizedRideHistoryView,
+SlowRideHistoryView,
+RideAggregationView,
+NearbyDriverView,
+NotificationListView,
+NotificationMarkReadView,
+NotificationMarkAllReadView,
 )
-
-
 urlpatterns = [
 
     # =====================================================
@@ -171,12 +167,7 @@ urlpatterns = [
         UserActiveRidesView.as_view(),
         name="user-active-rides",
     ),
-    # Ride history
-path(
-    "rides/history/",
-    RideHistoryView.as_view(),
-    name="ride-history",
-),
+    
 
     # Completed rides
     path(
@@ -252,16 +243,19 @@ path(
     RideAggregationView.as_view(),
     name="ride-aggregations",
 ),
-path(
-    "rides/driver/history/",
-    DriverRideHistoryView.as_view(),
-    name="driver-ride-history",
-),
+
 path(
     "drivers/location/",
     DriverLocationView.as_view(),
     name="driver-location",
 ),
+
+path(
+    "drivers/availability/",
+    DriverAvailabilityView.as_view(),
+    name="driver-availability",
+),
+
 path(
     "drivers/nearby/",
     NearbyDriverView.as_view(),

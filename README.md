@@ -7042,13 +7042,494 @@ reset_queries()
 query_count = len(
     connection.queries
 )
+25/8/26
+
+
+
+````markdown
+# Driver Location, Availability & Nearby Driver Search
+
+## Overview
+
+This module implements real-time driver location tracking, driver availability management, nearby-driver search, distance calculation, validation, Redis caching, and performance testing for the Django ride-booking application.
+
+---
+
+## Task 4 — Driver Availability
+
+Drivers can have the following availability statuses:
+
+- ONLINE
+- OFFLINE
+- BUSY
+
+Only drivers with `ONLINE` availability are included in nearby-driver matching.
+
+### Example
+
+```text
+ONLINE  → Driver can receive ride requests
+OFFLINE → Driver cannot receive ride requests
+BUSY    → Driver is currently handling another ride
+````
+
+---
+
+## Task 5 — Nearby Driver API
+
+### Endpoint
+
+```http
+GET /api/drivers/nearby/
 ```
 
+<<<<<<< HEAD
 
+=======
+### Query Parameters
+>>>>>>> 8938be4 (Complete driver location nearby search and validation tasks)
 
+```text
+latitude
+longitude
+radius
 ```
 
+### Example Request
 
+```http
+GET /api/drivers/nearby/?latitude=17.385&longitude=78.4867&radius=10
+```
 
+### Authentication
 
+The API requires a valid JWT access token.
+
+```http
+Authorization: Bearer <access_token>
+```
+
+### Example Response
+
+```json
+{
+    "success": true,
+    "message": "Nearby drivers retrieved successfully.",
+    "error_code": null,
+    "data": {
+        "latitude": 17.385,
+        "longitude": 78.4867,
+        "radius_km": 10.0,
+        "count": 1000,
+        "drivers": [
+            {
+                "driver_id": "UUID",
+                "email": "driver@example.com",
+                "latitude": 17.385799,
+                "longitude": 78.486803,
+                "distance_km": 0.09,
+                "availability_status": "online",
+                "last_updated": "2026-08-17T20:32:50Z"
+            }
+        ]
+    }
+}
+```
+
+---
+
+## Task 6 — Distance Calculation
+
+The system calculates the distance between the requested location and each driver's current location.
+
+Distance is returned in kilometers.
+
+### Example
+
+```json
+{
+    "driver_id": "UUID",
+    "distance_km": 1.7
+}
+```
+
+Drivers are sorted by distance, with the nearest driver returned first.
+
+Example:
+
+```text
+0.09 km
+0.24 km
+0.35 km
+0.41 km
+0.43 km
+```
+
+---
+
+## Task 7 — Validation
+
+The Nearby Driver API validates all input parameters.
+
+### Invalid Latitude
+
+Latitude must be between:
+
+```text
+-90 and 90
+```
+
+Example:
+
+```text
+latitude=100
+```
+
+Response:
+
+```json
+{
+    "success": false,
+    "message": "Invalid latitude.",
+    "error_code": "INVALID_LATITUDE"
+}
+```
+
+### Invalid Longitude
+
+Longitude must be between:
+
+```text
+-180 and 180
+```
+
+Example:
+
+```text
+longitude=200
+```
+
+Response:
+
+```json
+{
+    "success": false,
+    "message": "Invalid longitude.",
+    "error_code": "INVALID_LONGITUDE"
+}
+```
+
+### Missing Coordinates
+
+Required parameters:
+
+```text
+latitude
+longitude
+radius
+```
+
+If any parameter is missing, the API returns:
+
+```text
+MISSING_REQUIRED_FIELD
+```
+
+### Invalid Radius
+
+Radius must be greater than zero.
+
+Example:
+
+```text
+radius=0
+```
+
+Response:
+
+```text
+INVALID_RADIUS
+```
+
+### Offline and Busy Drivers
+
+Only drivers satisfying the following conditions participate in nearby-driver search:
+
+```text
+availability_status = ONLINE
+driver status = ACTIVE
+```
+
+Therefore:
+
+```text
+OFFLINE → Excluded
+BUSY    → Excluded
+ONLINE  → Included
+```
+
+---
+
+## Redis Caching
+
+Nearby-driver search results are cached using Redis.
+
+### Cache Key
+
+The cache key is generated using:
+
+```text
+latitude
+longitude
+radius
+```
+
+Example:
+
+```text
+nearby_drivers:17.3850:78.4867:10.00
+```
+
+### Cache HIT
+
+If the requested location is already cached:
+
+```json
+{
+    "cache_status": "HIT"
+}
+```
+
+The API returns the cached result without performing the nearby-driver database search again.
+
+### Cache MISS
+
+If the requested location is not available in cache:
+
+```json
+{
+    "cache_status": "MISS"
+}
+```
+
+The system:
+
+1. Queries active online drivers.
+2. Calculates distances.
+3. Filters drivers within the radius.
+4. Sorts drivers by distance.
+5. Saves the result in Redis.
+6. Returns the response.
+
+### Cache Expiration
+
+Cached nearby-driver results expire after:
+
+```text
+60 seconds
+```
+
+---
+
+## Task 8 — Performance Testing
+
+Performance testing was performed using a large number of driver records.
+
+### Test Data
+
+Thousands of driver records were created for performance testing.
+
+Example driver emails:
+
+```text
+perfdriver001@example.com
+perfdriver002@example.com
+perfdriver003@example.com
+...
+```
+
+### Test Location
+
+```text
+Latitude: 17.385
+Longitude: 78.4867
+Radius: 10 km
+```
+
+### Performance Metrics
+
+The API records:
+
+```text
+Response Time
+Database Query Count
+Cache Status
+```
+
+Example:
+
+```json
+{
+    "cache_status": "MISS",
+    "query_count": 1,
+    "response_time_ms": 120.45
+}
+```
+
+A repeated request can return:
+
+```json
+{
+    "cache_status": "HIT",
+    "query_count": 0,
+    "response_time_ms": 2.15
+}
+```
+
+This demonstrates the performance improvement provided by Redis caching.
+
+---
+
+## Performance Test Flow
+
+```text
+Create thousands of drivers
+        ↓
+Update driver locations
+        ↓
+Set drivers to ONLINE
+        ↓
+Call Nearby Driver API
+        ↓
+Calculate distances
+        ↓
+Sort by nearest distance
+        ↓
+Measure response time & DB queries
+        ↓
+Repeat same request
+        ↓
+Check Redis Cache HIT
+        ↓
+Compare performance
+```
+
+---
+
+## Postman Testing
+
+### 1. Get Access Token
+
+Obtain a valid JWT access token.
+
+### 2. Set Authorization
+
+In Postman:
+
+```text
+Authorization
+Type: Bearer Token
+Token: <access_token>
+```
+
+### 3. Send Nearby Driver Request
+
+```http
+GET http://127.0.0.1:8000/api/drivers/nearby/?latitude=17.385&longitude=78.4867&radius=10
+```
+
+### 4. Verify Response
+
+Check:
+
+```text
+success = true
+count
+drivers
+distance_km
+availability_status
+cache_status
+query_count
+response_time_ms
+```
+
+---
+
+## Validation Test Cases
+
+| Test Case         | Expected Result |
+| ----------------- | --------------- |
+| Valid latitude    | 200 OK          |
+| Valid longitude   | 200 OK          |
+| Missing latitude  | 400 Bad Request |
+| Missing longitude | 400 Bad Request |
+| Missing radius    | 400 Bad Request |
+| Latitude > 90     | 400 Bad Request |
+| Latitude < -90    | 400 Bad Request |
+| Longitude > 180   | 400 Bad Request |
+| Longitude < -180  | 400 Bad Request |
+| Radius = 0        | 400 Bad Request |
+| Negative radius   | 400 Bad Request |
+| Offline driver    | Excluded        |
+| Busy driver       | Excluded        |
+| Online driver     | Included        |
+| Nearest driver    | Returned first  |
+
+---
+
+## Acceptance Criteria
+
+* [x] Driver location API completed.
+* [x] Driver availability system completed.
+* [x] Nearby driver search completed.
+* [x] Distance calculation implemented.
+* [x] Location validation implemented.
+* [x] Offline drivers excluded.
+* [x] Busy drivers excluded.
+* [x] Online drivers included.
+* [x] Drivers sorted by nearest distance.
+* [x] Redis caching implemented.
+* [x] Cache HIT/MISS handled.
+* [x] Performance testing completed with large data.
+* [x] Response time measured.
+* [x] Database queries measured.
+
+---
+
+## Technologies Used
+
+* Python
+* Django
+* Django REST Framework
+* PostgreSQL
+* Redis
+* Django Cache Framework
+* JWT Authentication
+* Postman
+
+---
+
+## Result
+
+The Driver Location and Nearby Driver Search module successfully provides:
+
+```text
+Driver Location Tracking
+        +
+Driver Availability
+        +
+Nearby Driver Search
+        +
+Distance Calculation
+        +
+Input Validation
+        +
+Redis Caching
+        +
+Performance Monitoring
+```
+
+This allows the ride-booking system to efficiently identify the nearest available drivers while reducing database load through caching.
+
+````
 

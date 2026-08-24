@@ -2344,19 +2344,14 @@ class DriverLocationView(APIView):
     def post(self, request):
 
         try:
-
             driver = request.user.driver_profile
 
         except DriverProfile.DoesNotExist:
 
             return error_response(
                 message="You are not registered as a driver.",
-
                 error_code="DRIVER_NOT_FOUND",
-
-                status_code=(
-                    status.HTTP_404_NOT_FOUND
-                ),
+                status_code=status.HTTP_404_NOT_FOUND,
             )
 
         serializer = DriverLocationSerializer(
@@ -2369,6 +2364,7 @@ class DriverLocationView(APIView):
 
         location, created = (
             DriverLocation.objects.update_or_create(
+
                 driver=driver,
 
                 defaults={
@@ -2381,16 +2377,25 @@ class DriverLocationView(APIView):
                         serializer.validated_data[
                             "longitude"
                         ],
+
+                    "availability_status":
+                        serializer.validated_data.get(
+                            "availability_status",
+                            DriverLocation.AvailabilityStatus.OFFLINE
+                        ),
                 },
             )
         )
-        
 
-        # Invalidate cached nearby driver data
+        # Invalidate nearby driver cache
         cache.clear()
 
         return success_response(
-            message="Driver location updated successfully.",
+
+            message=(
+                "Driver location and availability "
+                "updated successfully."
+            ),
 
             data={
                 "driver_id":
@@ -2402,15 +2407,17 @@ class DriverLocationView(APIView):
                 "longitude":
                     location.longitude,
 
-                "last_updated":
-                    location.last_updated,
-
                 "availability_status":
                     location.availability_status,
+
+                "last_updated":
+                    location.last_updated,
             },
 
             status_code=status.HTTP_200_OK,
         )
+
+
 
 
 def calculate_distance_km(lat1, lon1, lat2, lon2):
@@ -2438,8 +2445,83 @@ def calculate_distance_km(lat1, lon1, lat2, lon2):
     )
 
     return R * c
+
+
+class DriverAvailabilityView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def patch(self, request):
+
+        try:
+            driver = request.user.driver_profile
+
+        except DriverProfile.DoesNotExist:
+            return error_response(
+                message="You are not registered as a driver.",
+                error_code="DRIVER_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            location = DriverLocation.objects.get(
+                driver=driver
+            )
+
+        except DriverLocation.DoesNotExist:
+            return error_response(
+                message="Driver location not found.",
+                error_code="DRIVER_LOCATION_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        availability_status = request.data.get(
+            "availability_status"
+        )
+
+        if not availability_status:
+            return error_response(
+                message="availability_status is required.",
+                error_code="MISSING_AVAILABILITY_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        valid_statuses = [
+            choice[0]
+            for choice in DriverLocation.AvailabilityStatus.choices
+        ]
+
+        if availability_status not in valid_statuses:
+            return error_response(
+                message="Invalid availability status.",
+                error_code="INVALID_AVAILABILITY_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        location.availability_status = availability_status
+
+        location.save(
+            update_fields=[
+                "availability_status",
+                "last_updated",
+            ]
+        )
+
+        cache.clear()
+
+        return success_response(
+            message="Driver availability updated successfully.",
+            data={
+                "driver_id": str(driver.id),
+                "availability_status": location.availability_status,
+                "last_updated": location.last_updated,
+            },
+            status_code=status.HTTP_200_OK,
+        )
 # =========================================================
-# TASK 3 - NEARBY DRIVER API WITH REDIS CACHE
+# TASK 5 - NEARBY DRIVER API WITH REDIS CACHE
 # =========================================================
 
 class NearbyDriverView(APIView):
@@ -2448,9 +2530,13 @@ class NearbyDriverView(APIView):
         IsAuthenticated
     ]
 
-    CACHE_TIMEOUT = 60  # 60 seconds
+    CACHE_TIMEOUT = 60
 
     def get(self, request):
+
+        start_time = time.perf_counter()
+
+        reset_queries()
 
         print("DEBUG: NearbyDriverView started")
 
@@ -2465,7 +2551,7 @@ class NearbyDriverView(APIView):
         radius = request.query_params.get(
             "radius"
         )
-        
+
         # -------------------------------------------------
         # VALIDATION
         # -------------------------------------------------
@@ -2487,10 +2573,16 @@ class NearbyDriverView(APIView):
                 ),
             )
 
+        # -------------------------------------------------
+        # CONVERT TO FLOAT
+        # -------------------------------------------------
+
         try:
 
             latitude = float(latitude)
+
             longitude = float(longitude)
+
             radius = float(radius)
 
         except (
@@ -2517,9 +2609,7 @@ class NearbyDriverView(APIView):
         # LATITUDE VALIDATION
         # -------------------------------------------------
 
-        if not (
-            -90 <= latitude <= 90
-        ):
+        if not -90 <= latitude <= 90:
 
             return error_response(
                 message="Invalid latitude.",
@@ -2537,9 +2627,7 @@ class NearbyDriverView(APIView):
         # LONGITUDE VALIDATION
         # -------------------------------------------------
 
-        if not (
-            -180 <= longitude <= 180
-        ):
+        if not -180 <= longitude <= 180:
 
             return error_response(
                 message="Invalid longitude.",
@@ -2584,6 +2672,11 @@ class NearbyDriverView(APIView):
             f"{radius:.2f}"
         )
 
+        print(
+            "DEBUG CACHE KEY:",
+            cache_key
+        )
+
         # -------------------------------------------------
         # CHECK CACHE
         # -------------------------------------------------
@@ -2592,42 +2685,79 @@ class NearbyDriverView(APIView):
             cache_key
         )
 
-        if cached_data is not None:
+        print(
+            "DEBUG CACHE DATA:",
+            cached_data
+        )
 
-         query_count = len(connection.queries)
+        print(
+            "DEBUG CACHE TYPE:",
+            type(cached_data)
+        )
 
-         response_time = time.perf_counter() - start_time
+        # -------------------------------------------------
+        # CACHE HIT
+        # -------------------------------------------------
 
-        return success_response(
-        message=(
-            "Nearby drivers retrieved "
-            "from cache."
-        ),
+        if isinstance(
+            cached_data,
+            dict
+        ):
 
-        data={
-            **cached_data,
+            print(
+                "DEBUG: CACHE HIT"
+            )
 
-            "cache_status": "HIT",
+            query_count = len(
+                connection.queries
+            )
 
-            "query_count": query_count,
+            response_time = (
+                time.perf_counter()
+                - start_time
+            )
 
-            "response_time_ms": round(
-                response_time * 1000,
-                2
-            ),
-        },
+            return success_response(
 
-        status_code=(
-            status.HTTP_200_OK
-        ),
-    )
+                message=(
+                    "Nearby drivers retrieved "
+                    "from cache."
+                ),
+
+                data={
+                    **cached_data,
+
+                    "cache_status": (
+                        "HIT"
+                    ),
+
+                    "query_count": (
+                        query_count
+                    ),
+
+                    "response_time_ms": round(
+                        response_time * 1000,
+                        2
+                    ),
+                },
+
+                status_code=(
+                    status.HTTP_200_OK
+                ),
+            )
+
         # -------------------------------------------------
         # CACHE MISS
         # -------------------------------------------------
 
+        print(
+            "DEBUG: CACHE MISS"
+        )
+
         locations = (
             DriverLocation.objects
             .filter(
+
                 availability_status=(
                     DriverLocation
                     .AvailabilityStatus
@@ -2664,9 +2794,13 @@ class NearbyDriverView(APIView):
 
             distance_km = (
                 calculate_distance_km(
+
                     latitude,
+
                     longitude,
+
                     driver_latitude,
+
                     driver_longitude,
                 )
             )
@@ -2680,7 +2814,10 @@ class NearbyDriverView(APIView):
                         ),
 
                         "email": (
-                            location.driver.user.email
+                            location
+                            .driver
+                            .user
+                            .email
                         ),
 
                         "latitude": (
@@ -2693,7 +2830,7 @@ class NearbyDriverView(APIView):
 
                         "distance_km": round(
                             distance_km,
-                            2,
+                            2
                         ),
 
                         "availability_status": (
@@ -2702,7 +2839,8 @@ class NearbyDriverView(APIView):
                         ),
 
                         "last_updated": (
-                            location.last_updated
+                            location
+                            .last_updated
                         ),
                     }
                 )
@@ -2712,6 +2850,7 @@ class NearbyDriverView(APIView):
         # -------------------------------------------------
 
         nearby_drivers.sort(
+
             key=lambda driver:
                 driver["distance_km"]
         )
@@ -2722,17 +2861,25 @@ class NearbyDriverView(APIView):
 
         response_data = {
 
-            "latitude": latitude,
-
-            "longitude": longitude,
-
-            "radius_km": radius,
-
-            "count": len(
-                nearby_drivers
+            "latitude": (
+                latitude
             ),
 
-            "drivers": nearby_drivers,
+            "longitude": (
+                longitude
+            ),
+
+            "radius_km": (
+                radius
+            ),
+
+            "count": (
+                len(nearby_drivers)
+            ),
+
+            "drivers": (
+                nearby_drivers
+            ),
         }
 
         # -------------------------------------------------
@@ -2740,13 +2887,33 @@ class NearbyDriverView(APIView):
         # -------------------------------------------------
 
         cache.set(
+
             cache_key,
+
             response_data,
+
             self.CACHE_TIMEOUT,
         )
 
+        print(
+            "DEBUG: DATA SAVED TO CACHE"
+        )
+
         # -------------------------------------------------
-        # RESPONSE
+        # PERFORMANCE
+        # -------------------------------------------------
+
+        query_count = len(
+            connection.queries
+        )
+
+        response_time = (
+            time.perf_counter()
+            - start_time
+        )
+
+        # -------------------------------------------------
+        # CACHE MISS RESPONSE
         # -------------------------------------------------
 
         return success_response(
@@ -2756,28 +2923,39 @@ class NearbyDriverView(APIView):
                 "successfully."
             ),
 
-            data=response_data,
+            data={
+
+                **response_data,
+
+                "cache_status": (
+                    "MISS"
+                ),
+
+                "query_count": (
+                    query_count
+                ),
+
+                "response_time_ms": round(
+                    response_time * 1000,
+                    2
+                ),
+            },
 
             status_code=(
                 status.HTTP_200_OK
             ),
         )
-
-
 # =========================================================
-# NOTIFICATION LIST VIEW
+# NOTIFICATIONS
 # =========================================================
 
-class NotificationListView(
-    generics.ListAPIView
-):
-
-    serializer_class = NotificationSerializer
+class NotificationListView(generics.ListAPIView):
 
     permission_classes = [
         IsAuthenticated
     ]
 
+    serializer_class = NotificationSerializer
     pagination_class = CustomPagination
 
     def get_queryset(self):
@@ -2793,283 +2971,73 @@ class NotificationListView(
         )
 
 
-# =========================================================
-# NOTIFICATION MARK READ VIEW
-# =========================================================
-
-class NotificationMarkReadView(
-    generics.UpdateAPIView
-):
-
-    serializer_class = NotificationSerializer
+class NotificationMarkReadView(APIView):
 
     permission_classes = [
         IsAuthenticated
     ]
 
-    def get_queryset(self):
+    def patch(self, request, pk):
 
-        return Notification.objects.filter(
-            user=self.request.user
-        )
+        try:
+            notification = Notification.objects.get(
+                id=pk,
+                user=request.user
+            )
 
-    def update(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
+        except Notification.DoesNotExist:
 
-        notification = self.get_object()
+            return error_response(
+                message="Notification not found.",
+                error_code="NOTIFICATION_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
 
         notification.is_read = True
 
         notification.save(
-            update_fields=[
-                "is_read"
-            ]
+            update_fields=["is_read"]
         )
 
-        return Response(
-            {
-                "success": True,
+        serializer = NotificationSerializer(
+            notification
+        )
 
-                "message": (
-                    "Notification marked "
-                    "as read."
-                ),
-
-                "data": (
-                    NotificationSerializer(
-                        notification
-                    ).data
-                ),
-            },
-
-            status=status.HTTP_200_OK,
+        return success_response(
+            message="Notification marked as read.",
+            data=serializer.data,
+            status_code=status.HTTP_200_OK,
         )
 
 
-# =========================================================
-# NOTIFICATION MARK ALL READ VIEW
-# =========================================================
-
-class NotificationMarkAllReadView(
-    generics.GenericAPIView
-):
+class NotificationMarkAllReadView(APIView):
 
     permission_classes = [
         IsAuthenticated
     ]
 
-    def post(
-        self,
-        request
-    ):
+    def post(self, request):
 
         updated_count = (
             Notification.objects
             .filter(
                 user=request.user,
-                is_read=False,
+                is_read=False
             )
             .update(
                 is_read=True
             )
         )
 
-        return Response(
-            {
-                "success": True,
-
-                "message": (
-                    "All notifications marked "
-                    "as read."
-                ),
-
-                "updated_count": (
-                    updated_count
-                ),
+        return success_response(
+            message="All notifications marked as read.",
+            data={
+                "updated_count": updated_count
             },
-
-            status=status.HTTP_200_OK,
+            status_code=status.HTTP_200_OK,
         )
 
 
-# =========================================================
-# CACHED PROFILE
-# =========================================================
 
-def cached_profile(request):
 
-    cache_key = (
-        f"profile_{request.user.id}"
-    )
 
-    data = cache.get(
-        cache_key
-    )
-
-    if data is None:
-
-        data = {
-            "id": str(
-                request.user.id
-            ),
-
-            "email": (
-                request.user.email
-            ),
-        }
-
-        cache.set(
-            cache_key,
-            data,
-            300,
-        )
-
-    return Response(
-        data
-    )
-# =========================================================
-# TASK 2 - RIDE HISTORY
-# =========================================================
-
-class RideHistoryView(
-    generics.ListAPIView
-):
-
-    permission_classes = [
-        IsAuthenticated
-    ]
-
-    pagination_class = CustomPagination
-
-    def get_queryset(self):
-
-        queryset = (
-            Ride.objects
-            .filter(
-                rider=self.request.user
-            )
-            .select_related(
-                "driver",
-                "driver__user",
-                "vehicle_type",
-                "status",
-            )
-            .order_by(
-                "-created_at"
-            )
-        )
-
-        # -------------------------------------------------
-        # DATE FILTER
-        # Example: ?date=2026-08-24
-        # -------------------------------------------------
-
-        date = self.request.query_params.get(
-            "date"
-        )
-
-        if date:
-            queryset = queryset.filter(
-                created_at__date=date
-            )
-
-        # -------------------------------------------------
-        # STATUS FILTER
-        # Example: ?status=COMPLETED
-        # -------------------------------------------------
-
-        status_filter = (
-            self.request.query_params.get(
-                "status"
-            )
-        )
-
-        if status_filter:
-            queryset = queryset.filter(
-                status__name=status_filter
-            )
-
-        # -------------------------------------------------
-        # DRIVER FILTER
-        # Example: ?driver=<driver_id>
-        # -------------------------------------------------
-
-        driver = self.request.query_params.get(
-            "driver"
-        )
-
-        if driver:
-            queryset = queryset.filter(
-                driver__id=driver
-            )
-
-        # -------------------------------------------------
-        # MIN FARE FILTER
-        # Example: ?min_fare=100
-        # -------------------------------------------------
-
-        min_fare = self.request.query_params.get(
-            "min_fare"
-        )
-
-        if min_fare:
-            queryset = queryset.filter(
-                fare__gte=min_fare
-            )
-
-        # -------------------------------------------------
-        # MAX FARE FILTER
-        # Example: ?max_fare=500
-        # -------------------------------------------------
-
-        max_fare = self.request.query_params.get(
-            "max_fare"
-        )
-
-        if max_fare:
-            queryset = queryset.filter(
-                fare__lte=max_fare
-            )
-
-        return queryset
-
-    def list(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
-
-        queryset = self.get_queryset()
-
-        page = self.paginate_queryset(
-            queryset
-        )
-
-        if page is not None:
-
-            data = [
-                build_ride_data(ride)
-                for ride in page
-            ]
-
-            return self.get_paginated_response(
-                data
-            )
-
-        data = [
-            build_ride_data(ride)
-            for ride in queryset
-        ]
-
-        return Response(
-            {
-                "success": True,
-                "count": len(data),
-                "results": data,
-            }
-        )
