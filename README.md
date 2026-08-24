@@ -7044,7 +7044,7 @@ query_count = len(
 )
 ```
 
-This helps compare slow and optimized implementations.
+
 
 ```
 
