@@ -7082,10 +7082,6 @@ BUSY    → Driver is currently handling another ride
 ```http
 GET /api/drivers/nearby/
 ```
-
-<<<<<<< HEAD
-
-=======
 ### Query Parameters
 >>>>>>> 8938be4 (Complete driver location nearby search and validation tasks)
 
