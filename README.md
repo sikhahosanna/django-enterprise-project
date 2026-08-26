@@ -7082,15 +7082,6 @@ BUSY    → Driver is currently handling another ride
 ```http
 GET /api/drivers/nearby/
 ```
-<<<<<<< HEAD
-=======
-
-
-
-=======
->>>>>>> a3cad3f (Implement WebSocket authentication and connection handling)
-### Query Parameters
->>>>>>> 8938be4 (Complete driver location nearby search and validation tasks)
 
 ```text
 latitude
@@ -8038,4 +8029,552 @@ The implementation provides:
 * Multi-user WebSocket testing
 
 ````
+27/08/26
+
+# Django Ride Booking Backend
+## Notifications & Background Processing
+
+A Django-based ride booking backend implementing asynchronous notifications,
+background processing, Celery task retries, Redis integration, and duplicate
+notification prevention.
+
+---
+
+# Project Overview
+
+The main objective of this implementation is to process ride-related
+notifications asynchronously so that API requests are not blocked by
+background operations.
+
+Architecture:
+
+    Client
+       |
+       v
+    Django REST API
+       |
+       +--------------------+
+       |                    |
+       v                    v
+    Database             Celery
+                            |
+                            v
+                          Redis
+                            |
+                            v
+                     Background Worker
+                            |
+                            v
+                       Notification
+
+
+---
+
+# Technologies Used
+
+- Python
+- Django
+- Django REST Framework
+- Django Channels
+- Celery
+- Redis
+- Daphne
+- SQLite/PostgreSQL
+- Postman
+- Git/GitHub
+
+---
+
+# Task 1 — Understand Asynchronous Processing
+
+## Synchronous Processing
+
+In synchronous processing, the API waits for the operation to finish.
+
+Example:
+
+    Client
+      |
+      v
+    API Request
+      |
+      v
+    Create Notification
+      |
+      v
+    Return Response
+
+If notification processing takes a long time, the API response is delayed.
+
+## Asynchronous Processing
+
+In asynchronous processing, the API sends the background work to Celery
+and immediately continues.
+
+    Client
+      |
+      v
+    Django API
+      |
+      +--------> Celery Task
+      |              |
+      v              v
+    Response       Worker
+                     |
+                     v
+                Notification
+
+This improves API responsiveness.
+
+---
+
+# Task 2 — Create Notification Model
+
+Created a Notification model to store user notifications.
+
+Main fields:
+
+- User
+- Ride
+- Notification Type
+- Message
+- Is Read
+- Created At
+
+The notification is associated with a user and ride.
+
+Example notification:
+
+    User: Passenger
+    Ride: Ride #123
+    Type: RIDE_ACCEPTED
+    Message: Your driver has accepted the ride.
+
+---
+
+# Task 3 — Notification APIs
+
+Implemented notification APIs.
+
+## Get Notifications
+
+    GET /api/notifications/
+
+Returns notifications belonging to the authenticated user.
+
+Pagination is supported.
+
+## Mark Notification as Read
+
+    PATCH /api/notifications/{id}/read/
+
+Marks a notification as read.
+
+## Mark All Notifications as Read
+
+    POST /api/notifications/read-all/
+
+Marks all notifications belonging to the authenticated user as read.
+
+---
+
+# Task 4 — Background Task Setup
+
+Celery was configured for asynchronous background processing.
+
+Redis is used as the Celery message broker and result backend.
+
+Configuration:
+
+    Broker:
+    redis://127.0.0.1:6379/0
+
+    Result Backend:
+    redis://127.0.0.1:6379/1
+
+Celery tasks include:
+
+- Ride notification
+- Driver assignment notification
+- Ride completion notification
+- Reminder notification
+- Ride accepted notification
+- Driver arriving notification
+- Ride started notification
+- Ride cancelled notification
+- Ride completed notification
+
+---
+
+# Task 5 — Asynchronous Ride Notifications
+
+Ride notifications are processed using Celery background tasks.
+
+Example:
+
+    @shared_task
+    def ride_accepted_notification(ride_id, passenger_id):
+
+        notification, created = Notification.objects.get_or_create(
+            user_id=passenger_id,
+            ride_id=ride_id,
+            notification_type=Notification.NotificationType.RIDE_ACCEPTED,
+            defaults={
+                "message": "Your driver has accepted the ride."
+            },
+        )
+
+        return {
+            "notification_id": str(notification.id),
+            "created": created,
+        }
+
+The API can trigger the task without waiting for notification creation.
+
+Example:
+
+    ride_accepted_notification.delay(
+        ride_id,
+        passenger_id
+    )
+
+---
+
+# Task 6 — Notification Events
+
+Implemented notification tasks for different ride events.
+
+## Ride Accepted
+
+    RIDE_ACCEPTED
+
+Message:
+
+    Your driver has accepted the ride.
+
+## Driver Arriving
+
+    DRIVER_ARRIVING
+
+Message:
+
+    Your driver is arriving.
+
+## Ride Started
+
+    RIDE_STARTED
+
+Message:
+
+    Your ride has started.
+
+## Ride Completed
+
+    RIDE_COMPLETED
+
+Message:
+
+    Your ride has been completed.
+
+## Ride Cancelled
+
+    RIDE_CANCELLED
+
+Message:
+
+    Your ride has been cancelled.
+
+Each notification is processed asynchronously through Celery.
+
+---
+
+# Task 7 — Retry Failed Tasks
+
+Implemented Celery retry behavior for failed background tasks.
+
+Test task:
+
+    @shared_task(bind=True, max_retries=2)
+    def retry_test_task(self):
+
+        attempt = self.request.retries + 1
+
+        if attempt < 3:
+            print(f"Attempt {attempt} failed. Retrying...")
+            raise self.retry(countdown=2)
+
+        print("Attempt 3 succeeded.")
+        return "Retry test successful"
+
+## Retry Flow
+
+    Attempt 1
+        |
+        v
+      Failed
+        |
+        v
+      Retry
+        |
+        v
+    Attempt 2
+        |
+        v
+      Failed
+        |
+        v
+      Retry
+        |
+        v
+    Attempt 3
+        |
+        v
+      Success
+
+Maximum retries:
+
+    max_retries = 2
+
+Retry delay:
+
+    countdown = 2 seconds
+
+## Testing
+
+The task was triggered using:
+
+    from accounts.tasks import retry_test_task
+
+    result = retry_test_task.delay()
+
+The result was verified using:
+
+    print(result.ready())
+
+    print(result.get())
+
+Expected result:
+
+    True
+    Retry test successful
+
+---
+
+# Task 8 — Duplicate Notification Prevention
+
+Duplicate notification prevention ensures that the same ride event does
+not create multiple notifications.
+
+Implemented using:
+
+    Notification.objects.get_or_create(...)
+
+and a database-level unique constraint.
+
+Unique combination:
+
+    user
+    ride
+    notification_type
+
+Constraint:
+
+    unique_ride_notification
+
+This prevents the same user from receiving multiple notifications for the
+same ride event.
+
+## Example
+
+First event:
+
+    Ride Accepted
+          |
+          v
+    Notification Created
+          |
+          v
+    created = True
+
+Same event again:
+
+    Ride Accepted
+          |
+          v
+    Existing Notification Found
+          |
+          v
+    created = False
+
+Therefore, only one notification exists.
+
+## Duplicate Test
+
+The same Celery task can be triggered multiple times:
+
+    results = [
+        ride_accepted_notification.delay(
+            str(ride.id),
+            str(user.id)
+        )
+        for _ in range(5)
+    ]
+
+The results can be checked using:
+
+    [result.get() for result in results]
+
+The notification count can be verified using:
+
+    Notification.objects.filter(
+        user=user,
+        ride=ride,
+        notification_type=Notification.NotificationType.RIDE_ACCEPTED
+    ).count()
+
+Expected result:
+
+    1
+
+This confirms duplicate notification prevention.
+
+---
+
+# Redis Configuration
+
+Redis is used as the message broker for Celery.
+
+Redis address:
+
+    redis://127.0.0.1:6379/0
+
+Result backend:
+
+    redis://127.0.0.1:6379/1
+
+Redis service was configured locally using Memurai on Windows.
+
+---
+
+# Celery Worker
+
+Celery worker is started using:
+
+    celery -A myproject worker --loglevel=info --pool=solo
+
+Successful worker startup shows:
+
+    Connected to redis://127.0.0.1:6379/0
+
+and:
+
+    celery@DESKTOP... ready.
+
+The worker processes background tasks from the Celery queue.
+
+---
+
+# Testing
+
+## Django Check
+
+Run:
+
+    python manage.py check
+
+Expected:
+
+    System check identified no issues (0 silenced).
+
+## Celery Worker
+
+Start worker:
+
+    celery -A myproject worker --loglevel=info --pool=solo
+
+## Trigger Background Task
+
+Open Django shell:
+
+    python manage.py shell
+
+Then:
+
+    from accounts.tasks import retry_test_task
+
+    result = retry_test_task.delay()
+
+    print(result.id)
+
+## Verify Result
+
+    print(result.ready())
+
+    print(result.get())
+
+Expected:
+
+    True
+    Retry test successful
+
+---
+
+# Postman Testing
+
+Notification APIs can be tested using Postman.
+
+## Get Notifications
+
+    GET /api/notifications/
+
+Authorization:
+
+    Bearer <access_token>
+
+## Mark Notification Read
+
+    PATCH /api/notifications/{notification_id}/read/
+
+Authorization:
+
+    Bearer <access_token>
+
+## Mark All Notifications Read
+
+    POST /api/notifications/read-all/
+
+Authorization:
+
+    Bearer <access_token>
+
+---
+
+# Task Completion Status
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Task 1 | Understand Asynchronous Processing | Completed |
+| Task 2 | Create Notification Model | Completed |
+| Task 3 | Notification APIs | Completed |
+| Task 4 | Celery + Redis Setup | Completed |
+| Task 5 | Asynchronous Notifications | Completed |
+| Task 6 | Ride Notification Events | Completed |
+| Task 7 | Retry Failed Tasks | Completed |
+| Task 8 | Duplicate Prevention | Completed |
+
+---
+
+# Acceptance Criteria
+
+- Redis configured
+- Celery configured
+- Background worker working
+- Notification APIs completed
+- Ride notifications generated asynchronously
+- Retry mechanism implemented
+- Duplicate notification prevention implemented
+
+All acceptance criteria have been completed and verified.
+
+---
 
