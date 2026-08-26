@@ -1,4 +1,6 @@
 from django.db import transaction
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 from ..models import (
     Ride,
@@ -240,6 +242,23 @@ class RideService:
                 "updated_at",
             ]
         )
+# -----------------------------------------------------
+# BROADCAST RIDE STATUS
+# -----------------------------------------------------
+
+        channel_layer = get_channel_layer()
+
+        async_to_sync(
+            channel_layer.group_send
+        )(
+            f"ride_{ride.id}",
+        {
+           "type": "ride_status_update",
+           "ride_id": str(ride.id),
+           "status": ride.status.name,
+           "message": f"Ride status changed to {ride.status.name}",
+       }
+)
 
         return ride
 

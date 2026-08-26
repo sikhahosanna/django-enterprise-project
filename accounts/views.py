@@ -1406,6 +1406,18 @@ class RideStatusUpdateView(APIView):
                     ),
                 )
             )
+            channel_layer = get_channel_layer()
+
+            async_to_sync(
+                channel_layer.group_send
+            )(
+                f"ride_{updated_ride.id}",
+                {
+                   "type": "ride_status_update",
+                   "status": updated_ride.status.name,
+               }
+            )
+
 
         except Ride.DoesNotExist:
 
@@ -2386,7 +2398,38 @@ class DriverLocationView(APIView):
                 },
             )
         )
+# -------------------------------------------------
+# BROADCAST DRIVER LOCATION
+# -------------------------------------------------
 
+        channel_layer = get_channel_layer()
+
+        ride = (
+            Ride.objects
+        .filter(
+            driver=driver,
+            status__name__in=[
+                RideStatus.Status.ACCEPTED,
+                RideStatus.Status.DRIVER_ARRIVING,
+                RideStatus.Status.STARTED,
+           ],
+     )
+    .first()
+)
+
+        if ride:
+            async_to_sync(
+                channel_layer.group_send
+            )(
+                f"ride_{ride.id}",
+        {
+                    "type": "driver_location_update",
+                    "ride_id": str(ride.id),
+                    "driver_id": str(driver.id),
+                    "latitude": float(location.latitude),
+                    "longitude": float(location.longitude),
+        },
+    )
         # Invalidate nearby driver cache
         cache.clear()
 

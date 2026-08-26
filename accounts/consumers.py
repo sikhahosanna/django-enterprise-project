@@ -456,3 +456,19 @@ class RideConsumer(AsyncWebsocketConsumer):
                 "status": event["status"],
             })
         )
+    async def driver_location_update(
+        self,
+        event,
+   ):
+
+        await self.send(
+            text_data=json.dumps({
+               "success": True,
+               "message": "Driver location updated.",
+               "type": "driver_location",
+               "ride_id": event["ride_id"],
+               "driver_id": event["driver_id"],
+               "latitude": event["latitude"],
+               "longitude": event["longitude"],
+        })
+    )

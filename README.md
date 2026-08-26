@@ -7082,6 +7082,13 @@ BUSY    → Driver is currently handling another ride
 ```http
 GET /api/drivers/nearby/
 ```
+<<<<<<< HEAD
+=======
+
+
+
+=======
+>>>>>>> a3cad3f (Implement WebSocket authentication and connection handling)
 ### Query Parameters
 >>>>>>> 8938be4 (Complete driver location nearby search and validation tasks)
 
@@ -7526,6 +7533,509 @@ Performance Monitoring
 ```
 
 This allows the ride-booking system to efficiently identify the nearest available drivers while reducing database load through caching.
+
+````
+26/8/26
+
+
+````markdown
+# Django Channels & Real-Time Mobile Communication
+
+## Jira Story
+
+Implement real-time communication between the Django backend and mobile clients using WebSockets.
+
+---
+
+## Objective
+
+Implement real-time communication between Django backend and mobile clients using Django Channels and WebSockets.
+
+The main objective is to allow mobile clients to receive real-time ride status and driver location updates without repeatedly polling REST APIs.
+
+---
+
+# Task 1 — Understand REST vs WebSocket
+
+## REST Communication
+
+REST API communication follows a request-response model.
+
+```text
+Mobile → Request → Backend
+Mobile ← Response ← Backend
+````
+
+The mobile application must send a request whenever it needs updated information.
+
+## WebSocket Communication
+
+WebSocket provides a persistent two-way connection.
+
+```text
+Mobile ←────────→ Backend
+       Real Time
+```
+
+Once the connection is established, the backend can send updates to the mobile client immediately.
+
+## Features Requiring WebSockets
+
+WebSockets are useful for:
+
+* Real-time ride status updates
+* Driver location updates
+* Ride acceptance notifications
+* Driver arriving notifications
+* Ride started notifications
+* Ride completed notifications
+* Real-time communication between driver and passenger
+
+---
+
+# Task 2 — Configure Django Channels
+
+Django Channels was configured to support WebSocket communication.
+
+## Technologies Used
+
+* Django
+* Django REST Framework
+* Django Channels
+* ASGI
+* Daphne
+* Redis / Channel Layer
+* JWT Authentication
+
+## ASGI
+
+The Django application runs using ASGI to support asynchronous WebSocket communication.
+
+The development server uses Daphne/ASGI.
+
+Example:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+# Task 3 — Create Ride WebSocket
+
+A Ride WebSocket was implemented for individual rides.
+
+## WebSocket Endpoint
+
+```text
+ws://127.0.0.1:8000/ws/ride/{ride_id}/?token={ACCESS_TOKEN}
+```
+
+Example:
+
+```text
+ws://127.0.0.1:8000/ws/ride/8603c224-1204-4941-babb-988ca54ec923/?token=YOUR_ACCESS_TOKEN
+```
+
+## Successful Connection
+
+Example response:
+
+```json
+{
+    "success": true,
+    "message": "Ride WebSocket connected successfully.",
+    "ride_id": "8603c224-1204-4941-babb-988ca54ec923",
+    "user_id": "cd938dff-f2fe-4a83-95be-65ec7c53881c"
+}
+```
+
+## Disconnection
+
+When the client disconnects, the WebSocket consumer handles the disconnect event and removes the client from the ride group.
+
+---
+
+# Task 4 — Real-Time Ride Status
+
+Ride status changes are broadcast to connected WebSocket clients.
+
+## Ride Status Flow
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+The backend broadcasts ride status changes through the WebSocket group associated with the ride.
+
+## Example
+
+When the ride status changes:
+
+```json
+{
+    "type": "ride_status_update",
+    "ride_id": "8603c224-1204-4941-babb-988ca54ec923",
+    "status": "started"
+}
+```
+
+The connected mobile client can receive the update immediately.
+
+---
+
+# Task 5 — Driver Location Updates
+
+Driver location updates are sent to the passenger in real time.
+
+## Flow
+
+```text
+Driver Mobile
+      ↓
+Django Backend
+      ↓
+WebSocket
+      ↓
+Passenger Mobile
+```
+
+The driver sends updated coordinates to the backend.
+
+Example:
+
+```json
+{
+    "latitude": 17.385044,
+    "longitude": 78.486671
+}
+```
+
+The backend processes the location update and broadcasts it to the appropriate ride WebSocket group.
+
+## Example WebSocket Event
+
+```json
+{
+    "type": "driver_location_update",
+    "ride_id": "8603c224-1204-4941-babb-988ca54ec923",
+    "latitude": 17.385044,
+    "longitude": 78.486671
+}
+```
+
+This allows the passenger mobile application to display the driver's current location without repeatedly polling the backend.
+
+---
+
+# Task 6 — WebSocket Authentication
+
+JWT authentication was implemented for WebSocket connections.
+
+The following validations are performed:
+
+### 1. JWT Validation
+
+The access token is extracted from the WebSocket connection and validated.
+
+Invalid tokens are rejected.
+
+### 2. User Identity
+
+The user ID is extracted from the validated JWT.
+
+The corresponding user is loaded from the database.
+
+### 3. Ride Ownership
+
+The system verifies whether the authenticated user is the rider/passenger associated with the requested ride.
+
+### 4. Driver Authorization
+
+If the authenticated user is a driver, the system verifies that the driver is assigned to the requested ride.
+
+## Authorization Rule
+
+A user can connect only when:
+
+```text
+User is Ride Owner
+        OR
+User is Assigned Driver
+```
+
+Otherwise the WebSocket connection is rejected.
+
+This prevents unauthorized users from accessing another user's ride updates.
+
+---
+
+# Task 7 — Connection Handling
+
+Different WebSocket connection scenarios were tested.
+
+## Connection Failure
+
+If the backend is unavailable, the WebSocket connection fails.
+
+Example:
+
+```text
+Could not connect
+```
+
+## Normal Disconnection
+
+When the client disconnects, the consumer handles the disconnect event and removes the client from the WebSocket group.
+
+## Invalid Token
+
+A connection using an invalid JWT token is rejected.
+
+Example:
+
+```text
+ws://127.0.0.1:8000/ws/ride/{ride_id}/?token=INVALID_TOKEN
+```
+
+Expected:
+
+```text
+Connection rejected
+```
+
+## Expired Token
+
+An expired JWT access token is rejected.
+
+The user must obtain a new access token before reconnecting.
+
+## Reconnection
+
+After a temporary network/server failure, the client can reconnect using a valid JWT token.
+
+Example:
+
+```text
+Disconnect
+    ↓
+Reconnect
+    ↓
+JWT Validation
+    ↓
+Authorization
+    ↓
+WebSocket Connected
+```
+
+---
+
+# Task 8 — Multi-User Testing
+
+WebSocket access was tested for different user roles.
+
+```text
+Passenger
+Driver
+Admin
+```
+
+## Passenger
+
+The passenger can connect to their own ride.
+
+```text
+Passenger → Own Ride WebSocket
+                  ↓
+               Allowed
+```
+
+## Assigned Driver
+
+The assigned driver can connect to the corresponding ride.
+
+```text
+Driver → Assigned Ride WebSocket
+                 ↓
+              Allowed
+```
+
+## Unauthorized User
+
+A user who is not the ride owner or assigned driver cannot connect to the ride.
+
+```text
+Unauthorized User
+        ↓
+Another User's Ride
+        ↓
+Connection Rejected
+```
+
+## Admin
+
+Admin access is controlled according to the WebSocket authorization rules configured in the consumer.
+
+Only authorized users should receive ride-specific events.
+
+---
+
+# Postman Testing
+
+WebSocket connections can be tested using Postman.
+
+## WebSocket URL
+
+```text
+ws://127.0.0.1:8000/ws/ride/{RIDE_ID}/?token={ACCESS_TOKEN}
+```
+
+Replace:
+
+```text
+{RIDE_ID}
+```
+
+with the actual ride UUID.
+
+Replace:
+
+```text
+{ACCESS_TOKEN}
+```
+
+with a valid JWT access token.
+
+## Successful Response
+
+```json
+{
+    "success": true,
+    "message": "Ride WebSocket connected successfully."
+}
+```
+
+---
+
+# Testing Checklist
+
+| Test                       | Expected Result             |
+| -------------------------- | --------------------------- |
+| Valid JWT                  | Connection accepted         |
+| Invalid JWT                | Connection rejected         |
+| Expired JWT                | Connection rejected         |
+| Ride owner                 | Connection accepted         |
+| Assigned driver            | Connection accepted         |
+| Unauthorized user          | Connection rejected         |
+| Server unavailable         | Connection failure          |
+| Client disconnect          | Disconnect handled          |
+| Reconnect with valid token | Connection accepted         |
+| Ride status update         | Real-time event received    |
+| Driver location update     | Real-time location received |
+
+---
+
+# Acceptance Criteria
+
+* [x] Django Channels configured.
+* [x] ASGI configured.
+* [x] WebSocket routing configured.
+* [x] Ride WebSocket connection working.
+* [x] JWT authentication implemented.
+* [x] User identity verification implemented.
+* [x] Ride ownership verification implemented.
+* [x] Driver authorization implemented.
+* [x] Ride status updates broadcast.
+* [x] Driver location updates broadcast.
+* [x] Unauthorized connections rejected.
+* [x] Disconnect handling implemented.
+* [x] Invalid token handling tested.
+* [x] Expired token handling tested.
+* [x] Reconnection scenario tested.
+* [x] Multi-user WebSocket testing performed.
+
+---
+
+# Project Structure
+
+```text
+myproject/
+│
+├── accounts/
+│   ├── consumers.py
+│   ├── models.py
+│   ├── views.py
+│   ├── urls.py
+│   └── routing.py
+│
+├── myproject/
+│   ├── settings.py
+│   ├── asgi.py
+│   └── urls.py
+│
+├── manage.py
+└── README.md
+```
+
+---
+
+# How to Run
+
+Activate the virtual environment:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Run migrations:
+
+```powershell
+python manage.py migrate
+```
+
+Start the Django ASGI server:
+
+```powershell
+python manage.py runserver
+```
+
+Server:
+
+```text
+http://127.0.0.1:8000/
+```
+
+WebSocket:
+
+```text
+ws://127.0.0.1:8000/ws/ride/{ride_id}/?token={access_token}
+```
+
+---
+
+# Conclusion
+
+The Django backend now supports real-time communication with mobile clients using Django Channels and WebSockets.
+
+The implementation provides:
+
+* Secure JWT-authenticated WebSocket connections
+* Ride-specific authorization
+* Real-time ride status updates
+* Real-time driver location updates
+* Unauthorized connection prevention
+* Connection and disconnection handling
+* Invalid and expired token handling
+* Reconnection support
+* Multi-user WebSocket testing
 
 ````
 

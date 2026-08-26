@@ -44,6 +44,18 @@ SECRET_KEY = os.getenv(
 DEBUG = True
 
 ALLOWED_HOSTS = []
+ASGI_APPLICATION = "myproject.asgi.application"
+
+
+# =========================================================
+# CHANNEL LAYERS
+# =========================================================
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 
 # =========================================================
@@ -80,8 +92,7 @@ INSTALLED_APPS = [
     # JWT blacklist
     "rest_framework_simplejwt.token_blacklist",
 ]
-ASGI_APPLICATION = "myproject.asgi.application"
-ASGI_APPLICATION = "myproject.asgi.application"
+
 
 # =========================================================
 # CHANNEL LAYERS
