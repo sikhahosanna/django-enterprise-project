@@ -541,6 +541,11 @@ class Notification(models.Model):
         on_delete=models.CASCADE,
         related_name="notifications"
     )
+    title = models.CharField(
+    max_length=255,
+    default="Notification"
+)
+
 
     ride = models.ForeignKey(
         Ride,

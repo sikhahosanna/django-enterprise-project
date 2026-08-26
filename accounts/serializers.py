@@ -660,6 +660,7 @@ class RideCreateSerializer(
     def create(self, validated_data):
 
         request = self.context["request"]
+        validated_data.pop("rider", None)
 
         try:
 
@@ -1039,6 +1040,7 @@ class NotificationSerializer(
             "id",
             "user",
             "ride",
+             "title",
             "notification_type",
             "message",
             "is_read",
@@ -1049,5 +1051,6 @@ class NotificationSerializer(
             "id",
             "user",
             "ride",
+            "title",
             "created_at",
         ]
