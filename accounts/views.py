@@ -19,12 +19,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .utils.helpers import calculate_distance_km
+from rest_framework.permissions import AllowAny
 
 from .services.notification_service import NotificationService
 from .services.profile_service import ProfileService
 
 
 from .permissions import IsAdminOrDriverOwner
+from .throttles import LoginRateThrottle
 
 from .models import (
     Ride,
@@ -125,15 +127,13 @@ class RegisterView(generics.CreateAPIView):
 # LOGIN
 # =========================================================
 
-# =========================================================
-# LOGIN
-# =========================================================
-
 
 class LoginView(APIView):
 
-    def post(self, request):
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
+    def post(self, request):
         serializer = LoginSerializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
@@ -154,8 +154,6 @@ class LoginView(APIView):
             },
             status_code=status.HTTP_200_OK,
         )
-
-
 # =========================================================
 # PROFILE
 # =========================================================
