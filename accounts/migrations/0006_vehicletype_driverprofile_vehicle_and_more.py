@@ -9,52 +9,124 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0005_profile_is_deleted'),
+        ("accounts", "0005_profile_is_deleted"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='VehicleType',
+            name="VehicleType",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(choices=[('bike', 'Bike'), ('auto', 'Auto'), ('car', 'Car'), ('suv', 'SUV')], max_length=20, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        choices=[
+                            ("bike", "Bike"),
+                            ("auto", "Auto"),
+                            ("car", "Car"),
+                            ("suv", "SUV"),
+                        ],
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
-            name='DriverProfile',
+            name="DriverProfile",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('license_number', models.CharField(max_length=50, unique=True)),
-                ('status', models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive'), ('suspended', 'Suspended')], default='inactive', max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='driver_profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("license_number", models.CharField(max_length=50, unique=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("active", "Active"),
+                            ("inactive", "Inactive"),
+                            ("suspended", "Suspended"),
+                        ],
+                        default="inactive",
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="driver_profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Vehicle',
+            name="Vehicle",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('registration_number', models.CharField(max_length=20, unique=True)),
-                ('model', models.CharField(max_length=100)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('driver', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vehicles', to='accounts.driverprofile')),
-                ('vehicle_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='vehicles', to='accounts.vehicletype')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("registration_number", models.CharField(max_length=20, unique=True)),
+                ("model", models.CharField(max_length=100)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "driver",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="vehicles",
+                        to="accounts.driverprofile",
+                    ),
+                ),
+                (
+                    "vehicle_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="vehicles",
+                        to="accounts.vehicletype",
+                    ),
+                ),
             ],
         ),
         migrations.AddIndex(
-            model_name='driverprofile',
-            index=models.Index(fields=['status'], name='accounts_dr_status_29d5c8_idx'),
+            model_name="driverprofile",
+            index=models.Index(fields=["status"], name="accounts_dr_status_29d5c8_idx"),
         ),
         migrations.AddIndex(
-            model_name='vehicle',
-            index=models.Index(fields=['driver'], name='accounts_ve_driver__21c69a_idx'),
+            model_name="vehicle",
+            index=models.Index(
+                fields=["driver"], name="accounts_ve_driver__21c69a_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='vehicle',
-            index=models.Index(fields=['vehicle_type'], name='accounts_ve_vehicle_c82457_idx'),
+            model_name="vehicle",
+            index=models.Index(
+                fields=["vehicle_type"], name="accounts_ve_vehicle_c82457_idx"
+            ),
         ),
     ]

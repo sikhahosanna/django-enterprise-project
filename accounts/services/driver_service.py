@@ -1,4 +1,4 @@
-from django.db import transaction
+
 
 from ..models import (
     DriverProfile,
@@ -13,21 +13,15 @@ class DriverService:
     def get_driver_for_user(cls, user):
 
         try:
-            return DriverProfile.objects.get(
-                user=user
-            )
+            return DriverProfile.objects.get(user=user)
         except DriverProfile.DoesNotExist:
-            raise PermissionError(
-                "You are not registered as a driver."
-            )
+            raise PermissionError("You are not registered as a driver.")
 
     @classmethod
     def validate_active_driver(cls, driver):
 
         if driver.status != DriverProfile.DriverStatus.ACTIVE:
-            raise PermissionError(
-                "Driver is not active."
-            )
+            raise PermissionError("Driver is not active.")
 
         return driver
 

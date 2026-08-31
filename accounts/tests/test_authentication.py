@@ -11,8 +11,7 @@ class AuthenticationTests(TestCase):
         self.client = APIClient()
 
         self.user = User.objects.create_user(
-            email="test@example.com",
-            password="Test@12345"
+            email="test@example.com", password="Test@12345"
         )
 
     def test_login_with_valid_credentials(self):
@@ -24,7 +23,7 @@ class AuthenticationTests(TestCase):
                 "email": "test@example.com",
                 "password": "Test@12345",
             },
-            format="json"
+            format="json",
         )
 
         print("LOGIN STATUS:", response.status_code)
@@ -36,11 +35,8 @@ class AuthenticationTests(TestCase):
         url = reverse("login")
         response = self.client.post(
             url,
-            {
-                "email": "test@example.com",
-                "password": "WrongPassword123"
-            },
-            format="json"
+            {"email": "test@example.com", "password": "WrongPassword123"},
+            format="json",
         )
 
         print("INVALID LOGIN STATUS:", response.status_code)

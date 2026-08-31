@@ -54,16 +54,12 @@ class RideCreationTest(TestCase):
     def test_ride_creation(self):
 
         response = self.client.post(
-            "/api/rides/",
+            "/api/v1/rides/",
             {
-                "vehicle_type": str(
-                    self.vehicle_type.id
-                ),
-
+                "vehicle_type": str(self.vehicle_type.id),
                 "pickup_address": "Guntur",
                 "pickup_latitude": 16.3067,
                 "pickup_longitude": 80.4365,
-
                 "dropoff_address": "Vijayawada",
                 "dropoff_latitude": 16.3200,
                 "dropoff_longitude": 80.4500,
@@ -75,10 +71,7 @@ class RideCreationTest(TestCase):
         print("RESPONSE:", response.data)
 
         if response.status_code == 500:
-            print(
-                "CONTENT:",
-                response.content.decode()
-            )
+            print("CONTENT:", response.content.decode())
 
         self.assertEqual(
             response.status_code,

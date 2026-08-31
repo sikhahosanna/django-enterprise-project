@@ -64,33 +64,23 @@ class DuplicateRideAcceptanceTest(TestCase):
         # AUTHENTICATION
         # -------------------------------------------------
 
-        self.client_a.force_authenticate(
-            user=self.driver_user_a
-        )
+        self.client_a.force_authenticate(user=self.driver_user_a)
 
-        self.client_b.force_authenticate(
-            user=self.driver_user_b
-        )
+        self.client_b.force_authenticate(user=self.driver_user_b)
 
         # -------------------------------------------------
         # VEHICLE TYPE
         # -------------------------------------------------
 
-        self.vehicle_type = VehicleType.objects.create(
-            name="car"
-        )
+        self.vehicle_type = VehicleType.objects.create(name="car")
 
         # -------------------------------------------------
         # STATUS
         # -------------------------------------------------
 
-        self.requested_status = RideStatus.objects.create(
-            name="requested"
-        )
+        self.requested_status = RideStatus.objects.create(name="requested")
 
-        self.accepted_status = RideStatus.objects.create(
-            name="accepted"
-        )
+        self.accepted_status = RideStatus.objects.create(name="accepted")
 
         # -------------------------------------------------
         # RIDE
@@ -101,15 +91,12 @@ class DuplicateRideAcceptanceTest(TestCase):
             driver=None,
             vehicle_type=self.vehicle_type,
             status=self.requested_status,
-
             pickup_address="Guntur",
             pickup_latitude=16.3067,
             pickup_longitude=80.4365,
-
             dropoff_address="Vijayawada",
             dropoff_latitude=16.3200,
             dropoff_longitude=80.4500,
-
             fare=100,
         )
 
@@ -124,7 +111,7 @@ class DuplicateRideAcceptanceTest(TestCase):
         # -------------------------------------------------
 
         response_a = self.client_a.post(
-            f"/api/rides/{self.ride.id}/accept/",
+            f"/api/v1/rides/{self.ride.id}/accept/",
             format="json",
         )
 
@@ -141,7 +128,7 @@ class DuplicateRideAcceptanceTest(TestCase):
         # -------------------------------------------------
 
         response_b = self.client_b.post(
-            f"/api/rides/{self.ride.id}/accept/",
+            f"/api/v1/rides/{self.ride.id}/accept/",
             format="json",
         )
 

@@ -68,23 +68,14 @@ class RideAcceptanceTest(TestCase):
 
         self.ride = Ride.objects.create(
             rider=self.rider,
-
             vehicle_type=self.vehicle_type,
-
             status=self.requested_status,
-
             pickup_address="Guntur",
-
             pickup_latitude=16.3067,
-
             pickup_longitude=80.4365,
-
             dropoff_address="Vijayawada",
-
             dropoff_latitude=16.3200,
-
             dropoff_longitude=80.4500,
-
             # REQUIRED FIELD
             fare=Decimal("141.29"),
         )
@@ -104,7 +95,7 @@ class RideAcceptanceTest(TestCase):
     def test_ride_acceptance(self):
 
         response = self.client.post(
-            f"/api/rides/{self.ride.id}/accept/",
+            f"/api/v1/rides/{self.ride.id}/accept/",
             {},
             format="json",
         )

@@ -46,9 +46,7 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
         if not token:
 
-            await self.close(
-                code=4001
-            )
+            await self.close(code=4001)
 
             return
 
@@ -58,9 +56,7 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
         try:
 
-            validated_token = UntypedToken(
-                token
-            )
+            validated_token = UntypedToken(token)
 
         except (
             InvalidToken,
@@ -68,9 +64,7 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
             Exception,
         ):
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -78,15 +72,11 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
         # GET USER ID FROM JWT
         # -----------------------------------------
 
-        user_id = validated_token.get(
-            "user_id"
-        )
+        user_id = validated_token.get("user_id")
 
         if not user_id:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -96,15 +86,11 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
         try:
 
-            self.user = await User.objects.aget(
-                id=user_id
-            )
+            self.user = await User.objects.aget(id=user_id)
 
         except User.DoesNotExist:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -114,15 +100,11 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
         try:
 
-            self.driver_profile = (
-                await self.user.driver_profile
-            )
+            self.driver_profile = await self.user.driver_profile
 
         except Exception:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -133,19 +115,14 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         await self.send(
-            text_data=json.dumps({
-                "success": True,
-                "message": (
-                    "Driver location WebSocket "
-                    "connected successfully."
-                ),
-                "user_id": str(
-                    self.user.id
-                ),
-                "driver_id": str(
-                    self.driver_profile.id
-                ),
-            })
+            text_data=json.dumps(
+                {
+                    "success": True,
+                    "message": ("Driver location WebSocket " "connected successfully."),
+                    "user_id": str(self.user.id),
+                    "driver_id": str(self.driver_profile.id),
+                }
+            )
         )
 
     async def disconnect(
@@ -192,11 +169,13 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
     ):
 
         await self.send(
-            text_data=json.dumps({
-                "success": True,
-                "message": "Message received.",
-                "data": text_data,
-            })
+            text_data=json.dumps(
+                {
+                    "success": True,
+                    "message": "Message received.",
+                    "data": text_data,
+                }
+            )
         )
 
 
@@ -208,9 +187,7 @@ class RideConsumer(AsyncWebsocketConsumer):
         # GET RIDE ID
         # -----------------------------------------
 
-        self.ride_id = self.scope[
-            "url_route"
-        ]["kwargs"]["ride_id"]
+        self.ride_id = self.scope["url_route"]["kwargs"]["ride_id"]
 
         # -----------------------------------------
         # GET JWT TOKEN
@@ -240,9 +217,7 @@ class RideConsumer(AsyncWebsocketConsumer):
 
         if not token:
 
-            await self.close(
-                code=4001
-            )
+            await self.close(code=4001)
 
             return
 
@@ -252,9 +227,7 @@ class RideConsumer(AsyncWebsocketConsumer):
 
         try:
 
-            validated_token = UntypedToken(
-                token
-            )
+            validated_token = UntypedToken(token)
 
         except (
             InvalidToken,
@@ -262,9 +235,7 @@ class RideConsumer(AsyncWebsocketConsumer):
             Exception,
         ):
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -272,15 +243,11 @@ class RideConsumer(AsyncWebsocketConsumer):
         # GET USER ID FROM JWT
         # -----------------------------------------
 
-        user_id = validated_token.get(
-            "user_id"
-        )
+        user_id = validated_token.get("user_id")
 
         if not user_id:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -290,15 +257,11 @@ class RideConsumer(AsyncWebsocketConsumer):
 
         try:
 
-            self.user = await User.objects.aget(
-                id=user_id
-            )
+            self.user = await User.objects.aget(id=user_id)
 
         except User.DoesNotExist:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -311,15 +274,11 @@ class RideConsumer(AsyncWebsocketConsumer):
             self.ride = await Ride.objects.select_related(
                 "rider",
                 "driver__user",
-            ).aget(
-                id=self.ride_id
-            )
+            ).aget(id=self.ride_id)
 
         except Ride.DoesNotExist:
 
-            await self.close(
-                code=4004
-            )
+            await self.close(code=4004)
 
             return
 
@@ -327,10 +286,7 @@ class RideConsumer(AsyncWebsocketConsumer):
         # RIDE OWNER CHECK
         # -----------------------------------------
 
-        is_ride_owner = (
-            self.ride.rider_id
-            == self.user.id
-        )
+        is_ride_owner = self.ride.rider_id == self.user.id
 
         # -----------------------------------------
         # DRIVER AUTHORIZATION
@@ -340,23 +296,15 @@ class RideConsumer(AsyncWebsocketConsumer):
 
         if self.ride.driver:
 
-            is_assigned_driver = (
-                self.ride.driver.user_id
-                == self.user.id
-            )
+            is_assigned_driver = self.ride.driver.user_id == self.user.id
 
         # -----------------------------------------
         # AUTHORIZATION
         # -----------------------------------------
 
-        if (
-            not is_ride_owner
-            and not is_assigned_driver
-        ):
+        if not is_ride_owner and not is_assigned_driver:
 
-            await self.close(
-                code=4003
-            )
+            await self.close(code=4003)
 
             return
 
@@ -364,9 +312,7 @@ class RideConsumer(AsyncWebsocketConsumer):
         # GROUP
         # -----------------------------------------
 
-        self.group_name = (
-            f"ride_{self.ride_id}"
-        )
+        self.group_name = f"ride_{self.ride_id}"
 
         await self.channel_layer.group_add(
             self.group_name,
@@ -380,19 +326,14 @@ class RideConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         await self.send(
-            text_data=json.dumps({
-                "success": True,
-                "message": (
-                    "Ride WebSocket connected "
-                    "successfully."
-                ),
-                "ride_id": str(
-                    self.ride_id
-                ),
-                "user_id": str(
-                    self.user.id
-                ),
-            })
+            text_data=json.dumps(
+                {
+                    "success": True,
+                    "message": ("Ride WebSocket connected " "successfully."),
+                    "ride_id": str(self.ride_id),
+                    "user_id": str(self.user.id),
+                }
+            )
         )
 
     async def disconnect(
@@ -447,28 +388,31 @@ class RideConsumer(AsyncWebsocketConsumer):
     ):
 
         await self.send(
-            text_data=json.dumps({
-                "success": True,
-                "message": "Ride status updated.",
-                "ride_id": str(
-                    self.ride_id
-                ),
-                "status": event["status"],
-            })
+            text_data=json.dumps(
+                {
+                    "success": True,
+                    "message": "Ride status updated.",
+                    "ride_id": str(self.ride_id),
+                    "status": event["status"],
+                }
+            )
         )
+
     async def driver_location_update(
         self,
         event,
-   ):
+    ):
 
         await self.send(
-            text_data=json.dumps({
-               "success": True,
-               "message": "Driver location updated.",
-               "type": "driver_location",
-               "ride_id": event["ride_id"],
-               "driver_id": event["driver_id"],
-               "latitude": event["latitude"],
-               "longitude": event["longitude"],
-        })
-    )
+            text_data=json.dumps(
+                {
+                    "success": True,
+                    "message": "Driver location updated.",
+                    "type": "driver_location",
+                    "ride_id": event["ride_id"],
+                    "driver_id": event["driver_id"],
+                    "latitude": event["latitude"],
+                    "longitude": event["longitude"],
+                }
+            )
+        )

@@ -24,25 +24,19 @@ class InvalidStateChangeTest(TestCase):
             password="TestPassword123",
         )
 
-        self.client.force_authenticate(
-            user=self.user
-        )
+        self.client.force_authenticate(user=self.user)
 
         # -------------------------------------------------
         # VEHICLE TYPE
         # -------------------------------------------------
 
-        self.vehicle_type = VehicleType.objects.create(
-            name="car"
-        )
+        self.vehicle_type = VehicleType.objects.create(name="car")
 
         # -------------------------------------------------
         # CANCELLED STATUS
         # -------------------------------------------------
 
-        self.cancelled_status = RideStatus.objects.create(
-            name="cancelled"
-        )
+        self.cancelled_status = RideStatus.objects.create(name="cancelled")
 
         # -------------------------------------------------
         # RIDE
@@ -52,15 +46,12 @@ class InvalidStateChangeTest(TestCase):
             rider=self.user,
             vehicle_type=self.vehicle_type,
             status=self.cancelled_status,
-
             pickup_address="Guntur",
             pickup_latitude=16.3067,
             pickup_longitude=80.4365,
-
             dropoff_address="Vijayawada",
             dropoff_latitude=16.3200,
             dropoff_longitude=80.4500,
-
             fare=100,
         )
 
@@ -71,7 +62,7 @@ class InvalidStateChangeTest(TestCase):
     def test_cancelled_ride_cannot_be_accepted(self):
 
         response = self.client.post(
-            f"/api/rides/{self.ride.id}/accept/",
+            f"/api/v1/rides/{self.ride.id}/accept/",
             format="json",
         )
 

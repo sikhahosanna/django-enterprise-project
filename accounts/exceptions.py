@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status
 import logging
 
-
 logger = logging.getLogger("accounts")
 
 
@@ -44,9 +43,7 @@ def custom_exception_handler(exc, context):
         if isinstance(response.data, dict):
 
             if "detail" in response.data:
-                message = str(
-                    response.data["detail"]
-                )
+                message = str(response.data["detail"])
             else:
                 message = "Validation error."
 

@@ -6,21 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0007_ridestatus_ride'),
+        ("accounts", "0007_ridestatus_ride"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='ridestatus',
-            name='name',
-            field=models.CharField(choices=[('requested', 'Requested'), ('accepted', 'Accepted'), ('started', 'Started'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], max_length=30, unique=True),
+            model_name="ridestatus",
+            name="name",
+            field=models.CharField(
+                choices=[
+                    ("requested", "Requested"),
+                    ("accepted", "Accepted"),
+                    ("started", "Started"),
+                    ("completed", "Completed"),
+                    ("cancelled", "Cancelled"),
+                ],
+                max_length=30,
+                unique=True,
+            ),
         ),
         migrations.AddIndex(
-            model_name='vehicletype',
-            index=models.Index(fields=['name'], name='accounts_ve_name_7ec80e_idx'),
+            model_name="vehicletype",
+            index=models.Index(fields=["name"], name="accounts_ve_name_7ec80e_idx"),
         ),
         migrations.AddConstraint(
-            model_name='ride',
-            constraint=models.CheckConstraint(condition=models.Q(('fare__gte', 0)), name='ride_fare_non_negative'),
+            model_name="ride",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("fare__gte", 0)), name="ride_fare_non_negative"
+            ),
         ),
     ]

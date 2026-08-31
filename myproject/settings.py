@@ -9,7 +9,6 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 
-
 # =========================================================
 # BASE DIRECTORY
 # =========================================================
@@ -18,28 +17,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 LOG_DIR = BASE_DIR / "logs"
 
-LOG_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # =========================================================
 # ENVIRONMENT
 # =========================================================
 
-load_dotenv(
-    BASE_DIR / ".env"
-)
+load_dotenv(BASE_DIR / ".env")
 
 
 # =========================================================
 # SECURITY
 # =========================================================
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY"
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 DEBUG = True
 
@@ -63,8 +55,7 @@ CHANNEL_LAYERS = {
 # =========================================================
 
 INSTALLED_APPS = [
-     "daphne",
-
+    "daphne",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -72,23 +63,18 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Project apps
     "core",
     "accounts",
     "common",
     "channels",
-
     # REST Framework
     "rest_framework",
-
     # API Documentation
     "drf_spectacular",
     "drf_spectacular_sidecar",
-
     # Filtering
     "django_filters",
-
     # JWT blacklist
     "rest_framework_simplejwt.token_blacklist",
 ]
@@ -108,19 +94,12 @@ CHANNEL_LAYERS = {
 # =========================================================
 
 MIDDLEWARE = [
-
     "django.middleware.security.SecurityMiddleware",
-
     "django.contrib.sessions.middleware.SessionMiddleware",
-
     "django.middleware.common.CommonMiddleware",
-
     "django.middleware.csrf.CsrfViewMiddleware",
-
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-
     "django.contrib.messages.middleware.MessageMiddleware",
-
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -137,25 +116,15 @@ ROOT_URLCONF = "myproject.urls"
 # =========================================================
 
 TEMPLATES = [
-
     {
-        "BACKEND":
-            "django.template.backends.django.DjangoTemplates",
-
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
-
         "APP_DIRS": True,
-
         "OPTIONS": {
-
             "context_processors": [
-
                 "django.template.context_processors.request",
-
                 "django.contrib.auth.context_processors.auth",
-
                 "django.contrib.messages.context_processors.messages",
-
             ],
         },
     },
@@ -174,26 +143,13 @@ WSGI_APPLICATION = "myproject.wsgi.application"
 # =========================================================
 
 DATABASES = {
-
     "default": {
-
-        "ENGINE":
-            "django.db.backends.postgresql",
-
-        "NAME":
-            os.getenv("DB_NAME"),
-
-        "USER":
-            os.getenv("DB_USER"),
-
-        "PASSWORD":
-            os.getenv("DB_PASSWORD"),
-
-        "HOST":
-            os.getenv("DB_HOST"),
-
-        "PORT":
-            os.getenv("DB_PORT"),
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
     }
 }
 
@@ -208,27 +164,34 @@ AUTH_USER_MODEL = "accounts.User"
 # =========================================================
 # PASSWORD VALIDATION
 # =========================================================
+# =========================================================
+# PASSWORD VALIDATION
+# =========================================================
 
 AUTH_PASSWORD_VALIDATORS = [
-
     {
-        "NAME":
-            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
+        ),
     },
-
     {
-        "NAME":
-            "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "MinimumLengthValidator"
+        ),
     },
-
     {
-        "NAME":
-            "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "CommonPasswordValidator"
+        ),
     },
-
     {
-        "NAME":
-            "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "NumericPasswordValidator"
+        ),
     },
 ]
 # =========================================================
@@ -240,38 +203,22 @@ SIMPLE_JWT = {
 }
 
 
-
 # =========================================================
 # REST FRAMEWORK
 # =========================================================
 
 REST_FRAMEWORK = {
-
     "DEFAULT_AUTHENTICATION_CLASSES": (
-
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-
     ),
-    
-
-    "EXCEPTION_HANDLER":
-        "accounts.utils.exceptions.custom_exception_handler",
-    "DEFAULT_SCHEMA_CLASS":
-        "drf_spectacular.openapi.AutoSchema",
-
+    "EXCEPTION_HANDLER": "accounts.utils.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": (
-
         "rest_framework.filters.SearchFilter",
-
         "rest_framework.filters.OrderingFilter",
-
         "django_filters.rest_framework.DjangoFilterBackend",
-
     ),
-
-    "DEFAULT_PAGINATION_CLASS":
-        "rest_framework.pagination.PageNumberPagination",
-
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
 }
 
@@ -281,15 +228,9 @@ REST_FRAMEWORK = {
 # =========================================================
 
 SPECTACULAR_SETTINGS = {
-
-    "TITLE":
-        "My Project API",
-
-    "DESCRIPTION":
-        "API Documentation",
-
-    "VERSION":
-        "1.0.0",
+    "TITLE": "My Project API",
+    "DESCRIPTION": "API Documentation",
+    "VERSION": "1.0.0",
 }
 
 
@@ -344,43 +285,24 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 RIDE_FARE_CONFIG = {
-
     "bike": {
-
         "base_fare": 30,
-
         "per_km": 10,
-
         "per_minute": 2,
     },
-
-
     "auto": {
-
         "base_fare": 40,
-
         "per_km": 15,
-
         "per_minute": 3,
     },
-
-
     "car": {
-
         "base_fare": 60,
-
         "per_km": 20,
-
         "per_minute": 4,
     },
-
-
     "suv": {
-
         "base_fare": 80,
-
         "per_km": 25,
-
         "per_minute": 5,
     },
 }
@@ -404,45 +326,24 @@ RIDE_SURGE_MULTIPLIER = 1.00
 # =========================================================
 
 LOGGING = {
-
     "version": 1,
-
     "disable_existing_loggers": False,
-
     "handlers": {
-
         "file": {
-
             "level": "ERROR",
-
             "class": "logging.FileHandler",
-
-            "filename":
-                str(LOG_DIR / "error.log"),
+            "filename": str(LOG_DIR / "error.log"),
         },
     },
-
     "loggers": {
-
         "django": {
-
-            "handlers": [
-                "file"
-            ],
-
+            "handlers": ["file"],
             "level": "ERROR",
-
             "propagate": True,
         },
-
         "accounts": {
-
-            "handlers": [
-                "file"
-            ],
-
+            "handlers": ["file"],
             "level": "ERROR",
-
             "propagate": False,
         },
     },

@@ -13,31 +13,26 @@ class VehicleTests(APITestCase):
     def setUp(self):
 
         self.admin = User.objects.create_superuser(
-            email="admin_vehicle@example.com",
-            password="AdminPass123!"
+            email="admin_vehicle@example.com", password="AdminPass123!"
         )
 
         self.user = User.objects.create_user(
-            email="normal_vehicle@example.com",
-            password="UserPass123!"
+            email="normal_vehicle@example.com", password="UserPass123!"
         )
 
         self.driver_user = User.objects.create_user(
-            email="driver_vehicle@example.com",
-            password="DriverPass123!"
+            email="driver_vehicle@example.com", password="DriverPass123!"
         )
 
         self.driver = DriverProfile.objects.create(
             user=self.driver_user,
             license_number="TEST-LICENSE-001",
-            status=DriverProfile.DriverStatus.ACTIVE
+            status=DriverProfile.DriverStatus.ACTIVE,
         )
 
-        self.vehicle_type = VehicleType.objects.create(
-            name=VehicleType.Type.CAR
-        )
+        self.vehicle_type = VehicleType.objects.create(name=VehicleType.Type.CAR)
 
-        self.url = "/api/vehicles/"
+        self.url = "/api/v1/vehicles/"
 
     # =====================================================
     # POSITIVE TEST
@@ -45,28 +40,15 @@ class VehicleTests(APITestCase):
 
     def test_admin_can_list_vehicles(self):
 
-        self.client.force_authenticate(
-            user=self.admin
-        )
+        self.client.force_authenticate(user=self.admin)
 
-        response = self.client.get(
-            self.url
-        )
+        response = self.client.get(self.url)
 
-        print(
-            "ADMIN VEHICLE STATUS:",
-            response.status_code
-        )
+        print("ADMIN VEHICLE STATUS:", response.status_code)
 
-        print(
-            "ADMIN VEHICLE RESPONSE:",
-            response.data
-        )
+        print("ADMIN VEHICLE RESPONSE:", response.data)
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # =====================================================
     # NEGATIVE TEST
@@ -74,9 +56,7 @@ class VehicleTests(APITestCase):
 
     def test_normal_user_cannot_create_vehicle(self):
 
-        self.client.force_authenticate(
-            user=self.user
-        )
+        self.client.force_authenticate(user=self.user)
 
         data = {
             "vehicle_type": str(self.vehicle_type.id),
@@ -84,23 +64,10 @@ class VehicleTests(APITestCase):
             "model": "Test Car",
         }
 
-        response = self.client.post(
-            self.url,
-            data,
-            format="json"
-        )
+        response = self.client.post(self.url, data, format="json")
 
-        print(
-            "NORMAL USER VEHICLE STATUS:",
-            response.status_code
-        )
+        print("NORMAL USER VEHICLE STATUS:", response.status_code)
 
-        print(
-            "NORMAL USER VEHICLE RESPONSE:",
-            response.data
-        )
+        print("NORMAL USER VEHICLE RESPONSE:", response.data)
 
-        self.assertNotEqual(
-            response.status_code,
-            status.HTTP_201_CREATED
-        )
+        self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)

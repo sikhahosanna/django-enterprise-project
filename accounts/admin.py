@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 
 from .models import (
@@ -33,9 +32,7 @@ class UserAdmin(admin.ModelAdmin):
         "is_active",
     )
 
-    ordering = (
-        "email",
-    )
+    ordering = ("email",)
 
 
 @admin.register(Profile)
@@ -55,13 +52,9 @@ class ProfileAdmin(admin.ModelAdmin):
         "phone",
     )
 
-    list_filter = (
-        "is_deleted",
-    )
+    list_filter = ("is_deleted",)
 
-    ordering = (
-        "first_name",
-    )
+    ordering = ("first_name",)
 
 
 @admin.register(DriverProfile)
@@ -79,13 +72,9 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "user__email",
     )
 
-    list_filter = (
-        "status",
-    )
+    list_filter = ("status",)
 
-    ordering = (
-        "-created_at",
-    )
+    ordering = ("-created_at",)
 
 
 @admin.register(VehicleType)
@@ -96,17 +85,11 @@ class VehicleTypeAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    search_fields = (
-        "name",
-    )
+    search_fields = ("name",)
 
-    list_filter = (
-        "name",
-    )
+    list_filter = ("name",)
 
-    ordering = (
-        "name",
-    )
+    ordering = ("name",)
 
 
 @admin.register(Vehicle)
@@ -125,13 +108,9 @@ class VehicleAdmin(admin.ModelAdmin):
         "driver__license_number",
     )
 
-    list_filter = (
-        "vehicle_type",
-    )
+    list_filter = ("vehicle_type",)
 
-    ordering = (
-        "-created_at",
-    )
+    ordering = ("-created_at",)
 
 
 @admin.register(RideStatus)
@@ -142,17 +121,11 @@ class RideStatusAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    search_fields = (
-        "name",
-    )
+    search_fields = ("name",)
 
-    list_filter = (
-        "name",
-    )
+    list_filter = ("name",)
 
-    ordering = (
-        "name",
-    )
+    ordering = ("name",)
 
 
 @admin.register(Ride)
@@ -178,6 +151,4 @@ class RideAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    ordering = (
-        "-created_at",
-    )
+    ordering = ("-created_at",)

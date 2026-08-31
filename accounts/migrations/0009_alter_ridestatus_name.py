@@ -6,13 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0008_alter_ridestatus_name_and_more'),
+        ("accounts", "0008_alter_ridestatus_name_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='ridestatus',
-            name='name',
-            field=models.CharField(choices=[('requested', 'Requested'), ('accepted', 'Accepted'), ('driver_arriving', 'Driver Arriving'), ('started', 'Started'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], max_length=30, unique=True),
+            model_name="ridestatus",
+            name="name",
+            field=models.CharField(
+                choices=[
+                    ("requested", "Requested"),
+                    ("accepted", "Accepted"),
+                    ("driver_arriving", "Driver Arriving"),
+                    ("started", "Started"),
+                    ("completed", "Completed"),
+                    ("cancelled", "Cancelled"),
+                ],
+                max_length=30,
+                unique=True,
+            ),
         ),
     ]

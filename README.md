@@ -8577,4 +8577,392 @@ Authorization:
 All acceptance criteria have been completed and verified.
 
 ---
+31/08/26
+
+
+## Project Overview
+
+This project is a Django REST API backend for a ride-booking application.
+
+The project provides APIs for users, profiles, drivers, vehicles, rides, authentication, real-time communication, notifications, caching, and background processing.
+
+---
+
+## Technology Stack
+
+- Python 3.13
+- Django 6.0
+- Django REST Framework
+- PostgreSQL
+- Django Channels
+- WebSockets
+- JWT Authentication
+- Redis
+- Celery
+- Flake8
+- drf-spectacular / Swagger
+
+---
+
+## Project Structure
+
+```text
+myproject/
+│
+├── accounts/
+│   ├── migrations/
+│   ├── services/
+│   ├── tests/
+│   ├── consumers.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── urls.py
+│   ├── views.py
+│   └── tasks.py
+│
+├── core/
+├── common/
+├── myproject/
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── manage.py
+├── requirements.txt
+└── README.md
+````
+
+---
+
+## API Versioning
+
+All account APIs are configured under the versioned API path:
+
+```text
+/api/v1/
+```
+
+Example:
+
+```text
+/api/v1/rides/
+/api/v1/drivers/
+/api/v1/vehicles/
+/api/v1/profile/
+```
+
+API documentation:
+
+```text
+/api/schema/
+/api/docs/
+```
+
+---
+
+## Authentication
+
+The project uses JWT authentication.
+
+Authentication flow:
+
+```text
+User
+  ↓
+Login
+  ↓
+JWT Access Token
+  ↓
+API Request
+  ↓
+JWT Authentication
+  ↓
+Protected API
+```
+
+Access and refresh tokens are used for secure API authentication.
+
+---
+
+## Ride Management
+
+The ride module supports ride lifecycle management.
+
+Ride status flow:
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+A ride can also be cancelled from valid states.
+
+Ride operations include:
+
+* Ride creation
+* Ride acceptance
+* Ride cancellation
+* Ride status updates
+* Driver assignment
+* Ride ownership validation
+
+---
+
+## Real-Time Communication
+
+Django Channels and WebSockets are used for real-time ride updates.
+
+Example flow:
+
+```text
+Driver
+   ↓
+Django Backend
+   ↓
+WebSocket
+   ↓
+Passenger
+```
+
+Real-time updates can include:
+
+* Ride status changes
+* Driver location updates
+* Ride notifications
+
+---
+
+## Notifications
+
+The project supports notification handling for important ride events.
+
+Notification functionality includes:
+
+* Creating notifications
+* Retrieving notifications
+* Marking notifications as read
+* Marking all notifications as read
+* Preventing duplicate notifications
+
+---
+
+## Background Processing
+
+Celery is configured for asynchronous background processing.
+
+Redis is used as the message broker and result backend.
+
+Example background tasks:
+
+* Ride notifications
+* Driver assignment notifications
+* Ride completion notifications
+* Reminder notifications
+
+---
+
+## Caching
+
+Redis caching is configured to improve API performance.
+
+Caching can be used for:
+
+* Nearby drivers
+* Driver locations
+* Vehicle information
+* Frequently accessed profile information
+
+Basic caching flow:
+
+```text
+API Request
+    ↓
+Check Cache
+    ↓
+Cache Hit → Return Data
+    ↓
+Cache Miss
+    ↓
+Database
+    ↓
+Store in Cache
+    ↓
+Return Data
+```
+
+---
+
+## Testing
+
+The project contains automated tests for important backend functionality.
+
+Test areas include:
+
+* Authentication
+* Profiles
+* Drivers
+* Vehicles
+* Rides
+* Ride acceptance
+* Ride cancellation
+* Permissions
+* Invalid ride states
+* Duplicate ride acceptance
+
+Run all tests:
+
+```bash
+python manage.py test
+```
+
+Expected result:
+
+```text
+Ran 14 tests
+
+OK
+```
+
+---
+
+## Code Quality
+
+Flake8 is used to check Python code quality and coding style.
+
+Run Flake8:
+
+```bash
+flake8 accounts myproject
+```
+
+The project was cleaned to remove:
+
+* Unused imports
+* Undefined variables
+* Unused local variables
+* Long lines
+* Extra blank lines
+* Missing newline at end of files
+
+---
+
+## Django System Check
+
+Run:
+
+```bash
+python manage.py check
+```
+
+Expected result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+---
+
+## API Documentation
+
+Swagger documentation is available at:
+
+```text
+/api/docs/
+```
+
+OpenAPI schema is available at:
+
+```text
+/api/schema/
+```
+
+---
+
+## Running the Project
+
+Activate the virtual environment:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Run migrations:
+
+```bash
+python manage.py migrate
+```
+
+Start the development server:
+
+```bash
+python manage.py runserver
+```
+
+---
+
+## Useful Commands
+
+### Django Check
+
+```bash
+python manage.py check
+```
+
+### Run Tests
+
+```bash
+python manage.py test
+```
+
+### Run Flake8
+
+```bash
+flake8 accounts myproject
+```
+
+### Create Migrations
+
+```bash
+python manage.py makemigrations
+```
+
+### Apply Migrations
+
+```bash
+python manage.py migrate
+```
+
+### Start Server
+
+```bash
+python manage.py runserver
+```
+
+---
+
+## Current Status
+
+* Django project configured
+* API versioning implemented with `/api/v1/`
+* JWT authentication configured
+* Ride APIs implemented
+* Driver APIs implemented
+* Vehicle APIs implemented
+* WebSocket communication configured
+* Notifications implemented
+* Celery background processing configured
+* Redis caching configured
+* Automated tests implemented
+* Flake8 code-quality cleanup completed
+* Django system check passed
+
+````
 

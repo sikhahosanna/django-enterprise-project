@@ -9,41 +9,107 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0006_vehicletype_driverprofile_vehicle_and_more'),
+        ("accounts", "0006_vehicletype_driverprofile_vehicle_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RideStatus',
+            name="RideStatus",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=30, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.CharField(max_length=30, unique=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'indexes': [models.Index(fields=['name'], name='accounts_ri_name_961f8d_idx')],
+                "indexes": [
+                    models.Index(fields=["name"], name="accounts_ri_name_961f8d_idx")
+                ],
             },
         ),
         migrations.CreateModel(
-            name='Ride',
+            name="Ride",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('pickup_address', models.CharField(max_length=255)),
-                ('pickup_latitude', models.DecimalField(decimal_places=6, max_digits=9)),
-                ('pickup_longitude', models.DecimalField(decimal_places=6, max_digits=9)),
-                ('dropoff_address', models.CharField(max_length=255)),
-                ('dropoff_latitude', models.DecimalField(decimal_places=6, max_digits=9)),
-                ('dropoff_longitude', models.DecimalField(decimal_places=6, max_digits=9)),
-                ('fare', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('driver', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='rides', to='accounts.driverprofile')),
-                ('rider', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='rides', to=settings.AUTH_USER_MODEL)),
-                ('status', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='rides', to='accounts.ridestatus')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("pickup_address", models.CharField(max_length=255)),
+                (
+                    "pickup_latitude",
+                    models.DecimalField(decimal_places=6, max_digits=9),
+                ),
+                (
+                    "pickup_longitude",
+                    models.DecimalField(decimal_places=6, max_digits=9),
+                ),
+                ("dropoff_address", models.CharField(max_length=255)),
+                (
+                    "dropoff_latitude",
+                    models.DecimalField(decimal_places=6, max_digits=9),
+                ),
+                (
+                    "dropoff_longitude",
+                    models.DecimalField(decimal_places=6, max_digits=9),
+                ),
+                ("fare", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "driver",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="rides",
+                        to="accounts.driverprofile",
+                    ),
+                ),
+                (
+                    "rider",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="rides",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "status",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="rides",
+                        to="accounts.ridestatus",
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['rider'], name='accounts_ri_rider_i_24eba8_idx'), models.Index(fields=['driver'], name='accounts_ri_driver__6b4fec_idx'), models.Index(fields=['status'], name='accounts_ri_status__150cc5_idx'), models.Index(fields=['created_at'], name='accounts_ri_created_852196_idx')],
+                "indexes": [
+                    models.Index(
+                        fields=["rider"], name="accounts_ri_rider_i_24eba8_idx"
+                    ),
+                    models.Index(
+                        fields=["driver"], name="accounts_ri_driver__6b4fec_idx"
+                    ),
+                    models.Index(
+                        fields=["status"], name="accounts_ri_status__150cc5_idx"
+                    ),
+                    models.Index(
+                        fields=["created_at"], name="accounts_ri_created_852196_idx"
+                    ),
+                ],
             },
         ),
     ]
