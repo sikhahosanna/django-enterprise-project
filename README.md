@@ -8966,3 +8966,113 @@ python manage.py runserver
 
 ````
 
+1/9/26
+
+# Backend Testing & Security Documentation
+
+## Task 6 — Backend Test Suite
+
+Implemented and tested the backend APIs using Django REST Framework test cases.
+
+### Tested Areas
+
+* Authentication
+* Login with valid credentials
+* Login with invalid credentials
+* Profile APIs
+* Driver APIs
+* Vehicle APIs
+* Ride creation
+* Ride acceptance
+* Ride cancellation
+* Permission checks
+* Unauthorized API access
+* Admin-only API access
+
+### Test Command
+
+```bash
+python manage.py test
+```
+
+### Testing Result
+
+```text
+Found 14 test(s).
+
+Ran 14 tests in 31.383s
+
+OK
+```
+
+All 14 backend tests passed successfully.
+
+---
+
+## Task 7 — JWT Security Review
+
+JWT authentication security was reviewed and tested.
+
+### 1. Access Token Expiration
+
+Access tokens are configured with an expiration time.
+
+After the access token expires, the API rejects the request and requires a new valid access token.
+
+### 2. Refresh Token Behavior
+
+Refresh tokens are used to obtain new access tokens without requiring the user to log in again.
+
+### 3. Invalid Token Rejection
+
+Invalid or modified JWT tokens are rejected by the authentication system.
+
+Expected response:
+
+```text
+401 Unauthorized
+```
+
+### 4. Expired Token Rejection
+
+Expired access tokens cannot be used to access protected APIs.
+
+Expected response:
+
+```text
+401 Unauthorized
+```
+
+### 5. Token Rotation / Blacklisting
+
+Refresh token blacklisting is implemented during logout.
+
+The logout API blacklists the provided refresh token so that it cannot be reused.
+
+---
+
+## Task 8 — Security Audit Report
+
+### Security Audit Report
+
+| Issue                                  | Severity | Affected API              | Risk                                              | Fix                                            | Testing Result |
+| -------------------------------------- | -------- | ------------------------- | ------------------------------------------------- | ---------------------------------------------- | -------------- |
+| Unauthenticated API access             | High     | Protected APIs            | Unauthorized users may access protected resources | `IsAuthenticated` permission added             | Passed         |
+| Invalid JWT token                      | High     | Protected APIs            | Unauthorized access                               | JWT authentication rejects invalid tokens      | Passed         |
+| Expired JWT token                      | High     | Protected APIs            | Old tokens could be misused                       | Access token expiration configured             | Passed         |
+| Refresh token reuse                    | High     | Logout API                | Compromised refresh token could be reused         | Refresh token blacklisting implemented         | Passed         |
+| Admin API access by normal user        | High     | Driver/Vehicle admin APIs | Privilege escalation                              | `IsAdminUser` permission added                 | Passed         |
+| Driver accessing another driver's ride | High     | Ride acceptance           | Unauthorized ride modification                    | Driver ownership/permission checks implemented | Passed         |
+| Unauthorized profile access            | Medium   | Profile API               | User data exposure                                | `IsAuthenticated` permission added             | Passed         |
+
+### Overall Security Result
+
+The backend authentication, authorization, JWT validation, permission checks, and security-related test cases were reviewed successfully.
+
+All available backend tests passed successfully:
+
+```text
+14 tests — OK
+```
+
+The application is protected against common authentication and authorization issues through JWT authentication, token expiration, refresh-token blacklisting, and DRF permission classes.
