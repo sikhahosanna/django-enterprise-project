@@ -9076,3 +9076,357 @@ All available backend tests passed successfully:
 ```
 
 The application is protected against common authentication and authorization issues through JWT authentication, token expiration, refresh-token blacklisting, and DRF permission classes.
+   
+
+2/9/26
+
+
+## Objective
+
+The objective of this story is to improve backend performance, understand caching, and build a complete testing system for the Django ride-booking application.
+
+---
+
+# Task 1 — Understand Django Testing
+
+## Theory
+
+### Unit Testing
+Unit testing checks one small piece of code, such as a function or method, independently.
+
+**Example:**
+Testing whether fare calculation returns the correct amount.
+
+### Integration Testing
+Integration testing checks whether multiple components work correctly together.
+
+**Example:**
+Testing a ride creation flow involving the API, serializer, service, and database.
+
+### API Testing
+API testing checks whether API endpoints work correctly.
+
+It verifies:
+- Request data
+- Response data
+- HTTP status codes
+- Authentication
+- Permissions
+- Validation
+
+### Test Fixtures
+Fixtures provide sample data required for tests.
+
+**Example:**
+Creating test users, drivers, vehicles, and rides.
+
+### Test Database
+Django creates a separate temporary database while running tests.
+
+This keeps the actual development database safe.
+
+### Mocking
+Mocking replaces real external dependencies with fake objects during testing.
+
+**Example:**
+Instead of calling a real external service, a fake response can be used during the test.
+
+## When to Use
+
+- Unit Testing → Individual functions or methods
+- Integration Testing → Multiple components together
+- API Testing → API endpoints
+- Fixtures → Required test data
+- Test Database → Database-related testing
+- Mocking → External services or dependencies
+
+---
+
+# Task 2 — Authentication Tests
+
+## Theory
+
+Authentication testing verifies whether users can correctly register, login, and receive valid JWT tokens.
+
+Tested:
+
+- Valid Login
+- Invalid Password
+- User Registration
+- JWT Token Refresh
+
+## Result
+
+```text
+Total Tests: 4
+Passed: 4
+Failed: 0
+Status: PASS
+````
+
+---
+
+# Task 3 — Permission Tests
+
+## Theory
+
+Permission testing verifies that users can access only the APIs they are authorized to use.
+
+Different user roles were tested:
+
+* Admin
+* Driver
+* Passenger
+* Anonymous User
+
+The tests verified correct HTTP responses such as:
+
+* 200 → Authorized access
+* 401 → Authentication required
+* 403 → Permission denied
+
+## Result
+
+```text
+Total Tests: 4
+Passed: 4
+Failed: 0
+Status: PASS
+```
+
+---
+
+# Task 4 — Ride API Tests
+
+## Theory
+
+API testing verifies that Ride APIs correctly handle different ride operations and status transitions.
+
+Tested:
+
+* Create Ride
+* Accept Ride
+* Start Ride
+* Complete Ride
+* Cancel Ride
+* Invalid Status Transition
+
+## Ride Flow
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+Invalid status transitions were also tested to make sure the API rejects incorrect operations.
+
+## Result
+
+```text
+Total Tests: 6
+Passed: 6
+Failed: 0
+Status: PASS
+```
+
+---
+
+# Task 5 — Business Logic Tests
+
+## Theory
+
+Business logic testing verifies that the important application rules work correctly.
+
+Tested:
+
+### Fare Calculation
+
+Verified that the ride fare is calculated correctly.
+
+### Driver Availability
+
+Verified driver availability status and whether available drivers can participate in ride matching.
+
+### Nearby Driver Selection
+
+Verified that suitable nearby drivers are selected for rides.
+
+### Ride Validation
+
+Verified that invalid ride data or operations are rejected.
+
+### Cancellation Rules
+
+Verified that rides can be cancelled only according to the defined business rules.
+
+## Result
+
+All business logic tests passed successfully.
+
+---
+
+# Task 6 — Database Tests
+
+## Theory
+
+Database testing verifies that Django models, relationships, and database constraints work correctly.
+
+Tested:
+
+* Unique fields
+* Foreign key relationships
+* One-to-one relationships
+* Required fields
+* Invalid relationships
+* Model constraints
+
+## Examples
+
+Verified that:
+
+* User email must be unique.
+* Driver license number must be unique.
+* Vehicle registration number must be unique.
+* Driver profile has the correct user relationship.
+* Ride has the correct rider and driver relationships.
+* Required model fields cannot be empty.
+
+## Result
+
+```text
+Total Tests: 10
+Passed: 10
+Failed: 0
+Status: PASS
+```
+
+---
+
+# Task 7 — WebSocket & Celery Tests
+
+## Theory
+
+### WebSocket Testing
+
+WebSocket testing verifies real-time communication between the Django backend and mobile clients.
+
+Tested:
+
+* WebSocket Authentication
+* Ride Status Events
+* Driver Location Events
+* Rider WebSocket Connection
+* Unauthorized WebSocket Access
+
+Example flow:
+
+```text
+Django Backend
+      ↓
+WebSocket
+      ↓
+Mobile Client
+```
+
+### Celery Testing
+
+Celery is used for background processing.
+
+Tested:
+
+* Celery Task Execution
+* Duplicate Notification Handling
+* Failed Task Retry
+
+Retry testing verifies that a failed background task can retry and complete successfully.
+
+## Result
+
+```text
+Total Tests: 8
+Passed: 8
+Failed: 0
+Status: PASS
+```
+
+---
+
+# Task 8 — Test Report
+
+## Theory
+
+The final test report provides an overall view of the application's testing status.
+
+The complete test suite was executed and code coverage was measured.
+
+## Test Command
+
+```bash
+python manage.py test -v 2
+```
+
+## Coverage Command
+
+```bash
+coverage run manage.py test
+coverage report
+```
+
+## Final Result
+
+```text
+Total Tests: 50
+Passed: 50
+Failed: 0
+Skipped: 0
+Coverage: 79%
+Status: PASS
+```
+
+## Coverage Report
+
+```text
+TOTAL    2026    425    79%
+```
+
+All 50 tests passed successfully.
+
+There were no failed or skipped tests.
+
+---
+
+# Overall Summary
+
+The complete backend testing process covered:
+
+* Django Testing Concepts
+* Authentication
+* Permissions
+* Ride APIs
+* Business Logic
+* Database Models
+* WebSockets
+* Celery Background Tasks
+* Test Coverage
+
+## Final Test Summary
+
+| Task   | Area                    | Tests | Result    |
+| ------ | ----------------------- | ----: | --------- |
+| Task 1 | Django Testing Concepts |     - | Completed |
+| Task 2 | Authentication          |     4 | PASS      |
+| Task 3 | Permissions             |     4 | PASS      |
+| Task 4 | Ride APIs               |     6 | PASS      |
+| Task 5 | Business Logic          |     - | PASS      |
+| Task 6 | Database                |    10 | PASS      |
+| Task 7 | WebSocket & Celery      |     8 | PASS      |
+| Task 8 | Complete Test Report    |    50 | PASS      |
+
+
