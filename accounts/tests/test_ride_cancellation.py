@@ -17,26 +17,19 @@ class RideCancellationTest(TestCase):
 
         self.client = APIClient()
 
-        # =================================================
         # RIDER
-        # =================================================
 
         self.rider = User.objects.create_user(
             email="rider_cancel@example.com",
             password="TestPassword123",
         )
 
-        # =================================================
         # VEHICLE TYPE
-        # =================================================
 
         self.vehicle_type = VehicleType.objects.create(
             name="car",
         )
-
-        # =================================================
         # RIDE STATUS
-        # =================================================
 
         self.requested_status = RideStatus.objects.create(
             name="requested",
@@ -46,9 +39,7 @@ class RideCancellationTest(TestCase):
             name="cancelled",
         )
 
-        # =================================================
         # CREATE RIDE
-        # =================================================
 
         self.ride = Ride.objects.create(
             rider=self.rider,
@@ -63,17 +54,12 @@ class RideCancellationTest(TestCase):
             fare=Decimal("141.29"),
         )
 
-        # =================================================
         # AUTHENTICATE RIDER
-        # =================================================
 
         self.client.force_authenticate(
             user=self.rider,
         )
-
-    # =====================================================
     # TEST RIDE CANCELLATION
-    # =====================================================
 
     def test_ride_cancellation(self):
 
@@ -93,24 +79,18 @@ class RideCancellationTest(TestCase):
             response.data,
         )
 
-        # =================================================
         # SUCCESS RESPONSE
-        # =================================================
 
         self.assertEqual(
             response.status_code,
             200,
         )
 
-        # =================================================
         # REFRESH RIDE
-        # =================================================
 
         self.ride.refresh_from_db()
 
-        # =================================================
         # STATUS MUST BE CANCELLED
-        # =================================================
 
         self.assertEqual(
             self.ride.status.name.lower(),

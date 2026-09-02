@@ -18,9 +18,9 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
 
-        # -----------------------------------------
+       
         # GET JWT TOKEN
-        # -----------------------------------------
+        
 
         query_string = self.scope.get(
             "query_string",
@@ -40,9 +40,8 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
                 break
 
-        # -----------------------------------------
         # JWT REQUIRED
-        # -----------------------------------------
+        
 
         if not token:
 
@@ -50,9 +49,9 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
+       
         # VERIFY JWT
-        # -----------------------------------------
+       
 
         try:
 
@@ -68,9 +67,9 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
+     
         # GET USER ID FROM JWT
-        # -----------------------------------------
+        
 
         user_id = validated_token.get("user_id")
 
@@ -80,9 +79,8 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # GET USER
-        # -----------------------------------------
+        
 
         try:
 
@@ -94,9 +92,9 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
+        
         # DRIVER AUTHORIZATION
-        # -----------------------------------------
+       
 
         try:
 
@@ -108,9 +106,8 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # ACCEPT CONNECTION
-        # -----------------------------------------
+        
 
         await self.accept()
 
@@ -130,9 +127,8 @@ class DriverLocationConsumer(AsyncWebsocketConsumer):
         close_code,
     ):
 
-        # -----------------------------------------
         # DISCONNECT LOG
-        # -----------------------------------------
+      
 
         user_id = getattr(
             getattr(
@@ -183,15 +179,14 @@ class RideConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
 
-        # -----------------------------------------
+        
         # GET RIDE ID
-        # -----------------------------------------
+     
 
         self.ride_id = self.scope["url_route"]["kwargs"]["ride_id"]
 
-        # -----------------------------------------
         # GET JWT TOKEN
-        # -----------------------------------------
+        
 
         query_string = self.scope.get(
             "query_string",
@@ -211,9 +206,9 @@ class RideConsumer(AsyncWebsocketConsumer):
 
                 break
 
-        # -----------------------------------------
+     
         # JWT REQUIRED
-        # -----------------------------------------
+     
 
         if not token:
 
@@ -221,9 +216,8 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # VERIFY JWT
-        # -----------------------------------------
+ 
 
         try:
 
@@ -239,9 +233,8 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # GET USER ID FROM JWT
-        # -----------------------------------------
+   
 
         user_id = validated_token.get("user_id")
 
@@ -251,9 +244,9 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
+   
         # GET USER
-        # -----------------------------------------
+    
 
         try:
 
@@ -265,9 +258,9 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
+        
         # GET RIDE
-        # -----------------------------------------
+      
 
         try:
 
@@ -282,25 +275,22 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # RIDE OWNER CHECK
-        # -----------------------------------------
+   
 
         is_ride_owner = self.ride.rider_id == self.user.id
 
-        # -----------------------------------------
         # DRIVER AUTHORIZATION
-        # -----------------------------------------
-
+      
         is_assigned_driver = False
 
         if self.ride.driver:
 
             is_assigned_driver = self.ride.driver.user_id == self.user.id
 
-        # -----------------------------------------
+      
         # AUTHORIZATION
-        # -----------------------------------------
+      
 
         if not is_ride_owner and not is_assigned_driver:
 
@@ -308,9 +298,8 @@ class RideConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------
         # GROUP
-        # -----------------------------------------
+       
 
         self.group_name = f"ride_{self.ride_id}"
 
@@ -319,9 +308,8 @@ class RideConsumer(AsyncWebsocketConsumer):
             self.channel_name,
         )
 
-        # -----------------------------------------
         # ACCEPT CONNECTION
-        # -----------------------------------------
+        
 
         await self.accept()
 
@@ -341,10 +329,7 @@ class RideConsumer(AsyncWebsocketConsumer):
         close_code,
     ):
 
-        # -----------------------------------------
         # REMOVE FROM RIDE GROUP
-        # -----------------------------------------
-
         if hasattr(
             self,
             "group_name",
@@ -355,9 +340,9 @@ class RideConsumer(AsyncWebsocketConsumer):
                 self.channel_name,
             )
 
-        # -----------------------------------------
+        
         # DISCONNECT LOG
-        # -----------------------------------------
+       
 
         user_id = getattr(
             getattr(

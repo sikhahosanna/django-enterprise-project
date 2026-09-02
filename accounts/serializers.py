@@ -25,9 +25,9 @@ from .services.fare_service import (
 )
 
 
-# =========================================================
+
 # REGISTER SERIALIZER
-# =========================================================
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -61,9 +61,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
 
-# =========================================================
 # LOGIN SERIALIZER
-# =========================================================
+
 
 
 class LoginSerializer(serializers.Serializer):
@@ -91,9 +90,7 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
-# =========================================================
 # CHANGE PASSWORD SERIALIZER
-# =========================================================
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -124,9 +121,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         return data
 
 
-# =========================================================
 # PROFILE SERIALIZER
-# =========================================================
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -173,9 +168,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         return image
 
 
-# =========================================================
+
 # DRIVER SERIALIZER
-# =========================================================
 
 
 class DriverSerializer(serializers.ModelSerializer):
@@ -259,9 +253,8 @@ class DriverSerializer(serializers.ModelSerializer):
         return driver
 
 
-# =========================================================
 # VEHICLE SERIALIZER
-# =========================================================
+
 
 
 class VehicleSerializer(serializers.ModelSerializer):
@@ -333,9 +326,8 @@ class VehicleSerializer(serializers.ModelSerializer):
         return value
 
 
-# =========================================================
+
 # VEHICLE NESTED SERIALIZER
-# =========================================================
 
 
 class VehicleNestedSerializer(serializers.ModelSerializer):
@@ -352,10 +344,7 @@ class VehicleNestedSerializer(serializers.ModelSerializer):
         ]
 
 
-# =========================================================
 # DRIVER NESTED SERIALIZER
-# =========================================================
-
 
 class DriverNestedSerializer(serializers.ModelSerializer):
 
@@ -398,10 +387,7 @@ class DriverNestedSerializer(serializers.ModelSerializer):
         return VehicleNestedSerializer(vehicle).data
 
 
-# =========================================================
 # RIDE CREATE SERIALIZER
-# =========================================================
-
 
 class RideCreateSerializer(serializers.ModelSerializer):
 
@@ -587,10 +573,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
         return ride
 
 
-# =========================================================
 # RIDE LIST SERIALIZER
-# =========================================================
-
 
 class RideSerializer(serializers.ModelSerializer):
 
@@ -627,10 +610,7 @@ class RideSerializer(serializers.ModelSerializer):
         ]
 
 
-# =========================================================
 # RIDE DETAIL SERIALIZER
-# =========================================================
-
 
 class RideDetailSerializer(serializers.ModelSerializer):
 
@@ -725,11 +705,7 @@ class RideDetailSerializer(serializers.ModelSerializer):
             "model": vehicle.model,
         }
 
-
-# =========================================================
 # DRIVER LOCATION SERIALIZER
-# =========================================================
-
 
 class DriverLocationSerializer(serializers.ModelSerializer):
 
@@ -769,11 +745,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
 
         return value
 
-
-# =========================================================
 # RIDE STATUS UPDATE SERIALIZER
-# =========================================================
-
 
 class RideStatusUpdateSerializer(serializers.Serializer):
 
@@ -826,10 +798,7 @@ class RideStatusUpdateSerializer(serializers.Serializer):
         return attrs
 
 
-# =========================================================
 # NOTIFICATION SERIALIZER
-# =========================================================
-
 
 class NotificationSerializer(serializers.ModelSerializer):
 

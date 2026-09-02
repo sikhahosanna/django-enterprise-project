@@ -15,9 +15,8 @@ class InvalidStateChangeTest(TestCase):
 
         self.client = APIClient()
 
-        # -------------------------------------------------
         # USER
-        # -------------------------------------------------
+       
 
         self.user = User.objects.create_user(
             email="invalid_state_test@example.com",
@@ -26,22 +25,11 @@ class InvalidStateChangeTest(TestCase):
 
         self.client.force_authenticate(user=self.user)
 
-        # -------------------------------------------------
         # VEHICLE TYPE
-        # -------------------------------------------------
-
         self.vehicle_type = VehicleType.objects.create(name="car")
-
-        # -------------------------------------------------
         # CANCELLED STATUS
-        # -------------------------------------------------
-
         self.cancelled_status = RideStatus.objects.create(name="cancelled")
-
-        # -------------------------------------------------
         # RIDE
-        # -------------------------------------------------
-
         self.ride = Ride.objects.create(
             rider=self.user,
             vehicle_type=self.vehicle_type,
@@ -54,10 +42,8 @@ class InvalidStateChangeTest(TestCase):
             dropoff_longitude=80.4500,
             fare=100,
         )
-
-    # =====================================================
     # CANCELLED RIDE CANNOT BE ACCEPTED
-    # =====================================================
+   
 
     def test_cancelled_ride_cannot_be_accepted(self):
 

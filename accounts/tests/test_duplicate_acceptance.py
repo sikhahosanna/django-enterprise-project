@@ -14,25 +14,17 @@ class DuplicateRideAcceptanceTest(TestCase):
 
     def setUp(self):
 
-        # -------------------------------------------------
         # CLIENTS
-        # -------------------------------------------------
-
         self.client_a = APIClient()
         self.client_b = APIClient()
 
-        # -------------------------------------------------
         # RIDER
-        # -------------------------------------------------
-
         self.rider = User.objects.create_user(
             email="duplicate_rider@example.com",
             password="TestPassword123",
         )
 
-        # -------------------------------------------------
         # DRIVER A
-        # -------------------------------------------------
 
         self.driver_user_a = User.objects.create_user(
             email="driver_a@example.com",
@@ -45,9 +37,7 @@ class DuplicateRideAcceptanceTest(TestCase):
             status="active",
         )
 
-        # -------------------------------------------------
         # DRIVER B
-        # -------------------------------------------------
 
         self.driver_user_b = User.objects.create_user(
             email="driver_b@example.com",
@@ -60,31 +50,28 @@ class DuplicateRideAcceptanceTest(TestCase):
             status="active",
         )
 
-        # -------------------------------------------------
         # AUTHENTICATION
-        # -------------------------------------------------
-
+        
         self.client_a.force_authenticate(user=self.driver_user_a)
 
         self.client_b.force_authenticate(user=self.driver_user_b)
 
-        # -------------------------------------------------
         # VEHICLE TYPE
-        # -------------------------------------------------
+       
 
         self.vehicle_type = VehicleType.objects.create(name="car")
 
-        # -------------------------------------------------
+        
         # STATUS
-        # -------------------------------------------------
+       
 
         self.requested_status = RideStatus.objects.create(name="requested")
 
         self.accepted_status = RideStatus.objects.create(name="accepted")
 
-        # -------------------------------------------------
+        
         # RIDE
-        # -------------------------------------------------
+       
 
         self.ride = Ride.objects.create(
             rider=self.rider,
@@ -99,16 +86,12 @@ class DuplicateRideAcceptanceTest(TestCase):
             dropoff_longitude=80.4500,
             fare=100,
         )
-
-    # =====================================================
     # DUPLICATE RIDE ACCEPTANCE
-    # =====================================================
 
     def test_duplicate_ride_acceptance(self):
 
-        # -------------------------------------------------
         # DRIVER A ACCEPTS
-        # -------------------------------------------------
+       
 
         response_a = self.client_a.post(
             f"/api/v1/rides/{self.ride.id}/accept/",
@@ -123,9 +106,8 @@ class DuplicateRideAcceptanceTest(TestCase):
             200,
         )
 
-        # -------------------------------------------------
         # DRIVER B TRIES SAME RIDE
-        # -------------------------------------------------
+       
 
         response_b = self.client_b.post(
             f"/api/v1/rides/{self.ride.id}/accept/",
@@ -140,9 +122,8 @@ class DuplicateRideAcceptanceTest(TestCase):
             200,
         )
 
-        # -------------------------------------------------
         # VERIFY RIDE STILL BELONGS TO DRIVER A
-        # -------------------------------------------------
+       
 
         self.ride.refresh_from_db()
 

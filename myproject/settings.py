@@ -9,9 +9,9 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 
-# =========================================================
+
 # BASE DIRECTORY
-# =========================================================
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,18 +23,15 @@ LOG_DIR.mkdir(
 )
 
 
-# =========================================================
+
 # ENVIRONMENT
-# =========================================================
 
 load_dotenv(
     BASE_DIR / ".env"
 )
 
-
-# =========================================================
 # SECURITY
-# =========================================================
+
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -55,9 +52,9 @@ ALLOWED_HOSTS = [
 ASGI_APPLICATION = "myproject.asgi.application"
 
 
-# =========================================================
+
 # CHANNEL LAYERS
-# =========================================================
+
 
 CHANNEL_LAYERS = {
     "default": {
@@ -66,9 +63,8 @@ CHANNEL_LAYERS = {
 }
 
 
-# =========================================================
 # APPLICATIONS
-# =========================================================
+
 
 INSTALLED_APPS = [
 
@@ -86,8 +82,10 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "common",
-    
     "channels",
+
+   
+    
 
     # REST Framework
     "rest_framework",
@@ -107,14 +105,14 @@ INSTALLED_APPS = [
 ]
 
 
-# =========================================================
+
 # MIDDLEWARE
-# =========================================================
+
 
 MIDDLEWARE = [
 
     "django.middleware.security.SecurityMiddleware",
-    
+
     # CORS should be placed before CommonMiddleware
     "corsheaders.middleware.CorsMiddleware",
 
@@ -129,12 +127,15 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
 
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+   
+
 ]
 
 
-# =========================================================
+
 # SECURITY SETTINGS
-# =========================================================
+
 
 # Redirect HTTP to HTTPS in production
 SECURE_SSL_REDIRECT = os.getenv(
@@ -188,9 +189,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 
-# =========================================================
+
 # CORS SETTINGS
-# =========================================================
+
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
@@ -201,10 +202,8 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-
-# =========================================================
 # CSRF SETTINGS
-# =========================================================
+
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -216,16 +215,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-# =========================================================
 # URL CONFIGURATION
-# =========================================================
+
 
 ROOT_URLCONF = "myproject.urls"
 
-
-# =========================================================
 # TEMPLATES
-# =========================================================
+
 
 TEMPLATES = [
     {
@@ -249,17 +245,14 @@ TEMPLATES = [
     },
 ]
 
-
-# =========================================================
 # WSGI
-# =========================================================
+
 
 WSGI_APPLICATION = "myproject.wsgi.application"
 
 
-# =========================================================
 # DATABASE
-# =========================================================
+
 
 DATABASES = {
     "default": {
@@ -284,16 +277,14 @@ DATABASES = {
 }
 
 
-# =========================================================
 # CUSTOM USER MODEL
-# =========================================================
+
 
 AUTH_USER_MODEL = "accounts.User"
 
 
-# =========================================================
 # PASSWORD VALIDATION
-# =========================================================
+
 
 AUTH_PASSWORD_VALIDATORS = [
 
@@ -327,24 +318,25 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# =========================================================
-# JWT CONFIGURATION
-# =========================================================
 
-from datetime import timedelta
+# JWT CONFIGURATION
+
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=30
+    ),
 
-    "UPDATE_LAST_LOGIN": False,
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=1
+    ),
 }
-# =========================================================
+
+
+
 # REST FRAMEWORK
-# =========================================================
+
 
 REST_FRAMEWORK = {
 
@@ -367,9 +359,9 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
 
-    # =====================================================
+  
     # RATE LIMITING / THROTTLING
-    # =====================================================
+  
 
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
@@ -379,19 +371,18 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
 
         # General APIs
-        "anon": "20/minute",
-        "user": "60/minute",
+        "anon": "1000/minute",
+        "user": "1000/minute",
 
         # Sensitive APIs
-        "login": "5/minute",
-        "ride_creation": "5/minute",
+        "login": "20/minute",
+        "ride_creation": "20/minute",
     },
 }
 
 
-# =========================================================
 # API DOCUMENTATION
-# =========================================================
+
 
 SPECTACULAR_SETTINGS = {
 
@@ -406,9 +397,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-# =========================================================
 # INTERNATIONALIZATION
-# =========================================================
+
 
 LANGUAGE_CODE = "en-us"
 
@@ -418,26 +408,24 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# =========================================================
 # STATIC FILES
-# =========================================================
+
 
 STATIC_URL = "static/"
 
 
-# =========================================================
+
 # MEDIA FILES
-# =========================================================
+
 
 MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# =========================================================
+
 # RIDE FARE CONFIGURATION
-# =========================================================
+
 
 RIDE_FARE_CONFIG = {
 
@@ -467,16 +455,15 @@ RIDE_FARE_CONFIG = {
 }
 
 
-# =========================================================
+
 # SURGE CONFIGURATION
-# =========================================================
+
 
 RIDE_SURGE_MULTIPLIER = 1.00
 
 
-# =========================================================
 # LOGGING
-# =========================================================
+
 
 LOGGING = {
 
@@ -521,9 +508,9 @@ LOGGING = {
 }
 
 
-# =========================================================
+
 # CELERY
-# =========================================================
+
 
 CELERY_BROKER_URL = (
     "redis://127.0.0.1:6379/0"
@@ -534,9 +521,8 @@ CELERY_RESULT_BACKEND = (
 )
 
 
-# =========================================================
 # REDIS CACHE
-# =========================================================
+
 
 CACHES = {
 

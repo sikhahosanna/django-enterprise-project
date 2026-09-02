@@ -1,19 +1,21 @@
 from decimal import Decimal, ROUND_HALF_UP
 from math import radians, sin, cos, sqrt, atan2
 from ..models import VehicleType
+from django.core.exceptions import ValidationError
 
 from django.conf import settings
 
 
 class FareService:
+
     @staticmethod
     def get_vehicle_type(vehicle_type_id):
 
-        try:
-            return VehicleType.objects.get(id=vehicle_type_id)
+       try:
+          return VehicleType.objects.get(id=vehicle_type_id)
 
-        except VehicleType.DoesNotExist:
-            return None
+       except (VehicleType.DoesNotExist, ValidationError, ValueError, TypeError):
+          return None
 
     # =========================================================
     # CALCULATE DISTANCE

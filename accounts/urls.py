@@ -1,4 +1,7 @@
-from django.urls import path
+
+from rest_framework_simplejwt.views import TokenRefreshView
+from django.urls import include, path
+
 
 from .views import (
     # AUTH
@@ -18,9 +21,11 @@ from .views import (
     DriverRideHistoryView,
     DriverLocationView,
     DriverAvailabilityView,
+    RideStatusListView,
     # VEHICLE
     VehicleListCreateView,
     VehicleDetailView,
+    VehicleTypeListView,
     # RIDES
     RideListCreateView,
     RideDetailView,
@@ -42,15 +47,18 @@ from .views import (
     NotificationListView,
     NotificationMarkReadView,
     NotificationMarkAllReadView,
+
 )
 
 urlpatterns = [
-    # =====================================================
+    
+    
     # AUTH
-    # =====================================================
+  
     path(
         "register/",
         RegisterView.as_view(),
+        name="register",
     ),
     path(
         "login/",
@@ -65,9 +73,14 @@ urlpatterns = [
         "logout/",
         LogoutView.as_view(),
     ),
-    # =====================================================
+    path(
+    "token/refresh/",
+    TokenRefreshView.as_view(),
+    name="token_refresh",
+),
+   
     # PROFILE
-    # =====================================================
+    
     path(
         "profile/",
         ProfileView.as_view(),
@@ -84,9 +97,9 @@ urlpatterns = [
         "profile/restore/",
         RestoreProfileView.as_view(),
     ),
-    # =====================================================
+    
     # DRIVER
-    # =====================================================
+    
     path(
         "drivers/",
         DriverListCreateView.as_view(),
@@ -105,9 +118,21 @@ urlpatterns = [
         DriverTotalFareEarnedView.as_view(),
         name="driver-total-fare",
     ),
-    # =====================================================
+   
     # VEHICLE
-    # =====================================================
+
+    path(
+    "ride-statuses/",
+    RideStatusListView.as_view(),
+    name="ride-statuses",
+),
+
+    path(
+    "vehicle-types/",
+    VehicleTypeListView.as_view(),
+    name="vehicle-types",
+),
+
     path(
         "vehicles/",
         VehicleListCreateView.as_view(),
@@ -116,9 +141,9 @@ urlpatterns = [
         "vehicles/<uuid:pk>/",
         VehicleDetailView.as_view(),
     ),
-    # =====================================================
+    
     # RIDES
-    # =====================================================
+  
     # Fare calculation
     path(
         "rides/fare/",
@@ -181,9 +206,9 @@ urlpatterns = [
         RideCancelView.as_view(),
         name="ride-cancel",
     ),
-    # =====================================================
+   
     # DATABASE OPTIMIZATION
-    # =====================================================
+    
     path(
         "rides/slow-history/",
         SlowRideHistoryView.as_view(),
@@ -229,4 +254,5 @@ urlpatterns = [
         NotificationMarkAllReadView.as_view(),
         name="notification-read-all",
     ),
+    
 ]

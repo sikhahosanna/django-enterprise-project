@@ -34,9 +34,9 @@ class VehicleTests(APITestCase):
 
         self.url = "/api/v1/vehicles/"
 
-    # =====================================================
+
     # POSITIVE TEST
-    # =====================================================
+    
 
     def test_admin_can_list_vehicles(self):
 
@@ -50,9 +50,9 @@ class VehicleTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    # =====================================================
+   
     # NEGATIVE TEST
-    # =====================================================
+    
 
     def test_normal_user_cannot_create_vehicle(self):
 

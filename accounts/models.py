@@ -3,9 +3,9 @@ import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
-# =========================================================
+
 # USER MANAGER
-# =========================================================
+
 
 
 class UserManager(BaseUserManager):
@@ -32,9 +32,8 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-# =========================================================
 # USER
-# =========================================================
+
 
 
 class User(AbstractUser):
@@ -54,9 +53,8 @@ class User(AbstractUser):
         return self.email
 
 
-# =========================================================
 # PROFILE
-# =========================================================
+
 
 
 class Profile(models.Model):
@@ -84,9 +82,8 @@ class Profile(models.Model):
         return self.user.email
 
 
-# =========================================================
 # DRIVER PROFILE
-# =========================================================
+
 
 
 class DriverProfile(models.Model):
@@ -123,9 +120,8 @@ class DriverProfile(models.Model):
         return self.license_number
 
 
-# =========================================================
 # VEHICLE TYPE
-# =========================================================
+
 
 
 class VehicleType(models.Model):
@@ -154,9 +150,8 @@ class VehicleType(models.Model):
         return self.name
 
 
-# =========================================================
 # VEHICLE
-# =========================================================
+
 
 
 class Vehicle(models.Model):
@@ -190,9 +185,8 @@ class Vehicle(models.Model):
         return self.registration_number
 
 
-# =========================================================
 # RIDE STATUS
-# =========================================================
+
 
 
 class RideStatus(models.Model):
@@ -223,13 +217,8 @@ class RideStatus(models.Model):
         return self.name
 
 
-# =========================================================
-# RIDE
-# =========================================================
 
-# =========================================================
 # RIDE
-# =========================================================
 
 
 class Ride(models.Model):
@@ -302,9 +291,7 @@ class Ride(models.Model):
         return str(self.id)
 
 
-# =========================================================
 # DRIVER LOCATION
-# =========================================================
 
 
 class DriverLocation(models.Model):
@@ -356,6 +343,7 @@ class Notification(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="notifications"
     )
+
     title = models.CharField(max_length=255, default="Notification")
 
     ride = models.ForeignKey(
@@ -373,13 +361,13 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["user", "is_read"]),
+        ]
         constraints = [
             models.UniqueConstraint(
-                fields=[
-                    "user",
-                    "ride",
-                    "notification_type",
-                ],
+                fields=["user", "ride", "notification_type"],
                 name="unique_ride_notification",
             ),
         ]

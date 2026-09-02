@@ -9430,3 +9430,263 @@ The complete backend testing process covered:
 | Task 8 | Complete Test Report    |    50 | PASS      |
 
 
+2/9/26
+
+# Task 1 — Identify Critical APIs
+
+The following APIs were identified as the most critical APIs for the mobile ride-booking application:
+
+| API             | Endpoint                           | Method   | Priority | Purpose                                                |
+| --------------- | ---------------------------------- | -------- | -------- | ------------------------------------------------------ |
+| Login           | `/api/v1/login/`                   | POST     | Critical | Authenticate the user and generate JWT tokens          |
+| Driver Location | `/api/v1/drivers/location/`        | POST/PUT | Critical | Update the driver's current location                   |
+| Nearby Drivers  | `/api/v1/drivers/nearby/`          | GET      | Critical | Retrieve nearby available drivers                      |
+| Create Ride     | `/api/v1/rides/`                   | POST     | Critical | Create a new ride request                              |
+| Ride Details    | `/api/v1/rides/<ride_id>/`         | GET      | Critical | Retrieve details and current status of a specific ride |
+| Ride History    | `/api/v1/rides/optimized-history/` | GET      | High     | Retrieve the user's previous rides                     |
+| Notifications   | `/api/v1/notifications/`           | GET      | High     | Retrieve user notifications                            |
+
+### Result
+
+The critical APIs required for the mobile application's core ride-booking flow were identified and documented based on the existing Django URL configuration.
+
+# Task 2 – Establish Performance Baseline
+
+## Objective
+
+Measure the baseline performance of all critical APIs before applying further performance optimizations.
+
+## APIs Tested
+
+1. Login API
+2. Driver Location API
+3. Nearby Drivers API
+4. Create Ride API
+5. Ride Details API
+6. Ride History API
+7. Notifications API
+
+## Performance Results
+
+| API             | Response Time | CPU Usage | Memory Usage |
+| --------------- | ------------: | --------: | -----------: |
+| Login           |    1814.22 ms |       ~4% |     144.4 MB |
+| Driver Location |     518.95 ms |       ~4% |     144.4 MB |
+| Nearby Drivers  |     398.29 ms |       ~4% |     144.4 MB |
+| Create Ride     |     390.41 ms |       ~4% |     144.4 MB |
+| Ride Details    |     458.54 ms |       ~4% |     144.4 MB |
+| Ride History    |     315.29 ms |       ~4% |     144.4 MB |
+| Notifications   |     413.13 ms |       ~4% |     144.4 MB |
+
+## Testing Result
+
+All 7 critical APIs were successfully tested and their baseline response times were recorded.
+
+The performance baseline will be used for comparison after implementing further performance optimizations.
+
+## Database Query Count
+
+Database query count was included in the performance test scripts. The current test setup returned `0` queries, but this value is not considered reliable for the final database query baseline and was therefore not used as a confirmed measurement.
+
+## Status
+
+**Task 2 – Establish Performance Baseline: Completed**
+# Task 3 – Optimize Database Queries
+
+## Objective
+
+Optimize database queries to improve API performance and reduce unnecessary database access.
+
+## Work Completed
+
+* Reviewed critical APIs for inefficient database queries and N+1 query issues.
+* Implemented `select_related()` for related ForeignKey data.
+* Used optimized querysets for Profiles, Drivers, Vehicles, Rides, and Notifications.
+* Added database indexes where required for frequently queried fields.
+* Reviewed slow and optimized Ride History APIs.
+
+## Testing Result
+
+Database query optimization was implemented successfully and the APIs were tested without errors.
+
+## Status
+
+**Task 3 – Optimize Database Queries: Completed**
+# Task 4 – Implement Redis Caching
+
+## Objective
+
+Implement Redis caching for frequently accessed and read-heavy data to improve API response performance.
+
+## Work Completed
+
+* Configured Redis caching using Django Redis.
+* Configured Memurai as the Redis service on Windows.
+* Implemented caching for Nearby Drivers.
+* Implemented caching for Vehicle Types.
+* Implemented caching for Ride Statuses.
+* Verified cache HIT and MISS behavior using Postman.
+
+## Testing Result
+
+Cache functionality was successfully tested. First requests returned data from the database, and subsequent requests returned data from Redis cache.
+
+## Status
+
+**Task 4 – Implement Redis Caching: Completed**
+
+# Task 5 – Cache Invalidation
+
+## Objective
+
+Ensure cached data is invalidated when the underlying data is updated so that stale data is not returned.
+
+## Work Completed
+
+* Implemented cache invalidation for driver location updates.
+* Implemented cache invalidation for driver availability updates.
+* Tested Nearby Drivers cache behavior before and after data updates.
+* Verified that cached data is removed after driver location changes.
+
+## Testing Result
+
+Nearby Drivers initially returned a **MISS**, subsequent requests returned a **HIT**, and after updating driver location, the next request returned a **MISS** again.
+
+This confirmed that stale cache data was successfully invalidated.
+
+## Status
+
+**Task 5 – Cache Invalidation: Completed**
+# Task 6 – Performance Benchmark
+
+## Objective
+
+Compare API performance before and after implementing Redis caching and verify cache HIT/MISS behavior.
+
+## Performance Results
+
+| API            | Cache Status | Response Time | Result            |
+| -------------- | ------------ | ------------: | ----------------- |
+| Vehicle Types  | HIT          |        360 ms | Cache verified    |
+| Ride Statuses  | HIT          |        171 ms | Cache verified    |
+| Nearby Drivers | MISS         |        139 ms | Database response |
+| Nearby Drivers | HIT          |         67 ms | Improved          |
+
+## Testing Result
+
+Redis caching was successfully verified for Vehicle Types, Ride Statuses, and Nearby Drivers.
+
+For Nearby Drivers, the response time improved from **139 ms on cache MISS to 67 ms on cache HIT**, confirming the performance benefit of Redis caching.
+
+Vehicle Types and Ride Statuses successfully returned cached data on subsequent requests.
+
+## Status
+
+**Task 6 – Performance Benchmark: Completed**
+# Task 7 – Load Testing
+
+## Objective
+
+Perform load testing on the backend API using Locust and verify how the API performs with multiple concurrent users.
+
+## Testing Tool
+
+* Tool: Locust
+* API Tested: Nearby Drivers API
+* Host: `http://127.0.0.1:8000`
+
+## Test Configuration
+
+* Concurrent Users: 10
+* Ramp-up: 2 users
+* API Method: GET
+* Endpoint: `/api/v1/drivers/nearby/`
+
+## Test Results
+
+| Metric              |     Result |
+| ------------------- | ---------: |
+| Concurrent Users    |         10 |
+| Requests Per Second |        6.3 |
+| Failure Rate        |         0% |
+| API Status          | Successful |
+
+## Testing Result
+
+The Nearby Drivers API was successfully tested with 10 concurrent users using Locust.
+
+The API handled approximately 6.3 requests per second with a 0% failure rate, confirming that the API successfully handled the configured load during testing.
+
+## Status
+
+**Task 7 – Load Testing: Completed**
+# Task 8 – Performance Report
+
+## Objective
+
+Compare backend performance before and after optimization and document the changes made and their purpose.
+
+## Before Optimization
+
+| API             | Response Time |
+| --------------- | ------------: |
+| Login           |    1814.22 ms |
+| Driver Location |     518.95 ms |
+| Nearby Drivers  |     398.29 ms |
+| Create Ride     |     390.41 ms |
+| Ride Details    |     458.54 ms |
+| Ride History    |     315.29 ms |
+| Notifications   |     413.13 ms |
+
+## After Optimization
+
+| API            | Cache Status | Response Time |
+| -------------- | ------------ | ------------: |
+| Nearby Drivers | MISS         |        139 ms |
+| Nearby Drivers | HIT          |         67 ms |
+
+The Nearby Drivers API response time improved from 139 ms on a cache MISS to 67 ms on a cache HIT, demonstrating the performance benefit of Redis caching.
+
+## Optimizations Implemented
+
+### 1. Database Query Optimization
+
+Used Django ORM optimizations such as `select_related()` to reduce unnecessary database queries and avoid N+1 query patterns.
+
+### 2. Redis Caching
+
+Implemented Redis caching for frequently accessed data including:
+
+* Nearby Drivers
+* Vehicle Types
+* Ride Statuses
+
+This reduces repeated database access and improves response time for repeated requests.
+
+### 3. Cache Invalidation
+
+Implemented cache invalidation when driver location or availability data changes to prevent stale cached data.
+
+### 4. Load Testing
+
+Performed load testing using Locust with 10 concurrent users.
+
+| Metric           | Result |
+| ---------------- | -----: |
+| Concurrent Users |     10 |
+| Requests/Second  |    6.3 |
+| Failure Rate     |     0% |
+
+## Performance Comparison
+
+The optimization work reduced database dependency for frequently accessed data and improved response time when cached data was available.
+
+The Nearby Drivers API demonstrated a clear improvement from 139 ms on cache MISS to 67 ms on cache HIT.
+
+## Testing Result
+
+Redis caching, cache invalidation, database query optimization, and load testing were successfully verified.
+
+## Status
+
+**Task 8 – Performance Report: Completed**

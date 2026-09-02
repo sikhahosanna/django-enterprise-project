@@ -17,9 +17,8 @@ class DriverTests(APITestCase):
 
         self.url = "/api/v1/drivers/"
 
-    # =====================================================
     # POSITIVE TEST
-    # =====================================================
+   
 
     def test_admin_can_access_drivers(self):
 
@@ -32,9 +31,9 @@ class DriverTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    # =====================================================
+    
     # NEGATIVE TEST
-    # =====================================================
+ 
 
     def test_normal_user_cannot_access_drivers(self):
 

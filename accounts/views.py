@@ -36,6 +36,7 @@ from .models import (
     DriverProfile,
     DriverLocation,
     Vehicle,
+    VehicleType,
     Notification,
 )
 
@@ -64,9 +65,9 @@ from .utils.responses import (
     error_response,
 )
 
-# =========================================================
+
 # PAGINATION
-# =========================================================
+
 
 
 class CustomPagination(PageNumberPagination):
@@ -76,9 +77,8 @@ class CustomPagination(PageNumberPagination):
     max_page_size = 50
 
 
-# =========================================================
 # RIDE RESPONSE HELPER
-# =========================================================
+
 
 
 def build_ride_data(ride):
@@ -111,9 +111,8 @@ def build_ride_data(ride):
     }
 
 
-# =========================================================
 # REGISTER
-# =========================================================
+
 
 
 class RegisterView(generics.CreateAPIView):
@@ -121,11 +120,11 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
 
     serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
 
-# =========================================================
 # LOGIN
-# =========================================================
+
 
 
 class LoginView(APIView):
@@ -154,9 +153,9 @@ class LoginView(APIView):
             },
             status_code=status.HTTP_200_OK,
         )
-# =========================================================
+
 # PROFILE
-# =========================================================
+
 
 
 class ProfileView(APIView):
@@ -203,9 +202,8 @@ class ProfileView(APIView):
         )
 
 
-# =========================================================
 # PROFILE LIST - ADMIN
-# =========================================================
+
 
 
 class ProfileListView(generics.ListAPIView):
@@ -245,9 +243,8 @@ class ProfileListView(generics.ListAPIView):
     ]
 
 
-# =========================================================
 # CHANGE PASSWORD
-# =========================================================
+
 
 
 class ChangePasswordView(APIView):
@@ -274,9 +271,8 @@ class ChangePasswordView(APIView):
         )
 
 
-# =========================================================
 # LOGOUT
-# =========================================================
+
 
 
 class LogoutView(APIView):
@@ -317,9 +313,8 @@ class LogoutView(APIView):
             )
 
 
-# =========================================================
 # DELETE PROFILE
-# =========================================================
+
 
 
 class DeleteProfileView(APIView):
@@ -345,9 +340,8 @@ class DeleteProfileView(APIView):
         )
 
 
-# =========================================================
 # RESTORE PROFILE
-# =========================================================
+
 
 
 class RestoreProfileView(APIView):
@@ -373,10 +367,9 @@ class RestoreProfileView(APIView):
         )
 
 
-# =========================================================
 # DRIVER LIST + CREATE
 # ADMIN ONLY
-# =========================================================
+
 
 
 class DriverListCreateView(generics.ListCreateAPIView):
@@ -421,10 +414,8 @@ class DriverListCreateView(generics.ListCreateAPIView):
 
     ordering = ["-created_at"]
 
-
-# =========================================================
 # DRIVER DETAIL
-# =========================================================
+
 
 
 class DriverDetailView(generics.RetrieveUpdateAPIView):
@@ -448,9 +439,8 @@ class DriverDetailView(generics.RetrieveUpdateAPIView):
         return DriverSerializer
 
 
-# =========================================================
 # VEHICLE BASE VIEW
-# =========================================================
+
 class VehicleBaseView:
 
     permission_classes = [
@@ -475,10 +465,94 @@ class VehicleBaseView:
 
             raise PermissionError("You are not registered as a driver.")
 
+# VEHICLE TYPES
 
-# =========================================================
+class VehicleTypeListView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    CACHE_KEY = "vehicle_types"
+    CACHE_TIMEOUT = 3600
+
+    def get(self, request):
+
+        cached_data = cache.get(self.CACHE_KEY)
+
+        if cached_data is not None:
+
+            return success_response(
+                message="Vehicle types retrieved from cache.",
+                data=cached_data,
+                status_code=status.HTTP_200_OK,
+            )
+
+        vehicle_types = VehicleType.objects.all().order_by("name")
+
+        data = [
+            {
+                "id": str(vehicle_type.id),
+                "name": vehicle_type.name,
+            }
+            for vehicle_type in vehicle_types
+        ]
+
+        cache.set(
+            self.CACHE_KEY,
+            data,
+            self.CACHE_TIMEOUT,
+        )
+
+        return success_response(
+            message="Vehicle types retrieved successfully.",
+            data=data,
+            status_code=status.HTTP_200_OK,
+        )
+
+# RIDE STATUSES
+
+class RideStatusListView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    CACHE_KEY = "ride_statuses"
+    CACHE_TIMEOUT = 3600
+
+    def get(self, request):
+
+        cached_data = cache.get(self.CACHE_KEY)
+
+        if cached_data is not None:
+
+            return success_response(
+                message="Ride statuses retrieved from cache.",
+                data=cached_data,
+                status_code=status.HTTP_200_OK,
+            )
+
+        ride_statuses = RideStatus.objects.all().order_by("name")
+
+        data = [
+            {
+                "id": str(ride_status.id),
+                "name": ride_status.name,
+            }
+            for ride_status in ride_statuses
+        ]
+
+        cache.set(
+            self.CACHE_KEY,
+            data,
+            self.CACHE_TIMEOUT,
+        )
+
+        return success_response(
+            message="Ride statuses retrieved successfully.",
+            data=data,
+            status_code=status.HTTP_200_OK,
+        )
+
 # VEHICLE LIST + CREATE
-# =========================================================
+
 
 
 class VehicleListCreateView(
@@ -545,9 +619,9 @@ class VehicleListCreateView(
         )
 
 
-# =========================================================
+
 # VEHICLE DETAIL
-# =========================================================
+
 
 
 class VehicleDetailView(
@@ -622,10 +696,8 @@ class VehicleDetailView(
 
         serializer.save(driver=driver)
 
-
-# =========================================================
 # TASK 6 - ADVANCED RIDE FILTERING
-# =========================================================
+
 
 
 class RideListCreateView(generics.ListCreateAPIView):
@@ -713,9 +785,8 @@ class RideListCreateView(generics.ListCreateAPIView):
         serializer.save(rider=self.request.user)
 
 
-# =========================================================
 # RIDE FARE
-# =========================================================
+
 
 
 class RideFareView(APIView):
@@ -801,9 +872,9 @@ class RideFareView(APIView):
         )
 
 
-# =========================================================
+
 # RIDE DETAIL
-# =========================================================
+
 
 
 class RideDetailView(generics.RetrieveAPIView):
@@ -824,9 +895,8 @@ class RideDetailView(generics.RetrieveAPIView):
         ).filter(rider=self.request.user)
 
 
-# =========================================================
 # ACCEPT RIDE
-# =========================================================
+
 
 
 class RideAcceptView(APIView):
@@ -880,9 +950,9 @@ class RideAcceptView(APIView):
             )
 
 
-# =========================================================
+
 # RIDE STATUS UPDATE
-# =========================================================
+
 
 
 class RideStatusUpdateView(APIView):
@@ -891,9 +961,8 @@ class RideStatusUpdateView(APIView):
 
     def patch(self, request, pk):
 
-        # -------------------------------------------------
         # GET RIDE
-        # -------------------------------------------------
+        
 
         try:
 
@@ -912,9 +981,9 @@ class RideStatusUpdateView(APIView):
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        # -------------------------------------------------
+       
         # VALIDATE REQUEST
-        # -------------------------------------------------
+       
 
         serializer = RideStatusUpdateSerializer(
             data=request.data,
@@ -926,9 +995,9 @@ class RideStatusUpdateView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
-        # -------------------------------------------------
+        
         # UPDATE STATUS
-        # -------------------------------------------------
+     
 
         try:
 
@@ -938,15 +1007,15 @@ class RideStatusUpdateView(APIView):
                 new_status_name=(serializer.validated_data["status"]),
             )
 
-            # -------------------------------------------------
+         
             # NEW STATUS
-            # -------------------------------------------------
+           
 
             new_status = updated_ride.status.name
 
-            # -------------------------------------------------
+            
             # NOTIFICATIONS
-            # -------------------------------------------------
+          
 
             if new_status == RideStatus.Status.DRIVER_ARRIVING:
 
@@ -959,9 +1028,9 @@ class RideStatusUpdateView(APIView):
             elif new_status == RideStatus.Status.COMPLETED:
 
                 NotificationService.ride_completed(updated_ride)
-            # -------------------------------------------------
+         
             # WEBSOCKET BROADCAST
-            # -------------------------------------------------
+            
 
             channel_layer = get_channel_layer()
 
@@ -998,9 +1067,9 @@ class RideStatusUpdateView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        # -------------------------------------------------
+       
         # RESPONSE
-        # -------------------------------------------------
+        
 
         return success_response(
             message="Ride status updated successfully.",
@@ -1012,9 +1081,8 @@ class RideStatusUpdateView(APIView):
         )
 
 
-# =========================================================
 # CANCEL RIDE
-# =========================================================
+
 
 
 class RideCancelView(APIView):
@@ -1030,15 +1098,15 @@ class RideCancelView(APIView):
                 rider=request.user,
             )
 
-            # -------------------------------------------------
+            
             # CANCELLATION NOTIFICATION
-            # -------------------------------------------------
+           
 
             NotificationService.ride_cancelled(ride)
 
-            # -------------------------------------------------
+           
             # WEBSOCKET
-            # -------------------------------------------------
+           
 
             channel_layer = get_channel_layer()
 
@@ -1085,9 +1153,8 @@ class RideCancelView(APIView):
             )
 
 
-# =========================================================
 # USER ACTIVE RIDES
-# =========================================================
+
 
 
 class UserActiveRidesView(generics.ListAPIView):
@@ -1143,9 +1210,8 @@ class UserActiveRidesView(generics.ListAPIView):
         )
 
 
-# =========================================================
 # USER COMPLETED RIDES
-# =========================================================
+
 
 
 class UserCompletedRidesView(generics.ListAPIView):
@@ -1194,9 +1260,8 @@ class UserCompletedRidesView(generics.ListAPIView):
         )
 
 
-# =========================================================
 # USER CANCELLED RIDES
-# =========================================================
+
 
 
 class UserCancelledRidesView(generics.ListAPIView):
@@ -1245,9 +1310,9 @@ class UserCancelledRidesView(generics.ListAPIView):
         )
 
 
-# =========================================================
+
 # DRIVER RIDE HISTORY
-# =========================================================
+
 
 
 class DriverRideHistoryView(generics.ListAPIView):
@@ -1318,9 +1383,8 @@ class DriverRideHistoryView(generics.ListAPIView):
         )
 
 
-# =========================================================
 # DAILY RIDE COUNT
-# =========================================================
+
 
 
 class DailyRideCountView(APIView):
@@ -1346,9 +1410,9 @@ class DailyRideCountView(APIView):
         )
 
 
-# =========================================================
+
 # TOTAL COMPLETED RIDES
-# =========================================================
+
 
 
 class TotalCompletedRidesView(APIView):
@@ -1370,10 +1434,8 @@ class TotalCompletedRidesView(APIView):
             status_code=status.HTTP_200_OK,
         )
 
-
-# =========================================================
 # TOTAL FARE EARNED BY DRIVER
-# =========================================================
+
 
 
 class DriverTotalFareEarnedView(APIView):
@@ -1398,9 +1460,9 @@ class DriverTotalFareEarnedView(APIView):
         )
 
 
-# =========================================================
+
 # TASK 3 - RIDE AGGREGATIONS
-# =========================================================
+
 
 
 class RideAggregationView(APIView):
@@ -1466,9 +1528,9 @@ class RideAggregationView(APIView):
         )
 
 
-# =========================================================
+
 # TASK 4 - SLOW RIDE HISTORY
-# =========================================================
+
 
 
 class SlowRideHistoryView(APIView):
@@ -1524,9 +1586,9 @@ class SlowRideHistoryView(APIView):
         )
 
 
-# =========================================================
+
 # TASK 4 - OPTIMIZED RIDE HISTORY
-# =========================================================
+
 
 
 class OptimizedRideHistoryView(APIView):
@@ -1590,16 +1652,7 @@ class OptimizedRideHistoryView(APIView):
             status_code=status.HTTP_200_OK,
         )
 
-
-# =========================================================
-# DISTANCE CALCULATION
-# =========================================================
-
-
-# =========================================================
 # DRIVER LOCATION
-# =========================================================
-
 
 class DriverLocationView(APIView):
 
@@ -1634,10 +1687,8 @@ class DriverLocationView(APIView):
             },
         )
 
-        # -------------------------------------------------
+      
         # FIND ACTIVE RIDE
-        # -------------------------------------------------
-
         ride = Ride.objects.filter(
             driver=driver,
             status__name__in=[
@@ -1647,9 +1698,9 @@ class DriverLocationView(APIView):
             ],
         ).first()
 
-        # -------------------------------------------------
+        
         # WEBSOCKET LOCATION UPDATE
-        # -------------------------------------------------
+       
 
         if ride:
 
@@ -1666,9 +1717,9 @@ class DriverLocationView(APIView):
                 },
             )
 
-        # -------------------------------------------------
+     
         # CACHE INVALIDATION
-        # -------------------------------------------------
+        
 
         cache.clear()
 
@@ -1685,10 +1736,7 @@ class DriverLocationView(APIView):
         )
 
 
-# =========================================================
 # DRIVER AVAILABILITY
-# =========================================================
-
 
 class DriverAvailabilityView(APIView):
 
@@ -1763,11 +1811,7 @@ class DriverAvailabilityView(APIView):
             status_code=status.HTTP_200_OK,
         )
 
-
-# =========================================================
 # TASK 5 - NEARBY DRIVER API WITH REDIS CACHE
-# =========================================================
-
 
 class NearbyDriverView(APIView):
 
@@ -1787,9 +1831,7 @@ class NearbyDriverView(APIView):
 
         radius = request.query_params.get("radius")
 
-        # -------------------------------------------------
         # VALIDATION
-        # -------------------------------------------------
 
         if not latitude or not longitude or not radius:
 
@@ -1842,9 +1884,9 @@ class NearbyDriverView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        # -------------------------------------------------
+       
         # CACHE KEY
-        # -------------------------------------------------
+       
 
         cache_key = (
             f"nearby_drivers:" f"{latitude:.4f}:" f"{longitude:.4f}:" f"{radius:.2f}"
@@ -1852,9 +1894,9 @@ class NearbyDriverView(APIView):
 
         cached_data = cache.get(cache_key)
 
-        # -------------------------------------------------
+       
         # CACHE HIT
-        # -------------------------------------------------
+       
 
         if isinstance(cached_data, dict):
 
@@ -1873,9 +1915,9 @@ class NearbyDriverView(APIView):
                 status_code=status.HTTP_200_OK,
             )
 
-        # -------------------------------------------------
+        
         # CACHE MISS
-        # -------------------------------------------------
+       
 
         locations = DriverLocation.objects.filter(
             availability_status=(DriverLocation.AvailabilityStatus.ONLINE),
@@ -1887,9 +1929,8 @@ class NearbyDriverView(APIView):
 
         nearby_drivers = []
 
-        # -------------------------------------------------
         # DISTANCE CALCULATION
-        # -------------------------------------------------
+        
 
         for location in locations:
 
@@ -1918,15 +1959,14 @@ class NearbyDriverView(APIView):
                     }
                 )
 
-        # -------------------------------------------------
         # SORT
-        # -------------------------------------------------
+        
 
         nearby_drivers.sort(key=lambda driver: driver["distance_km"])
 
-        # -------------------------------------------------
+    
         # RESPONSE DATA
-        # -------------------------------------------------
+       
 
         response_data = {
             "latitude": latitude,
@@ -1936,9 +1976,8 @@ class NearbyDriverView(APIView):
             "drivers": nearby_drivers,
         }
 
-        # -------------------------------------------------
         # CACHE
-        # -------------------------------------------------
+        
 
         cache.set(
             cache_key,
@@ -1946,9 +1985,9 @@ class NearbyDriverView(APIView):
             self.CACHE_TIMEOUT,
         )
 
-        # -------------------------------------------------
+        
         # PERFORMANCE
-        # -------------------------------------------------
+        
 
         query_count = len(connection.queries)
 
@@ -1966,11 +2005,8 @@ class NearbyDriverView(APIView):
         )
 
 
-# =========================================================
+
 # NOTIFICATIONS
-# =========================================================
-
-
 class NotificationListView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -1981,15 +2017,14 @@ class NotificationListView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        return Notification.objects.filter(user=self.request.user).order_by(
-            "-created_at"
+        return (
+            Notification.objects
+            .filter(user=self.request.user)
+            .select_related("ride")
+            .order_by("-created_at")
         )
 
-
-# =========================================================
 # MARK NOTIFICATION READ
-# =========================================================
-
 
 class NotificationMarkReadView(APIView):
 
@@ -2021,12 +2056,7 @@ class NotificationMarkReadView(APIView):
             status_code=status.HTTP_200_OK,
         )
 
-
-# =========================================================
 # MARK ALL NOTIFICATIONS READ
-# =========================================================
-
-
 class NotificationMarkAllReadView(APIView):
 
     permission_classes = [IsAuthenticated]

@@ -10,9 +10,9 @@ def custom_exception_handler(exc, context):
 
     response = exception_handler(exc, context)
 
-    # =========================================================
+ 
     # DRF HANDLED EXCEPTIONS
-    # =========================================================
+  
 
     if response is not None:
 
@@ -60,9 +60,8 @@ def custom_exception_handler(exc, context):
             status=response.status_code,
         )
 
-    # =========================================================
     # UNHANDLED EXCEPTION
-    # =========================================================
+   
 
     logger.exception(
         "Unhandled API Exception: %s",

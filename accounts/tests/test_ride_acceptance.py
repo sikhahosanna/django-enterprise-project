@@ -18,18 +18,14 @@ class RideAcceptanceTest(TestCase):
 
         self.client = APIClient()
 
-        # =================================================
         # RIDER
-        # =================================================
 
         self.rider = User.objects.create_user(
             email="rider_accept@example.com",
             password="TestPassword123",
         )
 
-        # =================================================
         # DRIVER
-        # =================================================
 
         self.driver_user = User.objects.create_user(
             email="driver_accept@example.com",
@@ -42,17 +38,14 @@ class RideAcceptanceTest(TestCase):
             status="active",
         )
 
-        # =================================================
         # VEHICLE TYPE
-        # =================================================
 
         self.vehicle_type = VehicleType.objects.create(
             name="car",
         )
 
-        # =================================================
         # RIDE STATUS
-        # =================================================
+ 
 
         self.requested_status = RideStatus.objects.create(
             name="requested",
@@ -62,9 +55,7 @@ class RideAcceptanceTest(TestCase):
             name="accepted",
         )
 
-        # =================================================
         # CREATE RIDE
-        # =================================================
 
         self.ride = Ride.objects.create(
             rider=self.rider,
@@ -80,17 +71,13 @@ class RideAcceptanceTest(TestCase):
             fare=Decimal("141.29"),
         )
 
-        # =================================================
         # AUTHENTICATE DRIVER
-        # =================================================
 
         self.client.force_authenticate(
             user=self.driver_user,
         )
 
-    # =====================================================
     # TEST RIDE ACCEPTANCE
-    # =====================================================
 
     def test_ride_acceptance(self):
 
@@ -110,33 +97,27 @@ class RideAcceptanceTest(TestCase):
             response.data,
         )
 
-        # =================================================
         # RESPONSE SHOULD BE SUCCESS
-        # =================================================
 
         self.assertEqual(
             response.status_code,
             200,
         )
 
-        # =================================================
         # REFRESH FROM DATABASE
-        # =================================================
 
         self.ride.refresh_from_db()
 
-        # =================================================
         # DRIVER MUST BE ASSIGNED
-        # =================================================
 
         self.assertEqual(
             self.ride.driver_id,
             self.driver.id,
         )
 
-        # =================================================
+    
         # STATUS MUST BE ACCEPTED
-        # =================================================
+      
 
         self.assertEqual(
             self.ride.status.name.lower(),
