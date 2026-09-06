@@ -9690,3 +9690,245 @@ Redis caching, cache invalidation, database query optimization, and load testing
 ## Status
 
 **Task 8 – Performance Report: Completed**
+
+
+7/9/26
+
+
+# API Architecture, Versioning & Advanced DRF
+
+## 1. API Versioning
+
+All application APIs are organized under the versioned API prefix:
+
+`/api/v1/`
+
+### Definition
+
+API Versioning means maintaining different versions of an API so that future changes do not break existing mobile applications.
+
+### Main API Modules
+
+* Authentication
+* Users and Profiles
+* Drivers
+* Vehicles
+* Rides
+* Notifications
+
+---
+
+## 2. API Documentation
+
+Swagger/OpenAPI documentation is available at:
+
+`http://localhost:8000/api/docs/`
+
+OpenAPI schema:
+
+`http://localhost:8000/api/schema/`
+
+### Definition
+
+API Documentation provides complete information about available APIs, including request data, response data, authentication, errors, and HTTP status codes.
+
+---
+
+## 3. Authentication
+
+Protected APIs use JWT authentication.
+
+Authorization format:
+
+`Authorization: Bearer <access_token>`
+
+### Definition
+
+JWT (JSON Web Token) is used to securely authenticate users and allow access to protected APIs.
+
+---
+
+## 4. Postman API Testing
+
+All major APIs were tested using Postman.
+
+### Definition
+
+Postman is an API testing tool used to send HTTP requests and verify API responses.
+
+### APIs Tested
+
+* User Registration
+* User Login
+* Change Password
+* Logout
+* User Profile
+* Drivers
+* Driver Location
+* Driver Availability
+* Nearby Drivers
+* Vehicle Types
+* Vehicles
+* Rides
+* Ride Fare
+* Ride Accept
+* Ride Cancel
+* Ride Status
+* Ride History
+* Notifications
+
+Each API was tested by checking:
+
+* Request method
+* Request URL
+* Request body
+* Authentication
+* Response data
+* HTTP status code
+* Error handling
+
+---
+
+## 5. Authentication Testing
+
+Login API was tested first to obtain the JWT access token.
+
+Example:
+
+`POST /api/v1/auth/login/`
+
+The access token was then used as a Bearer token for protected APIs.
+
+### Definition
+
+Authentication testing verifies whether only authenticated users can access protected APIs.
+
+---
+
+## 6. Error Testing
+
+Different error scenarios were tested in Postman.
+
+| Status Code | Definition                               |
+| ----------- | ---------------------------------------- |
+| 200         | Request completed successfully           |
+| 201         | Resource created successfully            |
+| 400         | Invalid request or validation error      |
+| 401         | Authentication required or invalid token |
+| 403         | User does not have permission            |
+| 404         | Requested resource was not found         |
+| 500         | Internal server error                    |
+
+### Definition
+
+Error testing verifies that APIs return proper status codes and meaningful error responses when invalid requests are received.
+
+---
+
+## 7. Ride Custom Actions
+
+Ride state-changing operations are implemented as custom actions.
+
+* `POST /api/v1/rides/{id}/accept/`
+* `POST /api/v1/rides/{id}/cancel/`
+* `POST /api/v1/rides-v2/{id}/start/`
+* `POST /api/v1/rides-v2/{id}/complete/`
+
+### Definition
+
+Custom Actions are API operations created for specific business operations instead of using only standard CRUD operations.
+
+Ride state validation is performed before changing the ride status.
+
+---
+
+## 8. Serializer Design
+
+Serializers were used to validate incoming request data and format API responses.
+
+### Definition
+
+A Serializer converts Django model/queryset data into JSON responses and validates JSON request data before saving it.
+
+The API uses appropriate serializers for:
+
+* Create operations
+* Update operations
+* Read operations
+* Nested data
+* Validation
+
+---
+
+## 9. Generic Views and ViewSets
+
+DRF Generic Views and ViewSets are used where appropriate.
+
+Examples include:
+
+* APIView
+* CreateAPIView
+* ListAPIView
+* RetrieveUpdateDestroyAPIView
+* ModelViewSet
+
+### Definition
+
+Generic Views provide reusable API behavior for common operations such as list, create, retrieve, update, and delete.
+
+A ViewSet groups related API operations into a single class and works with DRF routers.
+
+---
+
+## 10. API Testing with Django
+
+The complete Django test suite can be executed using:
+
+```bash
+python manage.py test
+```
+
+### Definition
+
+Django testing verifies that backend functionality continues to work correctly after API versioning, serializer changes, ViewSet changes, and refactoring.
+
+---
+
+## 11. Git Version Control
+
+After completing API testing and fixing broken endpoints, the changes were reviewed and committed to Git.
+
+Commands:
+
+```bash
+git status
+git diff
+git add .
+git commit -m "Complete API versioning and refactoring"
+git push
+```
+
+### Definition
+
+Git is a version control system used to track code changes, create commits, and synchronize the project with the remote GitHub repository.
+
+---
+
+## 12. Task 8 Completion
+
+The following activities were completed:
+
+* Complete API collection tested in Postman
+* Authentication tested
+* Protected APIs tested with JWT
+* Success and error responses verified
+* Broken endpoints identified and fixed
+* Django test suite executed
+* Code changes reviewed using Git
+* Changes committed
+* Changes pushed to GitHub
+
+### Definition
+
+Task 8 ensures that the versioned APIs are working correctly, existing functionality is not broken, and the final implementation is safely stored in the Git repository.
+

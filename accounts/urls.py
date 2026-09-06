@@ -1,6 +1,8 @@
 
 from rest_framework_simplejwt.views import TokenRefreshView
-from django.urls import include, path
+from django.urls import path
+from rest_framework.routers import DefaultRouter
+
 
 
 from .views import (
@@ -22,6 +24,7 @@ from .views import (
     DriverLocationView,
     DriverAvailabilityView,
     RideStatusListView,
+    RideViewSet,
     # VEHICLE
     VehicleListCreateView,
     VehicleDetailView,
@@ -49,55 +52,34 @@ from .views import (
     NotificationMarkAllReadView,
 
 )
+router = DefaultRouter()
+
+router.register(
+    r"rides-v2",
+    RideViewSet,
+    basename="ride-v2",
+)
+
+
 
 urlpatterns = [
     
     
     # AUTH
   
-    path(
-        "register/",
-        RegisterView.as_view(),
-        name="register",
-    ),
-    path(
-        "login/",
-        LoginView.as_view(),
-        name="login",
-    ),
-    path(
-        "change-password/",
-        ChangePasswordView.as_view(),
-    ),
-    path(
-        "logout/",
-        LogoutView.as_view(),
-    ),
-    path(
-    "token/refresh/",
-    TokenRefreshView.as_view(),
-    name="token_refresh",
-),
-   
+path("auth/register/", RegisterView.as_view(), name="register"),
+path("auth/login/", LoginView.as_view(), name="login"),
+path("auth/change-password/", ChangePasswordView.as_view()),
+path("auth/logout/", LogoutView.as_view()),
+path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+
     # PROFILE
     
-    path(
-        "profile/",
-        ProfileView.as_view(),
-    ),
-    path(
-        "profiles/",
-        ProfileListView.as_view(),
-    ),
-    path(
-        "profile/delete/",
-        DeleteProfileView.as_view(),
-    ),
-    path(
-        "profile/restore/",
-        RestoreProfileView.as_view(),
-    ),
-    
+path("users/profile/", ProfileView.as_view()),
+path("users/profiles/", ProfileListView.as_view()),
+path("users/profile/delete/", DeleteProfileView.as_view()),
+path("users/profile/restore/", RestoreProfileView.as_view()),
+
     # DRIVER
     
     path(
@@ -256,3 +238,4 @@ urlpatterns = [
     ),
     
 ]
+urlpatterns += router.urls

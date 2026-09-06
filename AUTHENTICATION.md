@@ -52,8 +52,8 @@ Creates a new user account in the application.
 
 ```json
 {
-    "email": "siri@gmail.com",
-    "password": "Siri@12345"
+    "email": "Hosanna@gmail.com",
+    "password": "Hosanna@12345"
 }
 ````
 
@@ -96,8 +96,8 @@ Authenticates users using email and password.
 
 ```json
 {
-    "email": "siri@gmail.com",
-    "password": "Siri@12345"
+    "email": "Hosanna@gmail.com",
+    "password": "Hosanna@12345"
 }
 ```
 
@@ -112,7 +112,7 @@ Authenticates users using email and password.
 ```json
 {
     "user": {
-        "email": "siri@gmail.com"
+        "email": "Hosanna@gmail.com"
     },
     "access": "jwt_access_token",
     "refresh": "jwt_refresh_token"

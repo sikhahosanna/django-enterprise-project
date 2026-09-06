@@ -1,11 +1,16 @@
 import time
+import logging
 
+logger = logging.getLogger(__name__)
 from django.core.cache import cache
 from django.db import connection, reset_queries
 from django.db.models import Count, Sum, Avg, Min, Max, Q
 from django.utils import timezone
+from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
-from rest_framework import generics, status, filters
+
+from rest_framework import generics, status, filters, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
@@ -27,6 +32,7 @@ from .services.profile_service import ProfileService
 
 from .permissions import IsAdminOrDriverOwner
 from .throttles import LoginRateThrottle
+
 
 from .models import (
     Ride,
@@ -112,6 +118,15 @@ def build_ride_data(ride):
 
 
 # REGISTER
+@extend_schema(
+    summary="Register User",
+    description="Create a new user account.",
+    responses={
+        201: OpenApiResponse(description="User registered successfully"),
+        400: OpenApiResponse(description="Invalid registration data"),
+    },
+    auth=[],
+)
 
 
 
@@ -124,7 +139,16 @@ class RegisterView(generics.CreateAPIView):
 
 
 # LOGIN
-
+@extend_schema(
+    summary="User Login",
+    description="Authenticate a user and return JWT access and refresh tokens.",
+    responses={
+        200: OpenApiResponse(description="Login successful"),
+        400: OpenApiResponse(description="Invalid email or password"),
+        429: OpenApiResponse(description="Too many login attempts"),
+    },
+    auth=[],
+)
 
 
 class LoginView(APIView):
@@ -134,9 +158,11 @@ class LoginView(APIView):
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-
-        serializer.is_valid(raise_exception=True)
-
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            logger.warning("Authentication failed: invalid credentials")
+            raise
         user = serializer.validated_data["user"]
 
         refresh = RefreshToken.for_user(user)
@@ -156,9 +182,21 @@ class LoginView(APIView):
 
 # PROFILE
 
+@extend_schema(
+    summary="Get or Save User Profile",
+    description="Retrieve or save the authenticated user's profile.",
+    responses={
+        200: OpenApiResponse(description="Profile operation successful"),
+        401: OpenApiResponse(description="Authentication required"),
+        404: OpenApiResponse(description="Profile not found"),
+    },
+)
+
 
 
 class ProfileView(APIView):
+
+   
 
     permission_classes = [IsAuthenticated]
 
@@ -172,6 +210,8 @@ class ProfileView(APIView):
         profile = ProfileService.get_profile(request.user)
 
         if profile is None:
+
+            logger.warning("Profile not found for authenticated user")
 
             return error_response(
                 message="Profile not created.",
@@ -245,6 +285,15 @@ class ProfileListView(generics.ListAPIView):
 
 # CHANGE PASSWORD
 
+@extend_schema(
+    summary="Change Password",
+    description="Change the password of the authenticated user.",
+    responses={
+        200: OpenApiResponse(description="Password changed successfully"),
+        400: OpenApiResponse(description="Invalid password data"),
+        401: OpenApiResponse(description="Authentication required"),
+    },
+)
 
 
 class ChangePasswordView(APIView):
@@ -273,6 +322,15 @@ class ChangePasswordView(APIView):
 
 # LOGOUT
 
+@extend_schema(
+    summary="Logout User",
+    description="Logout the authenticated user by blacklisting the refresh token.",
+    responses={
+        200: OpenApiResponse(description="Logout successful"),
+        400: OpenApiResponse(description="Invalid or missing refresh token"),
+        401: OpenApiResponse(description="Authentication required"),
+    },
+)
 
 
 class LogoutView(APIView):
@@ -305,6 +363,8 @@ class LogoutView(APIView):
 
         except Exception:
 
+            logger.warning("Logout failed: invalid refresh token")
+
             return error_response(
                 message="Invalid refresh token.",
                 error_code="INVALID_REFRESH_TOKEN",
@@ -314,6 +374,16 @@ class LogoutView(APIView):
 
 
 # DELETE PROFILE
+ 
+@extend_schema(
+    summary="Delete Profile",
+    description="Soft delete the authenticated user's profile.",
+    responses={
+        200: OpenApiResponse(description="Profile deleted successfully"),
+        404: OpenApiResponse(description="Profile not found"),
+        401: OpenApiResponse(description="Authentication required"),
+    },
+)
 
 
 
@@ -342,6 +412,15 @@ class DeleteProfileView(APIView):
 
 # RESTORE PROFILE
 
+@extend_schema(
+    summary="Restore Profile",
+    description="Restore the authenticated user's deleted profile.",
+    responses={
+        200: OpenApiResponse(description="Profile restored successfully"),
+        404: OpenApiResponse(description="Profile not found"),
+        401: OpenApiResponse(description="Authentication required"),
+    },
+)
 
 
 class RestoreProfileView(APIView):
@@ -696,6 +775,44 @@ class VehicleDetailView(
 
         serializer.save(driver=driver)
 
+#vehicle view set
+
+class VehicleViewSet(
+    VehicleBaseView,
+    viewsets.ModelViewSet,
+):
+
+    serializer_class = VehicleSerializer
+
+    def get_queryset(self):
+
+        queryset = self.get_vehicle_queryset()
+
+        if self.request.user.is_staff:
+            return queryset
+
+        return queryset.filter(
+            driver__user=self.request.user
+        )
+
+    def perform_create(self, serializer):
+
+        if self.request.user.is_staff:
+            serializer.save()
+            return
+
+        driver = self.get_driver()
+        serializer.save(driver=driver)
+
+    def perform_update(self, serializer):
+
+        if self.request.user.is_staff:
+            serializer.save()
+            return
+
+        driver = self.get_driver()
+        serializer.save(driver=driver)
+
 # TASK 6 - ADVANCED RIDE FILTERING
 
 
@@ -786,7 +903,15 @@ class RideListCreateView(generics.ListCreateAPIView):
 
 
 # RIDE FARE
-
+@extend_schema(
+    summary="Calculate Ride Fare",
+    description="Calculate the estimated fare for a ride.",
+    responses={
+        200: OpenApiResponse(description="Fare calculated successfully"),
+        400: OpenApiResponse(description="Invalid ride or fare data"),
+        404: OpenApiResponse(description="Ride or required resource not found"),
+    },
+)
 
 
 class RideFareView(APIView):
@@ -852,7 +977,7 @@ class RideFareView(APIView):
             TypeError,
             KeyError,
         ) as e:
-
+            logger.warning("Fare calculation failed due to invalid input")
             return error_response(
                 message=str(e),
                 error_code="FARE_CALCULATION_ERROR",
@@ -896,7 +1021,16 @@ class RideDetailView(generics.RetrieveAPIView):
 
 
 # ACCEPT RIDE
-
+@extend_schema(
+    summary="Accept Ride",
+    description="Driver accepts an available ride.",
+    responses={
+        200: OpenApiResponse(description="Ride accepted successfully"),
+        400: OpenApiResponse(description="Ride cannot be accepted"),
+        403: OpenApiResponse(description="User is not authorized to accept this ride"),
+        404: OpenApiResponse(description="Ride not found"),
+    },
+)
 
 
 class RideAcceptView(APIView):
@@ -926,7 +1060,7 @@ class RideAcceptView(APIView):
             )
 
         except PermissionError as e:
-
+            logger.warning("Ride accept permission denied")
             return error_response(
                 message=str(e),
                 error_code="PERMISSION_DENIED",
@@ -934,7 +1068,7 @@ class RideAcceptView(APIView):
             )
 
         except Ride.DoesNotExist:
-
+            logger.warning("Ride accept failed: ride not found")
             return error_response(
                 message="Ride not found.",
                 error_code="RIDE_NOT_FOUND",
@@ -942,7 +1076,7 @@ class RideAcceptView(APIView):
             )
 
         except ValueError as e:
-
+            logger.warning("Ride accept failed: invalid ride status")
             return error_response(
                 message=str(e),
                 error_code="INVALID_RIDE_STATUS",
@@ -1044,7 +1178,7 @@ class RideStatusUpdateView(APIView):
             )
 
         except Ride.DoesNotExist:
-
+            logger.warning("Ride status update failed: ride not found")
             return error_response(
                 message="Ride not found.",
                 error_code="RIDE_NOT_FOUND",
@@ -1052,7 +1186,7 @@ class RideStatusUpdateView(APIView):
             )
 
         except PermissionError as e:
-
+            logger.warning("Ride status update permission denied")
             return error_response(
                 message=str(e),
                 error_code="PERMISSION_DENIED",
@@ -1060,7 +1194,7 @@ class RideStatusUpdateView(APIView):
             )
 
         except ValueError as e:
-
+            logger.warning("Ride status update failed: invalid status")
             return error_response(
                 message=str(e),
                 error_code="INVALID_RIDE_STATUS",
@@ -1082,7 +1216,16 @@ class RideStatusUpdateView(APIView):
 
 
 # CANCEL RIDE
-
+@extend_schema(
+    summary="Cancel Ride",
+    description="Cancel an existing ride.",
+    responses={
+        200: OpenApiResponse(description="Ride cancelled successfully"),
+        400: OpenApiResponse(description="Ride cannot be cancelled"),
+        403: OpenApiResponse(description="User is not authorized to cancel this ride"),
+        404: OpenApiResponse(description="Ride not found"),
+    },
+)
 
 
 class RideCancelView(APIView):
@@ -1129,6 +1272,82 @@ class RideCancelView(APIView):
             )
 
         except Ride.DoesNotExist:
+            logger.warning("Ride cancellation failed: ride not found")
+            return error_response(
+                message="Ride not found.",
+                error_code="RIDE_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        except PermissionError as e:
+            logger.warning("Ride cancellation permission denied")
+
+            return error_response(
+                message=str(e),
+                error_code="PERMISSION_DENIED",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        except ValueError as e:
+            logger.warning("Ride cancellation failed: invalid ride status")
+
+            return error_response(
+                message=str(e),
+                error_code="INVALID_RIDE_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+# RIDE VIEWSET - CUSTOM ACTIONS
+
+class RideViewSet(viewsets.ModelViewSet):
+
+    serializer_class = RideSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+
+        return Ride.objects.select_related(
+            "rider",
+            "rider__profile",
+            "driver",
+            "driver__user",
+            "status",
+            "vehicle_type",
+        ).filter(
+            rider=self.request.user
+        )
+
+    # ACCEPT RIDE
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="accept",
+    )
+    def accept(self, request, pk=None):
+
+        try:
+
+            ride = RideService.accept_ride(
+                ride_id=pk,
+                user=request.user,
+            )
+
+            NotificationService.ride_accepted(ride)
+
+            return success_response(
+                message="Ride accepted successfully.",
+                data={
+                    "ride_id": str(ride.id),
+                    "driver_id": str(ride.driver.id),
+                    "driver_email": ride.driver.user.email,
+                    "status": ride.status.name,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        except Ride.DoesNotExist:
 
             return error_response(
                 message="Ride not found.",
@@ -1152,6 +1371,171 @@ class RideCancelView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
+    # CANCEL RIDE
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cancel",
+    )
+    def cancel(self, request, pk=None):
+
+        try:
+
+            ride = RideService.cancel_ride(
+                ride_id=pk,
+                rider=request.user,
+            )
+
+            NotificationService.ride_cancelled(ride)
+
+            channel_layer = get_channel_layer()
+
+            async_to_sync(channel_layer.group_send)(
+                f"ride_{ride.id}",
+                {
+                    "type": "ride_status_update",
+                    "status": ride.status.name,
+                    "ride_id": str(ride.id),
+                },
+            )
+
+            return success_response(
+                message="Ride cancelled successfully.",
+                data={
+                    "ride_id": str(ride.id),
+                    "status": ride.status.name,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        except Ride.DoesNotExist:
+
+            return error_response(
+                message="Ride not found.",
+                error_code="RIDE_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        except PermissionError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="PERMISSION_DENIED",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        except ValueError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="INVALID_RIDE_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+    # START RIDE
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="start",
+    )
+    def start(self, request, pk=None):
+
+        try:
+
+            ride = RideService.update_status(
+                ride_id=pk,
+                driver=request.user,
+                new_status_name=RideStatus.Status.STARTED,
+            )
+
+            NotificationService.ride_started(ride)
+
+            return success_response(
+                message="Ride started successfully.",
+                data={
+                    "ride_id": str(ride.id),
+                    "status": ride.status.name,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        except Ride.DoesNotExist:
+
+            return error_response(
+                message="Ride not found.",
+                error_code="RIDE_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        except PermissionError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="PERMISSION_DENIED",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        except ValueError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="INVALID_RIDE_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+    # COMPLETE RIDE
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="complete",
+    )
+    def complete(self, request, pk=None):
+
+        try:
+
+            ride = RideService.update_status(
+                ride_id=pk,
+                driver=request.user,
+                new_status_name=RideStatus.Status.COMPLETED,
+            )
+
+            NotificationService.ride_completed(ride)
+
+            return success_response(
+                message="Ride completed successfully.",
+                data={
+                    "ride_id": str(ride.id),
+                    "status": ride.status.name,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        except Ride.DoesNotExist:
+
+            return error_response(
+                message="Ride not found.",
+                error_code="RIDE_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        except PermissionError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="PERMISSION_DENIED",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        except ValueError as e:
+
+            return error_response(
+                message=str(e),
+                error_code="INVALID_RIDE_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
 # USER ACTIVE RIDES
 
@@ -1654,6 +2038,17 @@ class OptimizedRideHistoryView(APIView):
 
 # DRIVER LOCATION
 
+@extend_schema(
+    summary="Update Driver Location",
+    description="Update the authenticated driver's current location and availability.",
+    request=DriverLocationSerializer,
+    responses={
+        200: OpenApiResponse(description="Driver location updated successfully."),
+        400: OpenApiResponse(description="Invalid location data."),
+        401: OpenApiResponse(description="Authentication required."),
+        404: OpenApiResponse(description="Driver not found."),
+    },
+)
 class DriverLocationView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -1665,7 +2060,7 @@ class DriverLocationView(APIView):
             driver = request.user.driver_profile
 
         except DriverProfile.DoesNotExist:
-
+            logger.warning("Driver location update failed: driver not found")
             return error_response(
                 message="You are not registered as a driver.",
                 error_code="DRIVER_NOT_FOUND",
@@ -1738,6 +2133,26 @@ class DriverLocationView(APIView):
 
 # DRIVER AVAILABILITY
 
+@extend_schema(
+    summary="Update Driver Availability",
+    description="Update the authenticated driver's availability status.",
+    responses={
+        200: OpenApiResponse(
+            description="Driver availability updated successfully."
+        ),
+        400: OpenApiResponse(
+            description="Invalid availability status."
+        ),
+        401: OpenApiResponse(
+            description="Authentication required."
+        ),
+        404: OpenApiResponse(
+            description="Driver or location not found."
+        ),
+    },
+)
+
+
 class DriverAvailabilityView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -1749,7 +2164,7 @@ class DriverAvailabilityView(APIView):
             driver = request.user.driver_profile
 
         except DriverProfile.DoesNotExist:
-
+            logger.warning("Driver availability update failed: driver not found")
             return error_response(
                 message="You are not registered as a driver.",
                 error_code="DRIVER_NOT_FOUND",
@@ -1761,7 +2176,7 @@ class DriverAvailabilityView(APIView):
             location = DriverLocation.objects.get(driver=driver)
 
         except DriverLocation.DoesNotExist:
-
+            logger.warning("Driver availability update failed: location not found")
             return error_response(
                 message="Driver location not found.",
                 error_code="DRIVER_LOCATION_NOT_FOUND",
@@ -1812,6 +2227,40 @@ class DriverAvailabilityView(APIView):
         )
 
 # TASK 5 - NEARBY DRIVER API WITH REDIS CACHE
+
+@extend_schema(
+    summary="Find Nearby Drivers",
+    description="Retrieve available drivers within the specified radius.",
+    parameters=[
+        OpenApiParameter(
+            name="latitude",
+            type=float,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="Pickup latitude.",
+        ),
+        OpenApiParameter(
+            name="longitude",
+            type=float,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="Pickup longitude.",
+        ),
+        OpenApiParameter(
+            name="radius",
+            type=float,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="Search radius in kilometers.",
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(description="Nearby drivers retrieved successfully."),
+        400: OpenApiResponse(description="Invalid location or radius."),
+        401: OpenApiResponse(description="Authentication required."),
+    },
+)
+
 
 class NearbyDriverView(APIView):
 
@@ -2007,6 +2456,16 @@ class NearbyDriverView(APIView):
 
 
 # NOTIFICATIONS
+
+@extend_schema(
+    summary="List Notifications",
+    description="Retrieve notifications belonging to the authenticated user.",
+    responses={
+        200: NotificationSerializer(many=True),
+        401: OpenApiResponse(description="Authentication required."),
+    },
+)
+
 class NotificationListView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -2037,7 +2496,7 @@ class NotificationMarkReadView(APIView):
             notification = Notification.objects.get(id=pk, user=request.user)
 
         except Notification.DoesNotExist:
-
+            logger.warning("Notification mark-read failed: notification not found")
             return error_response(
                 message="Notification not found.",
                 error_code="NOTIFICATION_NOT_FOUND",
