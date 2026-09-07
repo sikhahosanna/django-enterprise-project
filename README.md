@@ -9931,4 +9931,215 @@ The following activities were completed:
 ### Definition
 
 Task 8 ensures that the versioned APIs are working correctly, existing functionality is not broken, and the final implementation is safely stored in the Git repository.
+ 
+
+8/9/26
+
+Task 1 — Authentication Flow Review
+
+Completed the authentication flow review covering:
+- User Registration
+- User Login
+- Access Token generation
+- Authenticated API requests
+- Access Token expiration
+- Refresh Token handling
+- New Access Token generation
+- Refresh Token expiration and re-login flow
+
+Tested the authentication flow using Postman and verified token expiration and refresh behavior.
+
+# Django Backend Security Implementation
+
+## Overview
+
+This project implements security, authentication, authorization, object-level permissions, secure data handling, API throttling, and security testing for a Django REST Framework backend.
+
+---
+
+## Task 2 — Role & Permission Matrix
+
+Implemented role-based permissions for:
+
+* Admin
+* Driver
+* Passenger
+
+### Permission Summary
+
+| API / Action       | Admin | Driver | Passenger |
+| ------------------ | ----- | ------ | --------- |
+| View Profile       | ✓     | ✓      | ✓         |
+| Update Own Profile | ✓     | ✓      | ✓         |
+| Manage Drivers     | ✓     | ✗      | ✗         |
+| Create Ride        | ✓     | ✗      | ✓         |
+| Accept Ride        | ✓     | ✓      | ✗         |
+| Complete Ride      | ✓     | ✓      | ✗         |
+
+Custom permission classes were implemented to restrict access based on user roles.
+
+---
+
+## Task 3 — Object-Level Permissions
+
+Implemented object-level authorization to prevent users from accessing other users' data.
+
+### Implemented Controls
+
+* Users can access only their own rides.
+* Drivers can access only their own vehicle-related data.
+* Users cannot access another user's ride.
+* Drivers cannot access another driver's vehicle.
+* Admin users have appropriate administrative access.
+
+This prevents **IDOR (Insecure Direct Object Reference)** vulnerabilities.
+
+---
+
+## Task 4 — Secure Sensitive APIs
+
+Security controls were implemented for sensitive APIs.
+
+### Protected APIs
+
+* Login
+* Registration
+* Password Change
+* Ride Creation
+* Driver Location
+* Admin APIs
+
+### Security Controls
+
+* JWT authentication
+* Authentication permissions
+* Role-based authorization
+* Driver/Admin restrictions
+* Passenger/Admin ride creation permissions
+* Sensitive operation throttling
+
+Login and registration remain accessible to unauthenticated users as required.
+
+---
+
+## Task 5 — API Throttling
+
+Implemented API throttling to prevent excessive requests and API abuse.
+
+### Configured Limits
+
+| Request Type         | Limit      |
+| -------------------- | ---------- |
+| Anonymous Users      | 20/minute  |
+| Authenticated Users  | 100/minute |
+| Login                | 5/minute   |
+| Ride Creation        | 10/minute  |
+| Sensitive Operations | 5/minute   |
+
+Custom throttling classes were implemented using Django REST Framework throttling.
+
+---
+
+## Task 6 — Secure Data Handling
+
+Implemented secure handling of passwords, secrets, credentials, logs, and error responses.
+
+### Password Security
+
+* Password fields are `write_only`.
+* Password validation is enabled.
+* Passwords are stored using Django password hashing.
+* Passwords are not returned in API responses.
+
+### Secret Management
+
+* `SECRET_KEY` is loaded from environment variables.
+* Database credentials are stored in `.env`.
+* Redis/Celery configuration is loaded through environment variables.
+* `.env` is excluded from Git using `.gitignore`.
+
+### Logging Security
+
+* Passwords are not logged.
+* JWT tokens are not logged.
+* Authentication credentials are not logged.
+* Generic log messages are used for sensitive errors.
+
+### Error Handling
+
+Internal exception details are not exposed to API clients.
+
+Example:
+
+```text
+Invalid fare calculation data.
+```
+
+instead of exposing internal exception details.
+
+---
+
+## Task 7 — Security Testing
+
+Security scenarios were covered for the following negative cases:
+
+* Invalid JWT
+* Expired JWT
+* Missing JWT
+* IDOR
+* Unauthorized role access
+* Malformed payload
+* Excessive requests
+
+The implementation uses JWT authentication, permissions, object-level authorization, serializer validation, and API throttling to handle these scenarios securely.
+
+---
+
+## Task 8 — Security Audit Report
+
+A security audit report was created containing:
+
+* Issue
+* Severity
+* Affected API
+* Root Cause
+* Fix
+* Test Result
+
+File:
+
+```text
+SECURITY_AUDIT.md
+```
+
+---
+
+## Validation
+
+Django system checks were executed successfully:
+
+```text
+python manage.py check
+
+System check identified no issues (0 silenced).
+```
+
+---
+
+## Security Summary
+
+The backend now includes:
+
+* Role-based access control
+* Object-level permissions
+* JWT authentication
+* Secure password handling
+* Environment-based secrets
+* API throttling
+* Secure error handling
+* Sensitive-data protection
+* IDOR protection
+* Security audit documentation
+
+These controls improve the overall security and reliability of the Django backend.
 
