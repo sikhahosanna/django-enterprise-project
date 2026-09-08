@@ -340,46 +340,35 @@ SIMPLE_JWT = {
 
 REST_FRAMEWORK = {
 
-    # API schema
     "DEFAULT_SCHEMA_CLASS":
         "drf_spectacular.openapi.AutoSchema",
 
-    # Authentication
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 
-    # Permissions
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
 
-    # Filtering
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
 
-  
     # RATE LIMITING / THROTTLING
-  
-
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
+        "accounts.throttles.AnonymousRateThrottle",
+        "accounts.throttles.AuthenticatedRateThrottle",
     ],
 
     "DEFAULT_THROTTLE_RATES": {
-
-        # General APIs
-        "anon": "1000/minute",
-        "user": "1000/minute",
-
-        # Sensitive APIs
-        "login": "20/minute",
-        "ride_creation": "20/minute",
+        "anonymous": "20/minute",
+        "authenticated": "100/minute",
+        "login": "5/minute",
+        "ride_creation": "10/minute",
+        "sensitive": "5/minute",
     },
 }
-
 
 # API DOCUMENTATION
 
@@ -511,14 +500,8 @@ LOGGING = {
 
 # CELERY
 
-
-CELERY_BROKER_URL = (
-    "redis://127.0.0.1:6379/0"
-)
-
-CELERY_RESULT_BACKEND = (
-    "redis://127.0.0.1:6379/1"
-)
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 
 
 # REDIS CACHE
@@ -532,7 +515,7 @@ CACHES = {
             "django_redis.cache.RedisCache",
 
         "LOCATION":
-            "redis://127.0.0.1:6379/1",
+    os.getenv("REDIS_CACHE_URL"),
 
         "OPTIONS": {
 

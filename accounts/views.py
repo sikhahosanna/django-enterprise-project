@@ -30,8 +30,16 @@ from .services.notification_service import NotificationService
 from .services.profile_service import ProfileService
 
 
-from .permissions import IsAdminOrDriverOwner
-from .throttles import LoginRateThrottle
+from .permissions import (
+    IsAdminOrDriverOwner,
+    IsAdminOrDriver,
+    IsAdminOrPassenger,
+)
+from .throttles import (
+    LoginRateThrottle,
+    RideCreationRateThrottle,
+    SensitiveOperationThrottle,
+)
 
 
 from .models import (
@@ -299,6 +307,7 @@ class ProfileListView(generics.ListAPIView):
 class ChangePasswordView(APIView):
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveOperationThrottle]
 
     def post(self, request):
 
@@ -819,7 +828,8 @@ class VehicleViewSet(
 
 class RideListCreateView(generics.ListCreateAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrPassenger]
+    throttle_classes = [RideCreationRateThrottle]
 
     pagination_class = CustomPagination
 
@@ -976,10 +986,10 @@ class RideFareView(APIView):
             ValueError,
             TypeError,
             KeyError,
-        ) as e:
+        ) :
             logger.warning("Fare calculation failed due to invalid input")
             return error_response(
-                message=str(e),
+                message="Invalid fare calculation data.",
                 error_code="FARE_CALCULATION_ERROR",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
@@ -1035,7 +1045,7 @@ class RideDetailView(generics.RetrieveAPIView):
 
 class RideAcceptView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrDriver]
 
     def post(self, request, pk):
 
@@ -1091,7 +1101,7 @@ class RideAcceptView(APIView):
 
 class RideStatusUpdateView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrDriver]
 
     def patch(self, request, pk):
 
@@ -2051,7 +2061,8 @@ class OptimizedRideHistoryView(APIView):
 )
 class DriverLocationView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    
+    permission_classes = [IsAdminOrDriver]
 
     def post(self, request):
 
@@ -2155,7 +2166,7 @@ class DriverLocationView(APIView):
 
 class DriverAvailabilityView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrDriver]
 
     def patch(self, request):
 

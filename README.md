@@ -10143,3 +10143,170 @@ The backend now includes:
 
 These controls improve the overall security and reliability of the Django backend.
 
+9/9/26
+
+# Background Processing & Celery
+
+## Overview
+
+This project uses **Celery** for background processing so that time-consuming tasks can run asynchronously without slowing down API requests.
+
+## Technologies Used
+
+* Django
+* Django REST Framework
+* Celery
+* Redis / Memurai
+* Celery Beat
+* SQLite
+
+## Tasks Completed
+
+### Task 1 — Identify Background Operations
+
+Identified background operations that should run asynchronously:
+
+* Ride notifications
+* Email notifications
+* Ride reports
+* Expired data cleanup
+* Background data processing
+* Scheduled jobs
+
+### Task 2 — Create Celery Tasks
+
+Implemented Celery tasks for:
+
+* Sending ride notifications
+* Generating ride reports
+* Cleaning expired data
+* Processing background records
+
+### Task 3 — Task Queues
+
+Created separate logical queues:
+
+* `notifications`
+* `reports`
+* `maintenance`
+
+Workers can process tasks based on their respective queues.
+
+### Task 4 — Retry & Failure Handling
+
+Implemented retry and failure handling for background tasks.
+
+The retry flow is:
+
+```text
+Task
+ ↓
+Failure
+ ↓
+Retry
+ ↓
+Retry
+ ↓
+Success / Final Failure
+```
+
+The retry mechanism was tested successfully.
+
+### Task 5 — Idempotency
+
+Implemented idempotent notification processing using:
+
+* `get_or_create()`
+* Database unique constraints
+
+The same notification task was executed multiple times, but only one notification record was created.
+
+### Task 6 — Scheduled Tasks
+
+Configured **Celery Beat** for scheduled background operations:
+
+* Remove expired records — Daily at 1:00 AM
+* Generate daily ride summary — Daily at 11:00 PM
+* Clean old temporary data — Daily at 2:00 AM
+
+### Task 7 — Monitor Task Execution
+
+Monitored Celery worker execution using worker logs.
+
+Verified:
+
+* Successful task execution
+* Failed task handling
+* Retry behavior
+* Task execution time
+* Queue processing
+
+Example execution time was successfully recorded in the worker logs.
+
+### Task 8 — Integration Testing
+
+Verified the complete background processing workflow:
+
+```text
+API
+ ↓
+Celery Task
+ ↓
+Redis
+ ↓
+Celery Worker
+ ↓
+Database / Notification
+```
+
+The notification record was successfully verified in the database.
+
+## Running the Project
+
+### Start Django Server
+
+```powershell
+python manage.py runserver
+```
+
+### Start Notifications Worker
+
+```powershell
+celery -A myproject worker -Q notifications -l info -P solo -n notifications@%h
+```
+
+### Start Reports Worker
+
+```powershell
+celery -A myproject worker -Q reports -l info -P solo -n reports@%h
+```
+
+### Start Maintenance Worker
+
+```powershell
+celery -A myproject worker -Q maintenance -l info -P solo -n maintenance@%h
+```
+
+### Start Celery Beat
+
+```powershell
+celery -A myproject beat -l info
+```
+
+## Verification
+
+Run Django system checks:
+
+```powershell
+python manage.py check
+```
+
+Expected result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+## Result
+
+All **8 background processing and Celery tasks** were completed and tested successfully.

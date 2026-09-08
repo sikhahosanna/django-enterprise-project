@@ -34,3 +34,34 @@ class IsAdminOrDriverOwner(BasePermission):
 
         # Driver can manage only own vehicle
         return obj.driver.user == request.user
+
+class IsAdminOrDriver(BasePermission):
+    """
+    Admin and Driver can perform driver-specific actions.
+    Passenger is denied.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_staff:
+            return True
+
+        return DriverProfile.objects.filter(user=request.user).exists()
+
+
+class IsAdminOrPassenger(BasePermission):
+    """
+    Admin and Passenger can create rides.
+    Driver is denied.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_staff:
+            return True
+
+        return not DriverProfile.objects.filter(user=request.user).exists()
