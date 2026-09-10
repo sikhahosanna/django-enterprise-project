@@ -345,7 +345,7 @@ CELERY_TASK_QUEUES = (
 CELERY_TASK_DEFAULT_QUEUE = "notifications"
 # CELERY BEAT SCHEDULE
 
-CCELERY_BEAT_SCHEDULE = {
+CELERY_BEAT_SCHEDULE = {
     "clean-expired-data-daily": {
         "task": "accounts.tasks.clean_expired_data",
         "schedule": 60.0,

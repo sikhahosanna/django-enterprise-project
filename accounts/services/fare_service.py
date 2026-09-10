@@ -2,9 +2,9 @@ import logging
 
 from decimal import Decimal, ROUND_HALF_UP
 from math import radians, sin, cos, sqrt, atan2
+
 from ..models import VehicleType
 from django.core.exceptions import ValidationError
-from django.conf import settings
 
 database_logger = logging.getLogger("database")
 
@@ -16,7 +16,12 @@ class FareService:
         try:
             return VehicleType.objects.get(id=vehicle_type_id)
 
-        except (VehicleType.DoesNotExist, ValidationError, ValueError, TypeError):
+        except (
+            VehicleType.DoesNotExist,
+            ValidationError,
+            ValueError,
+            TypeError,
+        ):
             database_logger.warning(
                 "Vehicle type not found or invalid vehicle type ID"
             )
@@ -44,7 +49,10 @@ class FareService:
         dlat = lat2 - lat1
         dlon = lon2 - lon1
 
-        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        a = (
+            sin(dlat / 2) ** 2
+            + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        )
 
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
@@ -71,9 +79,12 @@ class FareService:
             dropoff_longitude,
         )
 
-        base_fare = vehicle_type.base_fare
-        cost_per_km = vehicle_type.cost_per_km
-        cost_per_minute = vehicle_type.cost_per_minute
+        # Convert all fare values to Decimal
+        base_fare = Decimal(str(vehicle_type.base_fare))
+        cost_per_km = Decimal(str(vehicle_type.cost_per_km))
+        cost_per_minute = Decimal(str(vehicle_type.cost_per_minute))
+        distance_km = Decimal(str(distance_km))
+        duration_minutes = Decimal(str(duration_minutes))
 
         fare = (
             base_fare
@@ -82,8 +93,9 @@ class FareService:
         )
 
         if surge_multiplier is not None:
-            fare *= surge_multiplier
+            fare *= Decimal(str(surge_multiplier))
 
-        return Decimal(fare).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-    
+        return fare.quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )

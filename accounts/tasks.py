@@ -12,8 +12,13 @@ logger = logging.getLogger(__name__)
 
 # Notifications
 
-@shared_task(queue="notifications")
-def ride_notification(ride_id, user_id, message):
+@shared_task(
+    bind=True,
+    queue="notifications",
+    max_retries=3,
+    default_retry_delay=5,
+)
+def ride_notification(self, ride_id, user_id, message):
     start_time = time.perf_counter()
 
     try:
@@ -29,7 +34,8 @@ def ride_notification(ride_id, user_id, message):
         execution_time = time.perf_counter() - start_time
 
         logger.info(
-            "Ride notification processed for ride_id=%s, created=%s, execution_time=%.4f seconds",
+            "Ride notification processed for ride_id=%s, "
+            "created=%s, execution_time=%.4f seconds",
             ride_id,
             created,
             execution_time,
@@ -41,15 +47,12 @@ def ride_notification(ride_id, user_id, message):
             "execution_time": execution_time,
         }
 
-    except Exception:
-        execution_time = time.perf_counter() - start_time
-
+    except Exception as exc:
         logger.error(
-            "Background task failed: ride notification, execution_time=%.4f seconds",
-            execution_time,
+            "Background task failed: ride notification",
             exc_info=True,
         )
-        raise
+        raise self.retry(exc=exc)
 
 
 @shared_task(queue="notifications")
@@ -114,7 +117,6 @@ def ride_accepted_notification(ride_id, passenger_id):
             ride_id=ride_id,
             notification_type=Notification.NotificationType.RIDE_ACCEPTED,
             defaults={
-                "title": "Ride Accepted",
                 "message": "Your driver has accepted the ride.",
             },
         )
@@ -137,15 +139,19 @@ def ride_accepted_notification(ride_id, passenger_id):
         raise
 
 
-@shared_task(queue="notifications")
-def ride_completed_event_notification(ride_id, passenger_id):
+@shared_task(
+    bind=True,
+    queue="notifications",
+    max_retries=3,
+    default_retry_delay=5,
+)
+def ride_completed_event_notification(self, ride_id, passenger_id):
     try:
         notification, created = Notification.objects.get_or_create(
             user_id=passenger_id,
             ride_id=ride_id,
             notification_type=Notification.NotificationType.RIDE_COMPLETED,
             defaults={
-                "title": "Ride Completed",
                 "message": "Your ride has been completed.",
             },
         )
@@ -160,12 +166,12 @@ def ride_completed_event_notification(ride_id, passenger_id):
             "created": created,
         }
 
-    except Exception:
+    except Exception as exc:
         logger.error(
             "Background task failed: ride completed notification",
             exc_info=True,
         )
-        raise
+        raise self.retry(exc=exc)
 
 
 @shared_task(queue="notifications")
@@ -176,7 +182,6 @@ def driver_arriving_notification(ride_id, passenger_id):
             ride_id=ride_id,
             notification_type=Notification.NotificationType.DRIVER_ARRIVING,
             defaults={
-                "title": "Driver Arriving",
                 "message": "Your driver is arriving.",
             },
         )
@@ -207,7 +212,6 @@ def ride_started_notification(ride_id, passenger_id):
             ride_id=ride_id,
             notification_type=Notification.NotificationType.RIDE_STARTED,
             defaults={
-                "title": "Ride Started",
                 "message": "Your ride has started.",
             },
         )
@@ -238,7 +242,6 @@ def ride_cancelled_notification(ride_id, passenger_id):
             ride_id=ride_id,
             notification_type=Notification.NotificationType.RIDE_CANCELLED,
             defaults={
-                "title": "Ride Cancelled",
                 "message": "Your ride has been cancelled.",
             },
         )
@@ -265,29 +268,41 @@ def ride_cancelled_notification(ride_id, passenger_id):
 
 @shared_task(bind=True, max_retries=2)
 def retry_test_task(self):
-    logger.info(f"Retry test started. Attempt: {self.request.retries + 1}")
+    logger.info(
+        "Retry test started. Attempt: %s",
+        self.request.retries + 1,
+    )
 
     try:
         if self.request.retries < 2:
             raise Exception("Simulated task failure")
 
         logger.info("Retry test completed successfully")
+
         return "Task completed successfully"
 
     except Exception as exc:
         logger.error(
-            f"Task failed on attempt {self.request.retries + 1}: {exc}"
+            "Task failed on attempt %s: %s",
+            self.request.retries + 1,
+            exc,
         )
-        raise self.retry(exc=exc, countdown=2)
+
+        raise self.retry(
+            exc=exc,
+            countdown=2,
+        )
+
+
 # Ride Report
 
 @shared_task(queue="reports")
 def generate_ride_report():
     start_time = time.time()
-    logger.info("Ride report generation started")
-    try:
-        
 
+    logger.info("Ride report generation started")
+
+    try:
         total_rides = Ride.objects.count()
 
         completed_rides = Ride.objects.filter(
@@ -327,9 +342,13 @@ def generate_ride_report():
             "total_completed_fare": float(completed_fare),
         }
 
+        execution_time = time.time() - start_time
+
         logger.info(
-            "Ride report generated successfully: %s",
+            "Ride report generated successfully: %s "
+            "(execution_time=%.4f seconds)",
             report,
+            execution_time,
         )
 
         return report
@@ -340,6 +359,55 @@ def generate_ride_report():
             exc_info=True,
         )
         raise
+
+
+# Ride Summary
+
+@shared_task(
+    bind=True,
+    queue="reports",
+    max_retries=3,
+    default_retry_delay=5,
+)
+def generate_ride_summary(self, ride_id):
+    try:
+        ride = Ride.objects.select_related(
+            "rider",
+            "driver",
+            "vehicle_type",
+            "status",
+        ).get(id=ride_id)
+
+        summary = {
+            "ride_id": str(ride.id),
+            "passenger_id": str(ride.rider.id),
+            "driver_id": (
+                str(ride.driver.id)
+                if ride.driver
+                else None
+            ),
+            "pickup_address": ride.pickup_address,
+            "dropoff_address": ride.dropoff_address,
+            "fare": float(ride.fare),
+            "status": ride.status.name,
+            "created_at": ride.created_at.isoformat(),
+            "updated_at": ride.updated_at.isoformat(),
+        }
+
+        logger.info(
+            "Ride summary generated successfully for ride_id=%s",
+            ride_id,
+        )
+
+        return summary
+
+    except Exception as exc:
+        logger.error(
+            "Background task failed: ride summary",
+            exc_info=True,
+        )
+
+        raise self.retry(exc=exc)
 
 
 # Clean Expired Data
@@ -357,7 +425,8 @@ def clean_expired_data():
         ).delete()
 
         logger.info(
-            "Expired data cleaned successfully: deleted_notifications=%s",
+            "Expired data cleaned successfully: "
+            "deleted_notifications=%s",
             deleted_count,
         )
 

@@ -136,6 +136,10 @@ class VehicleType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     name = models.CharField(max_length=20, choices=Type.choices, unique=True)
+    base_fare = models.DecimalField(max_digits=10, decimal_places=2, default=50)
+    cost_per_km = models.DecimalField(max_digits=10, decimal_places=2, default=15)
+    cost_per_minute = models.DecimalField(max_digits=10, decimal_places=2, default=2)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
 

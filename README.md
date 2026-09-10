@@ -10537,3 +10537,1041 @@ accepted
 ## Final Status
 
 **All Tasks 1–8 Completed.**
+
+
+11/09/26
+
+# Task 1 — Receive Business Requirement
+
+## Objective
+
+The objective is to design a backend system for a mobile ride-booking application.
+
+## Business Requirement
+
+A passenger should be able to request a ride from the mobile application. The backend should find eligible nearby drivers, allow one driver to accept the ride, notify the passenger in real time, update the driver's location, process notifications asynchronously, and maintain complete ride history.
+
+## Technical Design
+
+### 1. Passenger Ride Request
+
+The passenger logs into the mobile application and requests a ride by providing pickup and drop-off details.
+
+The request is sent to the Django REST API.
+
+### 2. Authentication
+
+JWT authentication is used to verify the identity of the passenger and driver.
+
+Only authenticated users can access protected ride APIs.
+
+### 3. Driver Matching
+
+After a ride request is created, the backend checks available drivers and identifies eligible nearby drivers using driver location and availability information.
+
+### 4. Driver Acceptance
+
+An eligible driver can accept the requested ride.
+
+The ride status is updated from:
+
+`REQUESTED → ACCEPTED`
+
+### 5. Real-Time Updates
+
+Django Channels and WebSocket are used to send real-time ride status updates to the passenger.
+
+Example:
+
+`ACCEPTED → DRIVER_ARRIVING → STARTED → COMPLETED`
+
+### 6. Driver Location
+
+The driver sends location information to the backend.
+
+The backend stores the latest driver latitude and longitude and uses this information for driver tracking and nearby-driver matching.
+
+### 7. Asynchronous Notifications
+
+Celery is used to process notifications in the background.
+
+Redis is used as the message broker/queue between the API and Celery workers.
+
+### 8. Ride History
+
+PostgreSQL stores ride information, status, driver information, passenger information, fare, timestamps, and other required data.
+
+This allows passengers and drivers to access their complete ride history.
+
+## Overall Flow
+
+Mobile Application
+↓
+Django REST API
+↓
+Authentication
+↓
+Permission Validation
+↓
+Create Ride
+↓
+Find Nearby Drivers
+↓
+Driver Accepts Ride
+↓
+Celery → Notification
+↓
+WebSocket → Real-Time Update
+↓
+Driver Location Updates
+↓
+PostgreSQL → Ride History
+
+## Expected Result
+
+The system should provide a secure and scalable ride-booking workflow with driver matching, real-time updates, asynchronous notifications, location tracking, and persistent ride history.
+
+
+# Task 2 — System Architecture Design
+
+## Objective
+
+The objective is to design a scalable backend architecture that supports authentication, permissions, ride management, real-time communication, background processing, caching, and database operations.
+
+## Main Architecture
+
+```text
+Mobile Application
+        ↓
+REST API
+        ↓
+Authentication (JWT)
+        ↓
+Permission Layer
+        ↓
+Service Layer
+        ↓
+PostgreSQL
+```
+
+## Supporting Components
+
+```text
+                 Django Backend
+                      |
+        ┌─────────────┼─────────────┐
+        ↓             ↓             ↓
+    REST API      WebSocket       Celery
+        ↓             ↓             ↓
+ Authentication   Channels       Redis
+        ↓             ↓             ↓
+ Permissions    Real-Time      Background
+        ↓         Updates       Processing
+        ↓
+   Service Layer
+        ↓
+   PostgreSQL
+```
+
+## Architecture Components
+
+### 1. Mobile Application
+
+The mobile application is used by passengers and drivers to interact with the backend.
+
+It sends API requests and receives ride and driver information.
+
+### 2. REST API
+
+Django REST Framework provides APIs for:
+
+* User authentication
+* Ride creation
+* Ride listing
+* Ride details
+* Ride acceptance
+* Ride status updates
+* Ride cancellation
+* Ride history
+
+### 3. Authentication Layer
+
+JWT authentication is used to verify users.
+
+It protects APIs from unauthorized access.
+
+### 4. Permission Layer
+
+The permission layer controls what each user can do.
+
+Examples:
+
+* Passenger can request and manage rides.
+* Driver can accept eligible rides and update ride status.
+* Admin can perform administrative operations.
+
+### 5. Service Layer
+
+Business logic is handled in service classes instead of putting all logic inside API views.
+
+Examples:
+
+* Ride Service
+* Driver Service
+* Fare Service
+* Notification Service
+* Profile Service
+* Vehicle Service
+
+This makes the application easier to maintain and extend.
+
+### 6. PostgreSQL
+
+PostgreSQL is used as the main database.
+
+It stores:
+
+* Users
+* Profiles
+* Drivers
+* Vehicles
+* Driver locations
+* Rides
+* Notifications
+* Ride history
+
+### 7. WebSocket / Django Channels
+
+WebSocket provides real-time communication.
+
+It is used for:
+
+* Ride status updates
+* Driver location updates
+* Real-time passenger notifications
+
+### 8. Celery
+
+Celery handles background processing.
+
+It is used for:
+
+* Sending notifications
+* Generating ride reports
+* Cleaning expired data
+* Other background tasks
+
+### 9. Redis
+
+Redis is used as the Celery message broker and can also be used for caching.
+
+It allows API requests to send background tasks to Celery workers without waiting for the task to finish.
+
+## Complete Request Flow
+
+```text
+Passenger
+    ↓
+Mobile Application
+    ↓
+Django REST API
+    ↓
+JWT Authentication
+    ↓
+Permission Validation
+    ↓
+Service Layer
+    ↓
+PostgreSQL
+
+Background:
+API → Celery → Redis → Celery Worker → Database/Notification
+
+Real-Time:
+Driver/Backend → WebSocket → Django Channels → Passenger
+```
+
+## Benefits of the Architecture
+
+* Secure authentication and authorization
+* Separation of business logic
+* Scalable background processing
+* Real-time communication
+* Reliable data storage
+* Easier maintenance
+* Better performance for mobile applications
+* Clear separation between different backend components
+# Task 3 – Implement Ride Request
+
+## Objective
+
+The objective of this task is to implement a ride request API that allows an authenticated passenger to create a new ride.
+
+## API Endpoint
+
+**Method:** POST
+
+**Endpoint:** `/api/v1/rides/`
+
+The passenger sends pickup location, drop-off location, and vehicle type through the API.
+
+## Ride Request Flow
+
+**Passenger → REST API → Authentication → Validation → Active Ride Check → Fare Calculation → Ride Creation**
+
+## Implementation
+
+### 1. Authentication
+
+The API allows only authenticated users to create a ride.
+
+The passenger sends a JWT access token with the request.
+
+### 2. Pickup Validation
+
+The system validates the pickup details.
+
+* Pickup address should not be empty.
+* Pickup latitude must be between **-90 and 90**.
+* Pickup longitude must be between **-180 and 180**.
+
+### 3. Destination Validation
+
+The system validates the destination details.
+
+* Drop-off address should not be empty.
+* Drop-off latitude must be between **-90 and 90**.
+* Drop-off longitude must be between **-180 and 180**.
+
+### 4. Vehicle Type Validation
+
+The passenger must provide a valid vehicle type.
+
+For example:
+
+* Car
+* Other configured vehicle types
+
+The vehicle type is validated using the existing `VehicleType` data.
+
+### 5. Active Ride Validation
+
+Before creating a new ride, the system checks whether the passenger already has an active ride.
+
+The following statuses are considered active:
+
+* REQUESTED
+* ACCEPTED
+* DRIVER_ARRIVING
+* STARTED
+
+If an active ride already exists, the system does not allow another ride request.
+
+### 6. Fare Calculation
+
+After validation, the system calculates the ride fare using the existing **FareService**.
+
+The fare is calculated using:
+
+* Vehicle type
+* Pickup latitude and longitude
+* Drop-off latitude and longitude
+* Duration
+
+### 7. Ride Creation
+
+After all validations are successful, the ride is created in the database.
+
+The initial ride status is:
+
+**REQUESTED**
+
+The authenticated passenger is automatically assigned as the rider.
+
+The driver is initially empty because a driver has not accepted the ride yet.
+
+## Example Request
+
+```json
+{
+    "pickup_address": "Hyderabad",
+    "pickup_latitude": 17.3850,
+    "pickup_longitude": 78.4867,
+    "dropoff_address": "Secunderabad",
+    "dropoff_latitude": 17.4399,
+    "dropoff_longitude": 78.4983,
+    "vehicle_type": "42101441-690b-496f-aad3-abdf30b9b8fc"
+}
+```
+
+## Expected Result
+
+If all validations are successful:
+
+* Ride is created successfully.
+* Ride status is set to **REQUESTED**.
+* Fare is calculated.
+* Passenger is assigned to the ride.
+* Driver remains unassigned until a driver accepts the ride.
+
+## Task Status
+
+**Task 3 – Ride Request Implementation: Completed**
+
+The required ride request functionality and validations have been implemented. Postman testing is pending because of a server-side error encountered during testing.
+# Task 4 – Implement Driver Matching
+
+## Objective
+
+The objective of this task is to find suitable nearby drivers for a passenger's ride request and assign an eligible driver to the ride.
+
+## Driver Matching Flow
+
+**Ride Request**
+↓
+**Find Online Drivers**
+↓
+**Check Driver Eligibility**
+↓
+**Calculate Distance**
+↓
+**Sort Drivers by Distance**
+↓
+**Select Nearest Eligible Driver**
+
+## 1. Find Online Drivers
+
+When a passenger creates a ride request, the backend searches for drivers who are currently **online/available**.
+
+Only eligible drivers should be considered for the ride.
+
+For example:
+
+* Driver should be active.
+* Driver should be online.
+* Driver should have a valid driver profile.
+* Driver should have a valid current location.
+
+## 2. Get Driver Location
+
+The backend uses the driver's latest latitude and longitude to identify the driver's current location.
+
+The location is updated when the driver sends location updates to the backend.
+
+## 3. Calculate Distance
+
+The backend calculates the distance between:
+
+**Passenger Pickup Location → Driver Current Location**
+
+This helps the system identify which drivers are closest to the passenger.
+
+## 4. Sort Drivers by Distance
+
+After calculating the distance, eligible drivers are sorted from **nearest to farthest**.
+
+Example:
+
+| Driver   | Distance |
+| -------- | -------: |
+| Driver A |   1.2 km |
+| Driver B |   2.5 km |
+| Driver C |   4.1 km |
+
+Driver A is the closest driver and will be considered first.
+
+## 5. Select Eligible Driver
+
+The backend selects the nearest eligible driver for the ride.
+
+The selected driver can then accept the ride.
+
+The ride status changes from:
+
+**REQUESTED → ACCEPTED**
+
+## 6. Handle Multiple Drivers Accepting the Same Ride
+
+Sometimes multiple drivers may try to accept the same ride at almost the same time.
+
+The backend must ensure that **only one driver can successfully accept the ride**.
+
+Before accepting a ride, the system checks whether the ride is still in:
+
+**REQUESTED** status.
+
+If one driver accepts the ride first:
+
+**REQUESTED → ACCEPTED**
+
+When another driver tries to accept the same ride, the ride is no longer in `REQUESTED` status, so the second driver is rejected.
+
+This prevents the same ride from being assigned to multiple drivers.
+
+## Example
+
+Suppose Driver A and Driver B both try to accept Ride 101.
+
+**Driver A → Accept Ride 101**
+↓
+Ride status = `ACCEPTED`
+↓
+**Driver B → Accept Ride 101**
+↓
+System checks ride status
+↓
+Ride is already `ACCEPTED`
+↓
+**Driver B is rejected**
+
+Therefore, only one driver is assigned to the ride.
+
+## Expected Result
+
+* Online drivers are identified.
+* Driver locations are used for matching.
+* Distance is calculated.
+* Drivers are sorted by distance.
+* Nearest eligible driver is selected.
+* Only one driver can accept a ride.
+* Multiple simultaneous acceptance attempts are handled safely.
+
+## Task Status
+
+**Task 4 – Driver Matching: Completed**
+
+The driver matching flow is designed to find online and eligible drivers based on distance and ensure that only one driver can accept a ride.
+# Task 5 — Real-Time Updates
+
+## Output
+
+### 1. WebSocket Connection
+
+Postman WebSocket lo passenger connection successful ayinappudu:
+
+```text
+WebSocket URL:
+ws://127.0.0.1:8000/ws/ride/<ride_id>/?token=<access_token>
+
+Status:
+Connected
+
+Status Code:
+101 Switching Protocols
+
+Server:
+Daphne
+```
+
+**Meaning:** Passenger successfully connected to the ride's WebSocket.
+
+---
+
+### 2. Driver Accepts Ride
+
+Driver Accept API:
+
+```text
+POST http://127.0.0.1:8000/api/v1/rides/<ride_id>/accept/
+```
+
+Successful response:
+
+```json
+{
+    "success": true,
+    "message": "Ride accepted successfully.",
+    "error_code": null,
+    "data": {
+        "ride_id": "ACTUAL_RIDE_ID",
+        "driver_id": "DRIVER_ID",
+        "driver_email": "driver@example.com",
+        "status": "accepted"
+    }
+}
+```
+
+---
+
+### 3. Real-Time WebSocket Output
+
+Driver accepts the ride immediately after, passenger WebSocket receives:
+
+```json
+{
+    "status": "accepted",
+    "ride_id": "ACTUAL_RIDE_ID",
+    "message": "Ride accepted successfully"
+}
+```
+
+This message is received **without refreshing or calling another REST API**.
+
+---
+
+### 4. Ride Status Update Output
+
+When the ride status changes, the passenger receives real-time updates.
+
+Example:
+
+```json
+{
+    "ride_id": "ACTUAL_RIDE_ID",
+    "status": "driver_arriving",
+    "message": "Ride status changed to driver_arriving"
+}
+```
+
+For ride started:
+
+```json
+{
+    "ride_id": "ACTUAL_RIDE_ID",
+    "status": "started",
+    "message": "Ride status changed to started"
+}
+```
+
+For ride completed:
+
+```json
+{
+    "ride_id": "ACTUAL_RIDE_ID",
+    "status": "completed",
+    "message": "Ride status changed to completed"
+}
+```
+
+---
+
+## Final Output Flow
+
+```text
+Passenger creates ride
+        ↓
+Ride status = REQUESTED
+        ↓
+Passenger connects WebSocket
+        ↓
+WebSocket = Connected
+        ↓
+Driver accepts ride
+        ↓
+Ride status = ACCEPTED
+        ↓
+WebSocket sends message
+        ↓
+Passenger receives "accepted"
+```
+
+### Result
+
+**Task 5 successfully implements real-time ride updates using Django Channels and WebSockets. The passenger can receive ride status changes in real time through the WebSocket connection.**
+# Task 6 — Implement Background Processing
+
+## Objective
+
+Implement background processing using **Celery and Redis** for ride notifications, ride completion notifications, ride summaries, and retry handling.
+
+## Technologies Used
+
+* Django
+* Celery
+* Redis
+* PostgreSQL
+
+## Implementation
+
+### 1. Ride Notifications
+
+Implemented Celery background tasks for ride-related notifications such as:
+
+* Ride accepted
+* Driver arriving
+* Ride started
+* Ride completed
+* Ride cancelled
+
+These tasks run asynchronously so that the main API request is not blocked.
+
+### 2. Ride Completion Notification
+
+Implemented a Celery task to process ride completion notifications in the background.
+
+The task also includes retry handling when an error occurs.
+
+### 3. Ride Summary
+
+Implemented `generate_ride_summary` Celery task.
+
+It generates a summary containing:
+
+* Ride ID
+* Passenger ID
+* Driver ID
+* Pickup address
+* Drop-off address
+* Fare
+* Ride status
+* Created time
+* Updated time
+
+### 4. Retry Mechanism
+
+Implemented retry handling for failed Celery tasks.
+
+The retry test was configured to fail twice and succeed on the third attempt.
+
+## Celery and Redis Flow
+
+```text
+Django API
+    ↓
+Celery Task
+    ↓
+Redis Queue
+    ↓
+Celery Worker
+    ↓
+Background Processing
+    ↓
+Success / Retry
+```
+
+## Postman Testing
+
+The APIs related to ride processing were tested using **Postman**.
+
+### Ride Request
+
+Tested ride creation using:
+
+```text
+POST /api/v1/rides/
+```
+
+The ride was successfully created with:
+
+```text
+status: requested
+```
+
+### Driver Accept
+
+Tested ride acceptance using:
+
+```text
+POST /api/v1/rides/<ride_id>/accept/
+```
+
+The API successfully changed the ride status from:
+
+```text
+requested → accepted
+```
+
+### Ride Status
+
+The ride status flow was tested through the API:
+
+```text
+REQUESTED
+    ↓
+ACCEPTED
+    ↓
+DRIVER_ARRIVING
+    ↓
+STARTED
+    ↓
+COMPLETED
+```
+
+These status changes trigger the corresponding background notification processing.
+
+## Celery Worker Testing
+
+Celery worker was started successfully with Redis.
+
+The retry task was executed and the worker logs showed:
+
+```text
+Attempt 1 → Failed
+Attempt 2 → Failed
+Attempt 3 → Success
+```
+
+This confirmed that the retry mechanism is working correctly.
+
+## Django Validation
+
+Executed:
+
+```text
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+## Result
+
+Task 6 was successfully implemented and tested.
+
+* Celery configured
+* Redis connected
+* Background notification tasks implemented
+* Ride completion processing implemented
+* Ride summary implemented
+* Retry mechanism implemented and tested
+* Postman API testing completed
+* Celery worker tested successfully
+
+**Status: Task 6 COMPLETED ✅**
+
+# Task 7 — Implement Caching
+
+## Objective
+
+Implement caching to improve API performance and reduce unnecessary database queries.
+
+## Cached Data
+
+The **Nearby Drivers API** was selected for caching because nearby driver information is requested frequently.
+
+API:
+
+```text
+GET /api/v1/drivers/nearby/
+```
+
+## Technology Used
+
+* Django Cache Framework
+* Redis
+* PostgreSQL
+
+## Cache Flow
+
+```text
+Nearby Drivers Request
+        ↓
+    Cache Read
+        ↓
+   ┌────┴────┐
+   ↓         ↓
+  HIT       MISS
+   ↓         ↓
+Return    Database Query
+Cache         ↓
+Data      Process Data
+              ↓
+          Cache Write
+              ↓
+           Response
+```
+
+## 1. Cache Read
+
+The API first checks Redis for existing nearby-driver data.
+
+```python
+cached_data = cache.get(cache_key)
+```
+
+If data is available, it is returned directly from the cache.
+
+## 2. Cache Miss
+
+If cached data is not available, the API queries the database.
+
+The API:
+
+* Finds online drivers
+* Checks active driver status
+* Calculates distance
+* Filters drivers within the radius
+* Sorts drivers by distance
+
+The result is then stored in the cache.
+
+## 3. Cache Write
+
+The nearby-driver response is stored in Redis:
+
+```python
+cache.set(
+    cache_key,
+    response_data,
+    self.CACHE_TIMEOUT,
+)
+```
+
+Cache timeout:
+
+```text
+60 seconds
+```
+
+## 4. Cache Invalidation
+
+Cache is invalidated when driver location or availability changes.
+
+After updating driver location:
+
+```python
+cache.clear()
+```
+
+The cache is cleared so that the next nearby-driver request gets updated driver information.
+
+## Postman Testing
+
+### Step 1 — Nearby Drivers API
+
+Tested:
+
+```text
+GET http://127.0.0.1:8000/api/v1/drivers/nearby/?latitude=17.3850&longitude=78.4867&radius=10
+```
+
+The request was tested with a **Bearer access token**.
+
+### Step 2 — Cache Miss
+
+The first request checks the cache.
+
+Expected/result:
+
+```text
+cache_status: MISS
+```
+
+The API performs the database query and stores the result in Redis.
+
+### Step 3 — Cache Hit
+
+The exact same request was sent again.
+
+Expected/result:
+
+```text
+cache_status: HIT
+query_count: 0
+```
+
+This confirms that the response was retrieved from cache without a database query.
+
+### Step 4 — Driver Location Update
+
+Tested the driver location API:
+
+```text
+POST http://127.0.0.1:8000/api/v1/drivers/location/
+```
+
+Request body:
+
+```json
+{
+    "latitude": 17.3855,
+    "longitude": 78.4870,
+    "availability_status": "online"
+}
+```
+
+The API successfully returned:
+
+```text
+success: true
+message: Driver location and availability updated successfully.
+```
+
+The cache invalidation code was executed after the driver location update.
+
+### Step 5 — Verify Cache Invalidation
+
+After updating the driver location, the same Nearby Drivers API was called again.
+
+Expected behavior:
+
+```text
+cache_status: MISS
+```
+
+This confirms that the previous cached data was invalidated and fresh data was requested.
+
+## Performance Measurement
+
+The API measures:
+
+* Cache status
+* Database query count
+* Response time
+
+Using:
+
+```python
+time.perf_counter()
+```
+
+The response contains:
+
+```text
+cache_status
+query_count
+response_time_ms
+```
+
+A cache hit avoids the database query and improves response performance.
+
+## Complete Testing Flow
+
+```text
+First Nearby Drivers Request
+          ↓
+        MISS
+          ↓
+    Database Query
+          ↓
+      Cache Write
+          ↓
+Second Same Request
+          ↓
+         HIT
+          ↓
+    Query Count = 0
+          ↓
+Driver Location Update
+          ↓
+    Cache Invalidation
+          ↓
+Third Nearby Drivers Request
+          ↓
+        MISS
+          ↓
+    Fresh Database Data
+```
+
+## Result
+
+Task 7 was successfully implemented and tested.
+
+* Nearby driver data selected for caching
+* Cache Read implemented
+* Cache Miss handled
+* Cache Write implemented
+* Cache Invalidation implemented
+* Redis caching used
+* Nearby Drivers API tested in Postman
+* Driver Location API tested in Postman
+* Cache HIT/MISS behavior verified
+* Query count measured
+* Response time measured
+* Cache invalidation verified after driver location update
+
+**Status: Task 7 COMPLETED ✅**
+

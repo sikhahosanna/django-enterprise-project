@@ -55,7 +55,8 @@ class RideService:
 
         if ride.status.name != RideStatus.Status.REQUESTED:
             raise ValueError(
-                f"Ride cannot be accepted from " f"'{ride.status.name}' status."
+                f"Ride cannot be accepted from "
+                f"'{ride.status.name}' status."
             )
 
         # -----------------------------------------------------
@@ -69,7 +70,9 @@ class RideService:
         # -----------------------------------------------------
 
         try:
-            accepted_status = RideStatus.objects.get(name=RideStatus.Status.ACCEPTED)
+            accepted_status = RideStatus.objects.get(
+                name=RideStatus.Status.ACCEPTED
+            )
 
         except RideStatus.DoesNotExist:
             raise ValueError("Accepted ride status is not configured.")
@@ -86,6 +89,22 @@ class RideService:
                 "status",
                 "updated_at",
             ]
+        )
+
+        # -----------------------------------------------------
+        # BROADCAST RIDE ACCEPTED
+        # -----------------------------------------------------
+
+        channel_layer = get_channel_layer()
+
+        async_to_sync(channel_layer.group_send)(
+            f"ride_{ride.id}",
+            {
+                "type": "ride_status_update",
+                "ride_id": str(ride.id),
+                "status": ride.status.name,
+                "message": "Ride accepted successfully",
+            },
         )
 
         return ride
@@ -105,8 +124,6 @@ class RideService:
         # -----------------------------------------------------
         # GET RIDE
         # -----------------------------------------------------
-        # Do NOT use select_related("driver") here because
-        # Ride.driver is nullable.
 
         try:
             ride = (
@@ -167,7 +184,10 @@ class RideService:
             RideStatus.Status.CANCELLED: [],
         }
 
-        allowed_statuses = allowed_transitions.get(current_status, [])
+        allowed_statuses = allowed_transitions.get(
+            current_status,
+            []
+        )
 
         # -----------------------------------------------------
         # VALIDATE TRANSITION
@@ -185,10 +205,15 @@ class RideService:
         # -----------------------------------------------------
 
         try:
-            new_status = RideStatus.objects.get(name=new_status_name)
+            new_status = RideStatus.objects.get(
+                name=new_status_name
+            )
 
         except RideStatus.DoesNotExist:
-            raise ValueError(f"Ride status '{new_status_name}' " f"is not configured.")
+            raise ValueError(
+                f"Ride status '{new_status_name}' "
+                f"is not configured."
+            )
 
         # -----------------------------------------------------
         # UPDATE
@@ -202,6 +227,7 @@ class RideService:
                 "updated_at",
             ]
         )
+
         # -----------------------------------------------------
         # BROADCAST RIDE STATUS
         # -----------------------------------------------------
@@ -234,8 +260,6 @@ class RideService:
         # -----------------------------------------------------
         # GET RIDE
         # -----------------------------------------------------
-        # Do NOT use select_related("driver") here because
-        # Ride.driver is nullable.
 
         try:
             ride = (
@@ -252,7 +276,9 @@ class RideService:
         # -----------------------------------------------------
 
         if ride.rider_id != rider.id:
-            raise PermissionError("You are not allowed to cancel this ride.")
+            raise PermissionError(
+                "You are not allowed to cancel this ride."
+            )
 
         # -----------------------------------------------------
         # CURRENT STATUS
@@ -272,7 +298,8 @@ class RideService:
 
         if current_status not in cancellable_statuses:
             raise ValueError(
-                f"Ride cannot be cancelled from " f"'{current_status}' status."
+                f"Ride cannot be cancelled from "
+                f"'{current_status}' status."
             )
 
         # -----------------------------------------------------
@@ -280,10 +307,14 @@ class RideService:
         # -----------------------------------------------------
 
         try:
-            cancelled_status = RideStatus.objects.get(name=RideStatus.Status.CANCELLED)
+            cancelled_status = RideStatus.objects.get(
+                name=RideStatus.Status.CANCELLED
+            )
 
         except RideStatus.DoesNotExist:
-            raise ValueError("Cancelled ride status is not configured.")
+            raise ValueError(
+                "Cancelled ride status is not configured."
+            )
 
         # -----------------------------------------------------
         # CANCEL RIDE

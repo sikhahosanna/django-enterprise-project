@@ -1,6 +1,6 @@
 import time
 import logging
-
+logger = logging.getLogger(__name__)
 authentication_logger = logging.getLogger("authentication")
 from django.core.cache import cache
 from django.db import connection, reset_queries

@@ -560,7 +560,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
                 {"fare": f"Fare configuration is incomplete: {exc}"}
             )
 
-        final_fare = fare_details["total"]
+        final_fare = fare_details
 
         ride = Ride.objects.create(
             rider=request.user,
