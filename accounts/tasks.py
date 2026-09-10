@@ -1,13 +1,16 @@
 import logging
 import time
+from datetime import timedelta
 
 from celery import shared_task
+from django.utils import timezone
 
-from .models import Notification
-
+from .models import Notification, Ride, RideStatus
 
 logger = logging.getLogger(__name__)
 
+
+# Notifications
 
 @shared_task(queue="notifications")
 def ride_notification(ride_id, user_id, message):
@@ -47,6 +50,7 @@ def ride_notification(ride_id, user_id, message):
             exc_info=True,
         )
         raise
+
 
 @shared_task(queue="notifications")
 def driver_assignment_notification(ride_id, user_id, driver_id):
@@ -141,6 +145,7 @@ def ride_completed_event_notification(ride_id, passenger_id):
             ride_id=ride_id,
             notification_type=Notification.NotificationType.RIDE_COMPLETED,
             defaults={
+                "title": "Ride Completed",
                 "message": "Your ride has been completed.",
             },
         )
@@ -256,66 +261,78 @@ def ride_cancelled_notification(ride_id, passenger_id):
         raise
 
 
-@shared_task(
-    queue="notifications",
-    bind=True,
-    max_retries=2,
-)
-def retry_test_task(self):
-    attempt = self.request.retries + 1
+# Retry
 
-    logger.info(
-        "Retry test task started: attempt=%s",
-        attempt,
-    )
+@shared_task(bind=True, max_retries=2)
+def retry_test_task(self):
+    logger.info(f"Retry test started. Attempt: {self.request.retries + 1}")
 
     try:
-        # Simulate failure for first 2 attempts
-        if attempt < 3:
-            raise Exception(
-                f"Simulated failure on attempt {attempt}"
-            )
+        if self.request.retries < 2:
+            raise Exception("Simulated task failure")
 
-        logger.info(
-            "Retry test task succeeded: attempt=%s",
-            attempt,
-        )
-
-        return "Retry test successful"
+        logger.info("Retry test completed successfully")
+        return "Task completed successfully"
 
     except Exception as exc:
         logger.error(
-            "Retry test task failed: attempt=%s",
-            attempt,
-            exc_info=True,
+            f"Task failed on attempt {self.request.retries + 1}: {exc}"
         )
-
-        if self.request.retries < self.max_retries:
-            logger.warning(
-                "Retrying task: attempt=%s",
-                attempt,
-            )
-            raise self.retry(
-                exc=exc,
-                countdown=2,
-            )
-
-        logger.error(
-            "Retry test task failed permanently after %s attempts",
-            attempt,
-        )
-        raise
+        raise self.retry(exc=exc, countdown=2)
+# Ride Report
 
 @shared_task(queue="reports")
 def generate_ride_report():
+    start_time = time.time()
+    logger.info("Ride report generation started")
     try:
-        logger.info("Ride report generation started")
+        
 
-        # Report generation logic will be added here
+        total_rides = Ride.objects.count()
 
-        logger.info("Ride report generated successfully")
+        completed_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.COMPLETED
+        ).count()
 
-        return "Ride report generated successfully"
+        cancelled_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.CANCELLED
+        ).count()
+
+        requested_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.REQUESTED
+        ).count()
+
+        accepted_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.ACCEPTED
+        ).count()
+
+        started_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.STARTED
+        ).count()
+
+        completed_fare = sum(
+            ride.fare
+            for ride in Ride.objects.filter(
+                status__name=RideStatus.Status.COMPLETED
+            )
+        )
+
+        report = {
+            "total_rides": total_rides,
+            "requested_rides": requested_rides,
+            "accepted_rides": accepted_rides,
+            "started_rides": started_rides,
+            "completed_rides": completed_rides,
+            "cancelled_rides": cancelled_rides,
+            "total_completed_fare": float(completed_fare),
+        }
+
+        logger.info(
+            "Ride report generated successfully: %s",
+            report,
+        )
+
+        return report
 
     except Exception:
         logger.error(
@@ -324,16 +341,29 @@ def generate_ride_report():
         )
         raise
 
+
+# Clean Expired Data
+
 @shared_task(queue="maintenance")
 def clean_expired_data():
     try:
         logger.info("Expired data cleanup started")
 
-        # Expired data cleanup logic will be added here
+        cutoff_date = timezone.now() - timedelta(days=30)
 
-        logger.info("Expired data cleaned successfully")
+        deleted_count, _ = Notification.objects.filter(
+            is_read=True,
+            created_at__lt=cutoff_date,
+        ).delete()
 
-        return "Expired data cleaned successfully"
+        logger.info(
+            "Expired data cleaned successfully: deleted_notifications=%s",
+            deleted_count,
+        )
+
+        return {
+            "deleted_notifications": deleted_count,
+        }
 
     except Exception:
         logger.error(
@@ -343,16 +373,47 @@ def clean_expired_data():
         raise
 
 
+# Background Records
+
 @shared_task(queue="maintenance")
 def process_background_records():
     try:
         logger.info("Background record processing started")
 
-        # Background processing logic will be added here
+        requested_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.REQUESTED
+        ).count()
 
-        logger.info("Background records processed successfully")
+        accepted_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.ACCEPTED
+        ).count()
 
-        return "Background records processed successfully"
+        started_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.STARTED
+        ).count()
+
+        completed_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.COMPLETED
+        ).count()
+
+        cancelled_rides = Ride.objects.filter(
+            status__name=RideStatus.Status.CANCELLED
+        ).count()
+
+        result = {
+            "requested_rides": requested_rides,
+            "accepted_rides": accepted_rides,
+            "started_rides": started_rides,
+            "completed_rides": completed_rides,
+            "cancelled_rides": cancelled_rides,
+        }
+
+        logger.info(
+            "Background records processed successfully: %s",
+            result,
+        )
+
+        return result
 
     except Exception:
         logger.error(

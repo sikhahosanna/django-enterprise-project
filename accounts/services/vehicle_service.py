@@ -1,4 +1,8 @@
+import logging
+
 from ..models import DriverProfile, Vehicle
+
+database_logger = logging.getLogger("database")
 
 
 class VehicleService:
@@ -8,6 +12,9 @@ class VehicleService:
         try:
             return user.driver_profile
         except DriverProfile.DoesNotExist:
+            database_logger.warning(
+                "Driver profile not found while accessing vehicle"
+            )
             raise PermissionError("You are not registered as a driver.")
 
     @staticmethod

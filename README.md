@@ -10310,3 +10310,230 @@ System check identified no issues (0 silenced).
 ## Result
 
 All **8 background processing and Celery tasks** were completed and tested successfully.
+
+
+10/9/26
+
+# Observability, Logging & Backend Monitoring
+
+## Objective
+
+The objective of this story is to improve backend monitoring and make it easier to identify application errors, background task failures, retries, and system issues using logging and monitoring.
+
+---
+
+# Task 1 — Logging Architecture
+
+Implemented structured logging for different backend components:
+
+* Application
+* Authentication
+* API
+* Database
+* Celery
+* WebSocket
+* Security
+
+Logs are written to the console and `logs/error.log`.
+
+Logging was added to authentication, API requests, database services, Celery tasks, WebSocket operations, and security/throttling events.
+
+---
+
+# Task 2 — Create Celery Tasks
+
+Created background Celery tasks for:
+
+* Sending notifications
+* Generating ride reports
+* Cleaning expired data
+* Processing background records
+
+Tested the tasks using Celery workers and verified successful execution.
+
+---
+
+# Task 3 — Task Queues
+
+Configured separate Celery queues:
+
+* `notifications`
+* `reports`
+* `maintenance`
+
+Tasks are routed to the appropriate queue and processed by dedicated workers.
+
+Example:
+
+```text
+Notification Task → notifications
+Ride Report → reports
+Cleanup Tasks → maintenance
+```
+
+---
+
+# Task 4 — Retry & Failure Handling
+
+Implemented retry handling for failed Celery tasks.
+
+The retry test follows:
+
+```text
+Task
+ ↓
+Failure
+ ↓
+Retry
+ ↓
+Retry
+ ↓
+Success
+```
+
+Configured:
+
+* Maximum retries: 2
+* Retry delay: 2 seconds
+
+Tested the retry behavior successfully.
+
+---
+
+# Task 5 — Idempotency
+
+Implemented protection against duplicate notifications and duplicate business records.
+
+Used:
+
+* Database unique constraints
+* `get_or_create()`
+
+Example:
+
+```python
+notification, created = Notification.objects.get_or_create(
+    user=user,
+    ride=ride,
+    notification_type="RIDE_ACCEPTED",
+    defaults={
+        "title": "Ride Accepted",
+        "message": "Your ride has been accepted."
+    }
+)
+```
+
+This prevents the same notification from being created multiple times.
+
+---
+
+# Task 6 — Scheduled Tasks
+
+Configured scheduled Celery tasks for:
+
+* Cleaning expired data
+* Generating daily ride summaries
+* Processing old/background records
+
+Celery Beat was configured to run these tasks automatically.
+
+Example schedule:
+
+```text
+01:00 → Clean expired data
+02:00 → Clean old/background data
+23:59 → Generate daily ride summary
+```
+
+The schedules were tested successfully.
+
+---
+
+# Task 7 — Monitor Task Execution
+
+Implemented task execution monitoring through worker logs.
+
+The logs provide information about:
+
+* Task started
+* Task completed
+* Task failed
+* Retry attempts
+* Execution time
+
+Ride report execution time is also recorded in the logs.
+
+Example:
+
+```text
+Ride report generation started
+Ride report generated successfully
+Ride report completed successfully in X.XX seconds
+```
+
+---
+
+# Task 8 — Integration Testing
+
+Tested the complete backend workflow:
+
+```text
+API
+ ↓
+Celery Task
+ ↓
+Redis
+ ↓
+Worker
+ ↓
+Database / Notification
+```
+
+Integration testing included:
+
+* Driver authentication
+* Ride status update API
+* Celery worker processing
+* Database ride status update
+* Notification processing
+
+The ride status API was successfully tested and the ride status was updated to:
+
+```text
+accepted
+```
+
+---
+
+# Technologies Used
+
+* Python
+* Django
+* Django REST Framework
+* Celery
+* Redis
+* PostgreSQL
+* Django Channels
+* Celery Beat
+* WebSocket
+* PowerShell
+* Postman
+
+---
+
+# Task Status
+
+| Task                              | Status    |
+| --------------------------------- | --------- |
+| Task 1 — Logging Architecture     | Completed |
+| Task 2 — Create Celery Tasks      | Completed |
+| Task 3 — Task Queues              | Completed |
+| Task 4 — Retry & Failure Handling | Completed |
+| Task 5 — Idempotency              | Completed |
+| Task 6 — Scheduled Tasks          | Completed |
+| Task 7 — Monitor Task Execution   | Completed |
+| Task 8 — Integration Testing      | Completed |
+
+## Final Status
+
+**All Tasks 1–8 Completed.**

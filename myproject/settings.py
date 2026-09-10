@@ -5,7 +5,8 @@ Django settings for myproject project.
 import os
 from pathlib import Path
 from datetime import timedelta
-
+from kombu import Queue
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 
@@ -89,6 +90,7 @@ INSTALLED_APPS = [
 
     # REST Framework
     "rest_framework",
+    'django_celery_beat',
 
     # API Documentation
     "drf_spectacular",
@@ -332,8 +334,36 @@ SIMPLE_JWT = {
         days=1
     ),
 }
+# CELERY QUEUES
 
+CELERY_TASK_QUEUES = (
+    Queue("notifications"),
+    Queue("reports"),
+    Queue("maintenance"),
+)
 
+CELERY_TASK_DEFAULT_QUEUE = "notifications"
+# CELERY BEAT SCHEDULE
+
+CCELERY_BEAT_SCHEDULE = {
+    "clean-expired-data-daily": {
+        "task": "accounts.tasks.clean_expired_data",
+        "schedule": 60.0,
+        "options": {"queue": "maintenance"},
+    },
+
+    "generate-daily-ride-summary": {
+        "task": "accounts.tasks.generate_ride_report",
+        "schedule": 60.0,
+        "options": {"queue": "reports"},
+    },
+
+    "clean-old-temporary-data-daily": {
+        "task": "accounts.tasks.process_background_records",
+        "schedule": 60.0,
+        "options": {"queue": "maintenance"},
+    },
+}
 
 # REST FRAMEWORK
 
@@ -453,74 +483,86 @@ RIDE_SURGE_MULTIPLIER = 1.00
 
 # LOGGING
 
-
 LOGGING = {
-
     "version": 1,
-
     "disable_existing_loggers": False,
 
+    "formatters": {
+        "standard": {
+            "format": "{asctime} | {levelname} | {name} | {message}",
+            "style": "{",
+        },
+    },
+
     "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
 
         "file": {
-            "level": "ERROR",
-
             "class": "logging.FileHandler",
-
-            "filename":
-                str(LOG_DIR / "error.log"),
+            "filename": str(LOG_DIR / "error.log"),
+            "formatter": "standard",
         },
     },
 
     "loggers": {
 
-        "django": {
-            "handlers": [
-                "file"
-            ],
-
-            "level": "ERROR",
-
-            "propagate": True,
+        # 1. Application
+        "application": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
         },
 
-        "accounts": {
-            "handlers": [
-                "file"
-            ],
+        # 2. Authentication
+        "authentication": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
 
+        # 3. API
+        "api": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        # 4. Database
+        "database": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
+        # 5. Celery
+        "celery": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        # 6. WebSocket
+        "websocket": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        # 7. Security
+        "security": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
+        # Django
+        "django": {
+            "handlers": ["console", "file"],
             "level": "ERROR",
-
             "propagate": False,
         },
     },
-}
-
-
-
-# CELERY
-
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-
-
-# REDIS CACHE
-
-
-CACHES = {
-
-    "default": {
-
-        "BACKEND":
-            "django_redis.cache.RedisCache",
-
-        "LOCATION":
-    os.getenv("REDIS_CACHE_URL"),
-
-        "OPTIONS": {
-
-            "CLIENT_CLASS":
-                "django_redis.client.DefaultClient",
-        },
-    }
 }

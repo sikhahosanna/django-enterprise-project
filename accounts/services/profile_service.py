@@ -1,4 +1,8 @@
+import logging
+
 from ..models import Profile
+
+database_logger = logging.getLogger("database")
 
 
 class ProfileService:
@@ -8,6 +12,9 @@ class ProfileService:
         try:
             return Profile.objects.get(user=user)
         except Profile.DoesNotExist:
+            database_logger.warning(
+                "Profile not found for user"
+            )
             return None
 
     @staticmethod

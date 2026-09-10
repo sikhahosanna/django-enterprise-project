@@ -1,4 +1,8 @@
+import logging
+
 from ..models import User
+
+database_logger = logging.getLogger("database")
 
 
 class UserService:
@@ -8,6 +12,9 @@ class UserService:
         try:
             return User.objects.get(id=user_id)
         except User.DoesNotExist:
+            database_logger.warning(
+                "User not found"
+            )
             return None
 
     @staticmethod
@@ -19,4 +26,7 @@ class UserService:
         try:
             return User.objects.get(email=email)
         except User.DoesNotExist:
+            database_logger.warning(
+                "User not found with the provided email"
+            )
             return None

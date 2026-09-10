@@ -1,7 +1,7 @@
 import time
 import logging
 
-logger = logging.getLogger(__name__)
+authentication_logger = logging.getLogger("authentication")
 from django.core.cache import cache
 from django.db import connection, reset_queries
 from django.db.models import Count, Sum, Avg, Min, Max, Q
@@ -169,9 +169,14 @@ class LoginView(APIView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception:
-            logger.warning("Authentication failed: invalid credentials")
+            authentication_logger.warning(
+            "Authentication failed: invalid credentials"
+)
             raise
         user = serializer.validated_data["user"]
+        authentication_logger.info(
+    "User login successful"
+)
 
         refresh = RefreshToken.for_user(user)
 

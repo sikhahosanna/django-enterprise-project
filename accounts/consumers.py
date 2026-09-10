@@ -15,446 +15,258 @@ from accounts.models import (
 )
 
 
-logger = logging.getLogger(__name__)
+websocket_logger = logging.getLogger("websocket")
 
 
 class DriverLocationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-
-        # GET JWT TOKEN
-
-        query_string = self.scope.get(
-            "query_string",
-            b"",
-        ).decode()
-
-        token = None
-
-        for item in query_string.split("&"):
-
-            if item.startswith("token="):
-
-                token = item.split(
-                    "=",
-                    1,
-                )[1]
-
-                break
-
-        # JWT REQUIRED
-
-        if not token:
-
-            logger.warning(
-                "Driver location WebSocket connection rejected: token missing"
-            )
-
-            await self.close(code=4001)
-            return
-
-        # VERIFY JWT
-
         try:
+            self.user = await self.get_user_from_token()
 
-            validated_token = UntypedToken(token)
+            if not self.user:
+                websocket_logger.warning(
+                    "WebSocket connection denied: user not found"
+                )
+                await self.close(code=4003)
+                return
 
-        except (
-            InvalidToken,
-            TokenError,
-            Exception,
-        ):
-
-            logger.warning(
-                "Driver location WebSocket connection rejected: invalid token"
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GET USER ID FROM JWT
-
-        user_id = validated_token.get("user_id")
-
-        if not user_id:
-
-            logger.warning(
-                "Driver location WebSocket connection rejected: user ID missing"
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GET USER
-
-        try:
-
-            self.user = await User.objects.aget(id=user_id)
-
-        except User.DoesNotExist:
-
-            logger.warning(
-                "Driver location WebSocket connection rejected: user not found"
-            )
-
-            await self.close(code=4003)
-            return
-
-        # DRIVER AUTHORIZATION
-
-        try:
-
-            self.driver_profile = await self.user.driver_profile
-
-        except Exception:
-
-            logger.warning(
-                "Driver location WebSocket authorization failed"
-            )
-
-            await self.close(code=4003)
-            return
-
-        # ACCEPT CONNECTION
-
-        try:
+            if not self.user.is_authenticated:
+                websocket_logger.warning(
+                    "WebSocket connection denied: unauthorized user"
+                )
+                await self.close(code=4003)
+                return
 
             await self.accept()
 
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "success": True,
-                        "message": (
-                            "Driver location WebSocket "
-                            "connected successfully."
-                        ),
-                        "user_id": str(self.user.id),
-                        "driver_id": str(self.driver_profile.id),
-                    }
-                )
+            websocket_logger.info(
+                "Driver location WebSocket connected"
             )
 
-            logger.info(
-                "Driver location WebSocket connected successfully"
+        except Exception as e:
+            websocket_logger.error(
+                f"WebSocket connection error: {str(e)}"
             )
+            await self.close(code=4003)
 
-        except Exception:
-
-            logger.error(
-                "Driver location WebSocket connection processing failed",
-                exc_info=True,
-            )
-
-            raise
-
-    async def disconnect(
-        self,
-        close_code,
-    ):
-
-        logger.info(
-            "Driver location WebSocket disconnected | code=%s",
-            close_code,
+    async def disconnect(self, close_code):
+        websocket_logger.info(
+            f"Driver location WebSocket disconnected: {close_code}"
         )
 
-    async def receive(
-        self,
-        text_data=None,
-        bytes_data=None,
-    ):
-
+    async def receive(self, text_data):
         try:
+            data = json.loads(text_data)
 
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "success": True,
-                        "message": "Message received.",
-                        "data": text_data,
-                    }
+            latitude = data.get("latitude")
+            longitude = data.get("longitude")
+
+            if latitude is None or longitude is None:
+                websocket_logger.warning(
+                    "Driver location update failed: latitude or longitude missing"
                 )
+                return
+
+            websocket_logger.info(
+                "Driver location update received"
             )
 
-        except Exception:
-
-            logger.error(
-                "Driver location WebSocket message processing failed",
-                exc_info=True,
+        except json.JSONDecodeError:
+            websocket_logger.warning(
+                "WebSocket received invalid JSON"
             )
 
-            raise
+        except Exception as e:
+            websocket_logger.error(
+                f"Driver location update error: {str(e)}"
+            )
+
+    async def get_user_from_token(self):
+        try:
+            token = self.scope.get("query_string", b"").decode()
+
+            if not token:
+                websocket_logger.warning(
+                    "WebSocket authentication failed: token missing"
+                )
+                return None
+
+            token_value = token.split("token=")[-1]
+
+            validated_token = UntypedToken(token_value)
+
+            user_id = validated_token.get("user_id")
+
+            if not user_id:
+                websocket_logger.warning(
+                    "WebSocket authentication failed: user ID missing"
+                )
+                return None
+
+            user = await self.get_user(user_id)
+
+            if not user:
+                websocket_logger.warning(
+                    "WebSocket authentication failed: user not found"
+                )
+                return None
+
+            return user
+
+        except (InvalidToken, TokenError):
+            websocket_logger.warning(
+                "WebSocket authentication failed: invalid token"
+            )
+            return None
+
+        except Exception as e:
+            websocket_logger.error(
+                f"WebSocket token processing error: {str(e)}"
+            )
+            return None
+
+    async def get_user(self, user_id):
+        try:
+            return await User.objects.aget(id=user_id)
+        except User.DoesNotExist:
+            return None
 
 
 class RideConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-
-        # GET RIDE ID
-
-        self.ride_id = self.scope["url_route"]["kwargs"]["ride_id"]
-
-        # GET JWT TOKEN
-
-        query_string = self.scope.get(
-            "query_string",
-            b"",
-        ).decode()
-
-        token = None
-
-        for item in query_string.split("&"):
-
-            if item.startswith("token="):
-
-                token = item.split(
-                    "=",
-                    1,
-                )[1]
-
-                break
-
-        # JWT REQUIRED
-
-        if not token:
-
-            logger.warning(
-                "Ride WebSocket connection rejected: token missing | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4001)
-            return
-
-        # VERIFY JWT
-
         try:
+            self.ride_id = self.scope["url_route"]["kwargs"]["ride_id"]
 
-            validated_token = UntypedToken(token)
+            self.user = await self.get_user_from_token()
 
-        except (
-            InvalidToken,
-            TokenError,
-            Exception,
-        ):
+            if not self.user:
+                websocket_logger.warning(
+                    "Ride WebSocket connection denied: user not found"
+                )
+                await self.close(code=4003)
+                return
 
-            logger.warning(
-                "Ride WebSocket connection rejected: invalid token | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GET USER ID FROM JWT
-
-        user_id = validated_token.get("user_id")
-
-        if not user_id:
-
-            logger.warning(
-                "Ride WebSocket connection rejected: user ID missing | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GET USER
-
-        try:
-
-            self.user = await User.objects.aget(id=user_id)
-
-        except User.DoesNotExist:
-
-            logger.warning(
-                "Ride WebSocket connection rejected: user not found | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GET RIDE
-
-        try:
-
-            self.ride = await Ride.objects.select_related(
-                "rider",
-                "driver__user",
-            ).aget(id=self.ride_id)
-
-        except Ride.DoesNotExist:
-
-            logger.warning(
-                "Ride WebSocket connection rejected: ride not found | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4004)
-            return
-
-        # RIDE OWNER CHECK
-
-        is_ride_owner = self.ride.rider_id == self.user.id
-
-        # DRIVER AUTHORIZATION
-
-        is_assigned_driver = False
-
-        if self.ride.driver:
-
-            is_assigned_driver = (
-                self.ride.driver.user_id == self.user.id
-            )
-
-        # AUTHORIZATION
-
-        if not is_ride_owner and not is_assigned_driver:
-
-            logger.warning(
-                "Ride WebSocket authorization denied | ride_id=%s",
-                self.ride_id,
-            )
-
-            await self.close(code=4003)
-            return
-
-        # GROUP
-
-        self.group_name = f"ride_{self.ride_id}"
-
-        try:
+            self.room_group_name = f"ride_{self.ride_id}"
 
             await self.channel_layer.group_add(
-                self.group_name,
+                self.room_group_name,
                 self.channel_name,
             )
 
-            # ACCEPT CONNECTION
-
             await self.accept()
 
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "success": True,
-                        "message": (
-                            "Ride WebSocket connected "
-                            "successfully."
-                        ),
-                        "ride_id": str(self.ride_id),
-                        "user_id": str(self.user.id),
-                    }
-                )
+            websocket_logger.info(
+                f"Ride WebSocket connected: ride={self.ride_id}"
             )
 
-            logger.info(
-                "Ride WebSocket connected successfully | ride_id=%s",
-                self.ride_id,
+        except Exception as e:
+            websocket_logger.error(
+                f"Ride WebSocket connection error: {str(e)}"
             )
+            await self.close(code=4003)
 
-        except Exception:
-
-            logger.error(
-                "Ride WebSocket connection processing failed | ride_id=%s",
-                self.ride_id,
-                exc_info=True,
-            )
-
-            raise
-
-    async def disconnect(
-        self,
-        close_code,
-    ):
-
-        # REMOVE FROM RIDE GROUP
-
-        if hasattr(
-            self,
-            "group_name",
-        ):
-
-            try:
-
+    async def disconnect(self, close_code):
+        try:
+            if hasattr(self, "room_group_name"):
                 await self.channel_layer.group_discard(
-                    self.group_name,
+                    self.room_group_name,
                     self.channel_name,
                 )
 
-            except Exception:
+            websocket_logger.info(
+                f"Ride WebSocket disconnected: ride={getattr(self, 'ride_id', None)}"
+            )
 
-                logger.error(
-                    "Ride WebSocket group removal failed | ride_id=%s",
-                    getattr(self, "ride_id", None),
-                    exc_info=True,
-                )
+        except Exception as e:
+            websocket_logger.error(
+                f"Ride WebSocket disconnect error: {str(e)}"
+            )
 
-        # DISCONNECT LOG
-
-        logger.info(
-            "Ride WebSocket disconnected | ride_id=%s | code=%s",
-            getattr(self, "ride_id", None),
-            close_code,
-        )
-
-    async def ride_status_update(
-        self,
-        event,
-    ):
-
+    async def receive(self, text_data):
         try:
+            data = json.loads(text_data)
 
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "success": True,
-                        "message": "Ride status updated.",
-                        "ride_id": str(self.ride_id),
-                        "status": event["status"],
-                    }
-                )
+            websocket_logger.info(
+                f"Ride WebSocket message received: ride={self.ride_id}"
             )
 
-        except Exception:
-
-            logger.error(
-                "Ride status WebSocket update failed | ride_id=%s",
-                self.ride_id,
-                exc_info=True,
+        except json.JSONDecodeError:
+            websocket_logger.warning(
+                "Ride WebSocket received invalid JSON"
             )
 
-            raise
+        except Exception as e:
+            websocket_logger.error(
+                f"Ride WebSocket message processing error: {str(e)}"
+            )
 
-    async def driver_location_update(
-        self,
-        event,
-    ):
-
+    async def ride_status_update(self, event):
         try:
-
             await self.send(
-                text_data=json.dumps(
-                    {
-                        "success": True,
-                        "message": "Driver location updated.",
-                        "type": "driver_location",
-                        "ride_id": event["ride_id"],
-                        "driver_id": event["driver_id"],
-                        "latitude": event["latitude"],
-                        "longitude": event["longitude"],
-                    }
+                text_data=json.dumps({
+                    "type": "ride_status_update",
+                    "ride_id": event.get("ride_id"),
+                    "status": event.get("status"),
+                })
+            )
+
+            websocket_logger.info(
+                f"Ride status update sent: ride={self.ride_id}"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Ride status update error: {str(e)}"
+            )
+
+    async def get_user_from_token(self):
+        try:
+            token = self.scope.get("query_string", b"").decode()
+
+            if not token:
+                websocket_logger.warning(
+                    "Ride WebSocket authentication failed: token missing"
                 )
+                return None
+
+            token_value = token.split("token=")[-1]
+
+            validated_token = UntypedToken(token_value)
+
+            user_id = validated_token.get("user_id")
+
+            if not user_id:
+                websocket_logger.warning(
+                    "Ride WebSocket authentication failed: user ID missing"
+                )
+                return None
+
+            user = await self.get_user(user_id)
+
+            if not user:
+                websocket_logger.warning(
+                    "Ride WebSocket authentication failed: user not found"
+                )
+                return None
+
+            return user
+
+        except (InvalidToken, TokenError):
+            websocket_logger.warning(
+                "Ride WebSocket authentication failed: invalid token"
             )
+            return None
 
-        except Exception:
-
-            logger.error(
-                "Driver location WebSocket update failed | ride_id=%s",
-                self.ride_id,
-                exc_info=True,
+        except Exception as e:
+            websocket_logger.error(
+                f"Ride WebSocket token processing error: {str(e)}"
             )
+            return None
 
-            raise
+    async def get_user(self, user_id):
+        try:
+            return await User.objects.aget(id=user_id)
+        except User.DoesNotExist:
+            return None

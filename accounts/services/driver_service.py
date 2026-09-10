@@ -1,10 +1,13 @@
-
+import logging
 
 from ..models import (
     DriverProfile,
     Ride,
     RideStatus,
 )
+
+
+database_logger = logging.getLogger("database")
 
 
 class DriverService:
@@ -14,7 +17,11 @@ class DriverService:
 
         try:
             return DriverProfile.objects.get(user=user)
+
         except DriverProfile.DoesNotExist:
+            database_logger.warning(
+                "Driver profile not found for user"
+            )
             raise PermissionError("You are not registered as a driver.")
 
     @classmethod
