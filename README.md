@@ -11575,3 +11575,212 @@ Task 7 was successfully implemented and tested.
 
 **Status: Task 7 COMPLETED ✅**
 
+17/09/26
+
+# Production Configuration, Nginx & Database Deployment
+
+## Project Overview
+
+This project is a Django-based backend application for a mobile ride-booking system.
+
+The application handles authentication, ride booking, driver management, driver location, ride status, notifications, and ride history.
+
+### Technologies Used
+
+* Python
+* Django
+* Django REST Framework
+* PostgreSQL
+* Redis
+* Celery
+* Django Channels
+* WebSockets
+* Gunicorn
+* Nginx
+* Docker
+* Postman
+* Swagger
+
+---
+
+# Task 1 — Create Environment Configurations
+
+## Definition
+
+Environment configuration means managing different settings for Development, Testing, and Production environments separately.
+
+## Work Completed
+
+* Created separate settings for:
+
+  * Development
+  * Testing
+  * Production
+* Configured environment variables using `.env`.
+* Configured database settings through environment variables.
+* Configured Redis and Celery settings.
+* Configured JWT token settings.
+* Configured email settings.
+* Configured static and media file paths.
+* Configured environment selection through `DJANGO_ENV`.
+* Added production security settings.
+* Verified the configuration using Django system checks.
+
+## Environment Flow
+
+```text
+.env
+  |
+  v
+DJANGO_ENV
+  |
+  v
+Development / Testing / Production
+  |
+  v
+Django Settings
+```
+
+## Verification
+
+```powershell
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+---
+
+# Task 2 — Production Django Settings
+
+## Definition
+
+Production settings are Django configurations used to run the application securely in a production environment.
+
+## Work Completed
+
+* Set `DEBUG=False` for production.
+* Configured `ALLOWED_HOSTS`.
+* Configured `SECRET_KEY` through environment variables.
+* Configured PostgreSQL database settings.
+* Configured CORS and CSRF settings.
+* Configured static and media files.
+* Enabled secure cookies.
+* Configured HTTPS redirect.
+* Configured HSTS security settings.
+* Added security headers.
+
+## Production Security Flow
+
+```text
+Client Request
+     |
+     v
+Security Settings
+     |
+     +--> ALLOWED_HOSTS
+     +--> CSRF
+     +--> Secure Cookies
+     +--> HTTPS
+     +--> Security Headers
+     |
+     v
+Django Application
+```
+
+## Verification
+
+```powershell
+python manage.py check
+```
+
+---
+
+# Task 3 — Configure Gunicorn
+
+## Definition
+
+Gunicorn is a production application server used to run Python web applications and forward application requests from a web server such as Nginx.
+
+## Work Completed
+
+* Installed Gunicorn.
+* Added Gunicorn to `requirements.txt`.
+* Created `gunicorn.conf.py`.
+* Configured:
+
+  * Bind address
+  * Workers
+  * Timeout
+  * Access logs
+  * Error logs
+
+## Gunicorn Configuration
+
+```text
+Bind: 127.0.0.1:8000
+Workers: 3
+Timeout: 120 seconds
+```
+
+## Request Flow
+
+```text
+Client
+  |
+  v
+Nginx
+  |
+  v
+Gunicorn
+  |
+  v
+Django
+```
+
+## Note
+
+The project uses Django ASGI and WebSockets through Channels, so Daphne/ASGI is used for the development/runtime WebSocket flow. Gunicorn configuration was prepared as part of the production deployment setup.
+
+---
+
+# Task 4 — Configure Nginx
+
+## Definition
+
+Nginx is a web server and reverse proxy that receives client requests and forwards application requests to the Django application server.
+
+## Work Completed
+
+* Installed Nginx on Windows.
+* Created and configured `nginx.conf`.
+* Configured port 80.
+* Configured Django reverse proxy.
+* Configured static file serving.
+* Configured media file serving.
+* Added required proxy headers.
+* Tested the Nginx configuration.
+* Reloaded Nginx after configuration changes.
+
+## Nginx Configuration Flow
+
+```text
+Client
+  |
+  v
+Nginx :80
+  |
+  +------> /static/ ------> Static Files
+  |
+  +------> /media/ -------> Media Files
+  |
+  +------> /api/ ---------> Django :8000
+```
+
+## Verification
+
+
