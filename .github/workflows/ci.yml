@@ -70,12 +70,12 @@ jobs:
           python manage.py check
 
       - name: Run migrations
-  run: |
-    python manage.py migrate --noinput
+        run: |
+          python manage.py migrate --noinput
 
-    - name: Check migrations
-  run: |
-    python manage.py migrate --check
+      - name: Check migrations
+        run: |
+          python manage.py migrate --check
 
       - name: Run tests
         run: |
