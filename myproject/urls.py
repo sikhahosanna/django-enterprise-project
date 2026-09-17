@@ -4,6 +4,7 @@ URL configuration for myproject project.
 
 from django.contrib import admin
 from django.urls import include, path
+from accounts.health import health_check, database_health, redis_health
 
 
 from drf_spectacular.views import (
@@ -34,4 +35,8 @@ urlpatterns = [
         ),
         name="swagger-ui",
     ),
+
+    path("api/health/", health_check, name="health"),
+path("api/health/database/", database_health, name="health-database"),
+path("api/health/redis/", redis_health, name="health-redis"),
 ]

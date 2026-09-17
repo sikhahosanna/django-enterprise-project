@@ -56,9 +56,7 @@ class WebSocketTest(TransactionTestCase):
             password="Test@12345",
         )
 
-       
         # Driver
-
 
         self.driver = User.objects.create_user(
             email="driver@test.com",
@@ -72,7 +70,6 @@ class WebSocketTest(TransactionTestCase):
         )
 
         # Driver Location
-        
 
         self.driver_location = DriverLocation.objects.create(
             driver=self.driver_profile,
@@ -83,23 +80,19 @@ class WebSocketTest(TransactionTestCase):
             ),
         )
 
-       
         # Vehicle Type
-        
 
         self.vehicle_type, _ = VehicleType.objects.get_or_create(
             name="CAR"
         )
 
         # Ride Status
-       
 
         self.ride_status, _ = RideStatus.objects.get_or_create(
             name=RideStatus.Status.REQUESTED
         )
 
         # Ride
-        
 
         self.ride = Ride.objects.create(
             rider=self.rider,
@@ -116,7 +109,7 @@ class WebSocketTest(TransactionTestCase):
         )
 
     # JWT TOKEN HELPER
-   
+
     @sync_to_async
     def get_token(self, user):
 
@@ -125,6 +118,63 @@ class WebSocketTest(TransactionTestCase):
         return str(refresh.access_token)
 
     # 1. DRIVER WEBSOCKET - VALID TOKEN
+
+    async def test_driver_websocket_valid_token(self):
+
+        token = await self.get_token(self.driver)
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"/ws/driver/location/?token={token}",
+        )
+
+        connected, _ = await communicator.connect()
+
+        self.assertTrue(connected)
+
+        await communicator.disconnect()
+
+    # 2. DRIVER WEBSOCKET - WITHOUT TOKEN
+
+    async def test_driver_websocket_without_token(self):
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            "/ws/driver/location/",
+        )
+
+        connected, _ = await communicator.connect()
+
+        self.assertFalse(connected)
+
+    # 3. RIDE WEBSOCKET - RIDER CONNECTION
+
+    async def test_ride_websocket_rider_connection(self):
+
+        token = await self.get_token(self.rider)
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"/ws/ride/{self.ride.id}/?token={token}",
+        )
+
+        connected, _ = await communicator.connect()
+
+        self.assertTrue(connected)
+
+        response = await communicator.receive_json_from()
+
+        self.assertTrue(response["success"])
+
+        self.assertEqual(
+            response["ride_id"],
+            str(self.ride.id),
+        )
+
+        await communicator.disconnect()
+
+    # 4. RIDE WEBSOCKET - UNAUTHORIZED USER
+
     async def test_ride_websocket_unauthorized_user(self):
 
         unauthorized_user = await sync_to_async(
@@ -147,73 +197,7 @@ class WebSocketTest(TransactionTestCase):
 
         await communicator.disconnect()
 
-    # 2. DRIVER WEBSOCKET - WITHOUT TOKEN
-   
-
-    async def test_driver_websocket_without_token(self):
-
-        communicator = WebsocketCommunicator(
-            self.application,
-            "/ws/driver/location/",
-        )
-
-        connected, _ = await communicator.connect()
-
-        self.assertFalse(connected)
-
-    
-    # 3. RIDE WEBSOCKET - RIDER CONNECTION
-    
-
-    async def test_ride_websocket_rider_connection(self):
-
-        token = await self.get_token(self.rider)
-
-        communicator = WebsocketCommunicator(
-            self.application,
-            f"/ws/ride/{self.ride.id}/?token={token}",
-    )
-
-        connected, _ = await communicator.connect()
-
-        self.assertTrue(connected)
-
-        response = await communicator.receive_json_from()
-
-        self.assertTrue(response["success"])
-        self.assertEqual(
-            response["ride_id"],
-            str(self.ride.id),
-        )
-
-        await communicator.disconnect()
-
- 
-    # 4. RIDE WEBSOCKET - UNAUTHORIZED USER
-  
-
-        async def test_ride_websocket_unauthorized_user(self):
-
-           unauthorized_user = await sync_to_async(
-            User.objects.create_user
-        )(
-            email="unauthorized@test.com",
-            password="Test@12345",
-        )
-
-        token = await self.get_token(self.rider)
-
-        communicator = WebsocketCommunicator(
-            self.application,
-            f"/ws/ride/{self.ride.id}/?token={token}",
-        )
-
-        connected, _ = await communicator.connect()
-
-        self.assertTrue(connected)
-
     # 5. RIDE STATUS EVENT
-   
 
     async def test_ride_status_event(self):
 
@@ -229,6 +213,7 @@ class WebSocketTest(TransactionTestCase):
         self.assertTrue(connected)
 
         # First message = connection success
+
         await communicator.receive_json_from()
 
         from channels.layers import get_channel_layer
@@ -265,7 +250,6 @@ class WebSocketTest(TransactionTestCase):
         await communicator.disconnect()
 
     # 6. DRIVER LOCATION EVENT
-    
 
     async def test_driver_location_event(self):
 
@@ -281,6 +265,7 @@ class WebSocketTest(TransactionTestCase):
         self.assertTrue(connected)
 
         # First message = connection success
+
         await communicator.receive_json_from()
 
         from channels.layers import get_channel_layer
@@ -331,10 +316,11 @@ class WebSocketTest(TransactionTestCase):
 
 
 # CELERY TESTS
+
+
 class CeleryTest(TestCase):
 
     # CELERY TASK EXECUTION
-   
 
     def test_celery_task_execution(self):
 
@@ -382,7 +368,6 @@ class CeleryTest(TestCase):
         )
 
     # CELERY DUPLICATE NOTIFICATION
-    
 
     def test_celery_duplicate_notification(self):
 

@@ -215,7 +215,7 @@ class RideConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         try:
-            data = json.loads(text_data)
+            json.loads(text_data)
 
             websocket_logger.info(
                 f"Ride WebSocket message received: ride={self.ride_id}"

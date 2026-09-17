@@ -11805,3 +11805,505 @@ Tasks 1 to 8 were completed as part of the Production Configuration, Nginx & Dat
 
 The project now has environment-specific Django configuration, production security settings, Gunicorn configuration, Nginx reverse proxy configuration, static/media file handling, PostgreSQL migrations, database backup and restore procedures, and production troubleshooting procedures.
 
+18/09/26
+
+# Production Deployment Checklist
+
+## Objective
+
+The purpose of this checklist is to verify that the Django mobile backend is ready for production deployment.
+
+The checklist covers the application, database, Redis, Celery, Gunicorn, Nginx, security, logging, monitoring, backup, and rollback requirements.
+
+---
+
+## 1. Environment
+
+### Definition
+
+The environment contains the configuration required to run the Django application.
+
+### Checklist
+
+* Production environment is configured.
+* `DEBUG=False` is configured.
+* `ALLOWED_HOSTS` contains the required production host.
+* Production settings are loaded correctly.
+
+### Verification
+
+```powershell
+python manage.py check
+```
+
+### Expected Result
+
+```text
+System check identified no issues.
+```
+
+---
+
+## 2. Database
+
+### Definition
+
+PostgreSQL stores the application's permanent data such as users, drivers, rides, notifications, and other application records.
+
+### Checklist
+
+* PostgreSQL service is running.
+* Database credentials are configured through environment variables.
+* Django can connect to PostgreSQL.
+* Required migrations are applied.
+* Database backup is available.
+
+### Verification
+
+```powershell
+python manage.py showmigrations
+```
+
+```powershell
+python manage.py migrate --check
+```
+
+### Expected Result
+
+All required migrations should be applied and no pending migrations should be reported.
+
+---
+
+## 3. Redis
+
+### Definition
+
+Redis is used by the application for caching and as the message broker for Celery.
+
+### Checklist
+
+* Redis service is running.
+* Redis URL is configured correctly.
+* Django can connect to Redis.
+* Celery broker uses the correct Redis URL.
+
+### Configuration
+
+```text
+REDIS_URL
+CELERY_BROKER_URL
+CELERY_RESULT_BACKEND
+REDIS_CACHE_URL
+```
+
+### Verification
+
+Verify the Redis service and application connection before deployment.
+
+---
+
+## 4. Django
+
+### Definition
+
+Django is the main backend framework that handles API requests, authentication, business logic, and application data.
+
+### Checklist
+
+* Django settings are configured for production.
+* `DEBUG=False`.
+* Required applications are installed.
+* Database configuration is correct.
+* Static and media configuration is correct.
+
+### Verification
+
+```powershell
+python manage.py check
+```
+
+### Expected Result
+
+```text
+System check identified no issues.
+```
+
+---
+
+## 5. Gunicorn
+
+### Definition
+
+Gunicorn is the application server used to run the Django application in a production-style environment.
+
+### Configuration
+
+The project contains:
+
+```text
+gunicorn.conf.py
+```
+
+Configuration includes:
+
+```text
+bind = 127.0.0.1:8000
+workers = 3
+timeout = 120
+```
+
+### Checklist
+
+* Gunicorn is installed.
+* Gunicorn configuration exists.
+* Django WSGI application is configured.
+* Gunicorn can start the application.
+
+### Note
+
+On Windows, Gunicorn has platform limitations because it depends on Unix-specific functionality. The package is included for production-style configuration, while Windows development/testing uses Django/Daphne as applicable.
+
+---
+
+## 6. Celery
+
+### Definition
+
+Celery handles background tasks asynchronously, such as notifications and other scheduled/background operations.
+
+### Checklist
+
+* Celery is configured.
+* Redis is configured as the broker.
+* Celery worker can start.
+* Celery tasks execute successfully.
+
+### Verification
+
+Celery tasks should be tested before production deployment.
+
+Example:
+
+```powershell
+celery -A myproject worker --pool=solo -l info
+```
+
+### Expected Result
+
+The worker should start successfully and be able to receive tasks.
+
+---
+
+## 7. Nginx
+
+### Definition
+
+Nginx acts as the web server/reverse proxy between the client and the Django application server.
+
+### Request Flow
+
+```text
+Client
+   |
+   v
+Nginx
+   |
+   v
+Django Application
+   |
+   +---- PostgreSQL
+   |
+   +---- Redis
+   |
+   +---- Celery
+```
+
+### Checklist
+
+* Nginx configuration is available.
+* Reverse proxy is configured.
+* Static files are configured.
+* Media files are configured.
+* Nginx configuration syntax is valid.
+
+### Verification
+
+```powershell
+nginx -t
+```
+
+### Expected Result
+
+```text
+syntax is ok
+test is successful
+```
+
+---
+
+## 8. Static Files
+
+### Definition
+
+Static files include CSS, JavaScript, admin assets, and other files required by the application interface.
+
+### Checklist
+
+* `STATIC_ROOT` is configured.
+* Static files are collected.
+* Nginx points to the correct static directory.
+
+### Verification
+
+```powershell
+python manage.py collectstatic --noinput
+```
+
+### Expected Result
+
+Static files should be collected successfully into the configured `staticfiles` directory.
+
+---
+
+## 9. Media
+
+### Definition
+
+Media files are user/application-generated files stored separately from static files.
+
+### Checklist
+
+* `MEDIA_ROOT` is configured.
+* Media directory exists.
+* Nginx media configuration points to the correct directory.
+* Media files are accessible when required.
+
+---
+
+## 10. Environment Variables
+
+### Definition
+
+Environment variables store configuration and sensitive values outside the source code.
+
+### Checklist
+
+The following configuration is maintained through environment variables where required:
+
+```text
+SECRET_KEY
+DB_NAME
+DB_USER
+DB_PASSWORD
+DB_HOST
+DB_PORT
+REDIS_URL
+CELERY_BROKER_URL
+CELERY_RESULT_BACKEND
+JWT_ACCESS_TOKEN_MINUTES
+JWT_REFRESH_TOKEN_DAYS
+```
+
+### Security Requirement
+
+Sensitive values such as passwords and secret keys must not be committed to Git.
+
+---
+
+## 11. Migrations
+
+### Definition
+
+Django migrations are used to create and update the database schema.
+
+### Checklist
+
+* Migration files are committed.
+* Migrations are applied before deployment.
+* No pending migrations exist.
+
+### Verification
+
+```powershell
+python manage.py migrate --check
+```
+
+### Expected Result
+
+The command should complete without reporting unapplied migrations.
+
+---
+
+## 12. Security
+
+### Definition
+
+Production security protects the application, credentials, sessions, and communication from common security risks.
+
+### Checklist
+
+* `DEBUG=False`.
+* `ALLOWED_HOSTS` is configured.
+* Secret key is protected.
+* CSRF settings are configured.
+* Secure cookies are configured where required.
+* HTTPS/security settings are configured.
+* Sensitive configuration is not stored in source code.
+
+### Verification
+
+```powershell
+python manage.py check
+```
+
+---
+
+## 13. Logging
+
+### Definition
+
+Logging records application and infrastructure events so that errors and failures can be investigated.
+
+### Checklist
+
+* Django application logging is configured.
+* Error messages are logged.
+* Nginx logs are available.
+* Celery logs are available.
+* Logs can be used for troubleshooting.
+
+### Purpose
+
+Logging helps identify:
+
+```text
+Application Errors
+Database Errors
+Redis Connection Errors
+Celery Failures
+Nginx Errors
+API Failures
+```
+
+---
+
+## 14. Monitoring
+
+### Definition
+
+Monitoring checks whether the production application and its supporting services are operating correctly.
+
+### Checklist
+
+Monitor:
+
+```text
+Django Application
+PostgreSQL
+Redis
+Celery
+Nginx
+API Availability
+Application Errors
+```
+
+### Health Verification
+
+The application should be checked after deployment to confirm that APIs and supporting services are responding correctly.
+
+---
+
+## 15. Backup
+
+### Definition
+
+A database backup is a copy of application data that can be used for recovery if data is lost or corrupted.
+
+### Checklist
+
+* PostgreSQL backup is created before deployment.
+* Backup is stored safely.
+* Backup file can be accessed.
+* Restore procedure has been tested.
+
+### Example
+
+```powershell
+pg_dump -U postgres -d mydb -F c -f mydb_backup.dump
+```
+
+### Restore
+
+```powershell
+pg_restore -U postgres -d mydb mydb_backup.dump
+```
+
+---
+
+## 16. Rollback
+
+### Definition
+
+Rollback means returning the application to the previous working version when a deployment causes problems.
+
+### Rollback Requirements
+
+* Previous working Git version is identified.
+* Database backup is available.
+* Previous application configuration is available.
+* Failed deployment can be reverted.
+* Database can be restored when required.
+
+### Rollback Flow
+
+```text
+Deployment
+    |
+    v
+Check Application
+    |
+    +---- Success ----> Continue
+    |
+    +---- Failure
+            |
+            v
+      Stop/Reverse Deployment
+            |
+            v
+      Restore Previous Version
+            |
+            v
+      Restore Database if Required
+            |
+            v
+      Verify Application
+```
+
+---
+
+# Final Deployment Verification
+
+Before considering the production deployment ready, verify:
+
+```text
+Environment       → Configured
+Database          → Connected
+Redis             → Connected
+Django            → System check passed
+Gunicorn          → Configured
+Celery            → Worker verified
+Nginx             → Configuration tested
+Static Files      → Collected
+Media             → Configured
+Environment Vars  → Secured
+Migrations        → Applied
+Security          → Verified
+Logging           → Available
+Monitoring        → Verified
+Backup            → Created/Tested
+Rollback          → Procedure available
+```
+
+## Final Status
+
+The production deployment checklist covers the major application, infrastructure, security, monitoring, backup, and recovery requirements needed to operate the Django mobile backend in a production-style environment.

@@ -48,7 +48,7 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       REDIS_CACHE_URL: redis://redis:6379/1
-    command: celery -A myproject worker --loglevel=info
+    command: celery -A myproject worker --loglevel=info -Q celery,notifications,reports,maintenance
     depends_on:
       - postgres
       - redis
@@ -60,10 +60,12 @@ services:
     container_name: django-nginx
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - web
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     networks:
       - app-network
 
