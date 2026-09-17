@@ -148,6 +148,26 @@ class RideConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4003)
                 return
 
+            self.ride = await self.get_ride(self.ride_id)
+
+            if not self.ride:
+                websocket_logger.warning(
+                    "Ride WebSocket connection denied: ride not found"
+                )
+                await self.close(code=4004)
+                return
+
+            # Only the rider or assigned driver can connect
+            if self.user != self.ride.rider and (
+                not self.ride.driver
+                or self.user != self.ride.driver.user
+            ):
+                websocket_logger.warning(
+                    "Ride WebSocket connection denied: unauthorized user"
+                )
+                await self.close(code=4003)
+                return
+
             self.room_group_name = f"ride_{self.ride_id}"
 
             await self.channel_layer.group_add(
@@ -156,6 +176,14 @@ class RideConsumer(AsyncWebsocketConsumer):
             )
 
             await self.accept()
+
+            await self.send(
+                text_data=json.dumps({
+                    "success": True,
+                    "message": "Ride WebSocket connected",
+                    "ride_id": str(self.ride_id),
+                })
+            )
 
             websocket_logger.info(
                 f"Ride WebSocket connected: ride={self.ride_id}"
@@ -176,7 +204,8 @@ class RideConsumer(AsyncWebsocketConsumer):
                 )
 
             websocket_logger.info(
-                f"Ride WebSocket disconnected: ride={getattr(self, 'ride_id', None)}"
+                f"Ride WebSocket disconnected: "
+                f"ride={getattr(self, 'ride_id', None)}"
             )
 
         except Exception as e:
@@ -206,8 +235,10 @@ class RideConsumer(AsyncWebsocketConsumer):
         try:
             await self.send(
                 text_data=json.dumps({
+                    "success": True,
+                    "message": "Ride status updated.",
                     "type": "ride_status_update",
-                    "ride_id": event.get("ride_id"),
+                    "ride_id": str(self.ride_id),
                     "status": event.get("status"),
                 })
             )
@@ -220,6 +251,39 @@ class RideConsumer(AsyncWebsocketConsumer):
             websocket_logger.error(
                 f"Ride status update error: {str(e)}"
             )
+
+    async def driver_location_update(self, event):
+        try:
+            await self.send(
+                text_data=json.dumps({
+                    "success": True,
+                    "message": "Driver location updated",
+                    "type": "driver_location",
+                    "ride_id": str(self.ride_id),
+                    "driver_id": event.get("driver_id"),
+                    "latitude": event.get("latitude"),
+                    "longitude": event.get("longitude"),
+                })
+            )
+
+            websocket_logger.info(
+                f"Driver location update sent: ride={self.ride_id}"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Driver location update error: {str(e)}"
+            )
+
+    async def get_ride(self, ride_id):
+        try:
+            return await Ride.objects.select_related(
+                "rider",
+                "driver__user",
+            ).aget(id=ride_id)
+
+        except Ride.DoesNotExist:
+            return None
 
     async def get_user_from_token(self):
         try:

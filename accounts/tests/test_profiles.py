@@ -15,7 +15,7 @@ class ProfileTests(APITestCase):
             user=self.user, first_name="Test", last_name="User", phone="9876543210"
         )
 
-        self.url = "/api/v1/profile/"
+        self.url = "/api/v1/users/profile/"
 
     def test_authenticated_user_can_get_profile(self):
         self.client.force_authenticate(user=self.user)

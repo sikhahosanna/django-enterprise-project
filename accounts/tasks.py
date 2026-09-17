@@ -279,7 +279,7 @@ def retry_test_task(self):
 
         logger.info("Retry test completed successfully")
 
-        return "Task completed successfully"
+        return "Retry test successful"
 
     except Exception as exc:
         logger.error(

@@ -28,7 +28,7 @@ class PermissionTests(TestCase):
             password="Passenger@12345",
         )
 
-        self.url = "/api/v1/profiles/"
+        self.url = "/api/v1/users/profiles/"
 
     def test_admin_permission(self):
         self.client.force_authenticate(user=self.admin)

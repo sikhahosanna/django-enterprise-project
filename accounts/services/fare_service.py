@@ -37,7 +37,6 @@ class FareService:
         dropoff_latitude,
         dropoff_longitude,
     ):
-
         earth_radius_km = 6371
 
         lat1 = radians(float(pickup_latitude))
@@ -71,7 +70,6 @@ class FareService:
         duration_minutes=0,
         surge_multiplier=None,
     ):
-
         distance_km = cls.calculate_distance(
             pickup_latitude,
             pickup_longitude,
@@ -86,16 +84,40 @@ class FareService:
         distance_km = Decimal(str(distance_km))
         duration_minutes = Decimal(str(duration_minutes))
 
-        fare = (
-            base_fare
-            + (cost_per_km * distance_km)
-            + (cost_per_minute * duration_minutes)
-        )
+        # Calculate individual fare components
+        distance_fare = cost_per_km * distance_km
+        time_fare = cost_per_minute * duration_minutes
+
+        # Default surge multiplier
+        surge = Decimal("1.00")
 
         if surge_multiplier is not None:
-            fare *= Decimal(str(surge_multiplier))
+            surge = Decimal(str(surge_multiplier))
 
-        return fare.quantize(
-            Decimal("0.01"),
-            rounding=ROUND_HALF_UP,
-        )
+        # Calculate total fare
+        total = (
+            base_fare
+            + distance_fare
+            + time_fare
+        ) * surge
+
+        # Return detailed fare breakdown
+        return {
+            "base_fare": base_fare.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            ),
+            "distance_fare": distance_fare.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            ),
+            "time_fare": time_fare.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            ),
+            "surge": surge,
+            "total": total.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            ),
+        }
