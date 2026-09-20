@@ -12307,3 +12307,789 @@ Rollback          → Procedure available
 ## Final Status
 
 The production deployment checklist covers the major application, infrastructure, security, monitoring, backup, and recovery requirements needed to operate the Django mobile backend in a production-style environment.
+
+20/9/27
+
+# Task 1 — Mobile Application Business Requirement Analysis
+
+## 1. Business Requirement
+
+The mobile application allows users to register, create a profile, search for available services, view service details, make bookings, receive notifications, communicate with service providers, and track booking status.
+
+## 2. Users
+
+* Customer / Mobile User
+* Service Provider
+* Admin
+
+## 3. Roles
+
+### Customer
+
+* Register and login
+* Create and manage profile
+* Search available services
+* View service details
+* Make bookings
+* View booking status
+* Receive notifications
+* Communicate with service provider
+
+### Service Provider
+
+* Manage profile
+* Manage available services
+* View customer bookings
+* Accept or reject bookings
+* Update booking status
+* Communicate with customers
+
+### Admin
+
+* Manage users
+* Manage service providers
+* Manage services
+* Manage bookings
+* Monitor application activities
+
+## 4. Modules
+
+* Authentication Module
+* User Profile Module
+* Service Management Module
+* Service Search Module
+* Booking Management Module
+* Notification Module
+* Communication / Chat Module
+* Booking Status Tracking Module
+* Admin Module
+
+## 5. Business Rules
+
+* User must register and login before making a booking.
+* User should have a valid profile.
+* Only available services can be booked.
+* Each booking should be associated with a customer and service provider.
+* Service provider can accept or reject a booking.
+* Booking status should be updated during the booking process.
+* Users should receive notifications for booking updates.
+* Only authorized users can access their bookings and messages.
+
+## 6. Required APIs
+
+* `POST /api/v1/auth/register/` — User Registration
+* `POST /api/v1/auth/login/` — User Login
+* `GET/PUT /api/v1/profile/` — Manage Profile
+* `GET /api/v1/services/` — Search/List Services
+* `GET /api/v1/services/<id>/` — View Service Details
+* `POST /api/v1/bookings/` — Create Booking
+* `GET /api/v1/bookings/<id>/` — View Booking Details
+* `PATCH /api/v1/bookings/<id>/status/` — Update Booking Status
+* `GET /api/v1/notifications/` — View Notifications
+* `POST /api/v1/messages/` — Send Message
+
+## 7. Database Entities
+
+* User
+* Profile
+* Service
+* ServiceProvider
+* Booking
+* Notification
+* Message
+
+## 8. Conclusion
+
+The business requirement was analyzed and converted into users, roles, backend modules, business rules, APIs, and database entities. This analysis will be used as the foundation for designing and developing the Django backend.
+
+# Task 2 — User Roles and Permissions
+
+## 1. Admin
+
+### What can Admin see?
+
+* All users
+* All customers
+* All service providers
+* All services
+* All bookings
+* All notifications
+* Application activity
+
+### What can Admin create?
+
+* Users
+* Service providers
+* Services
+* Notifications
+
+### What can Admin update?
+
+* User details
+* Service provider details
+* Service details
+* Booking status
+* User roles and account status
+
+### What can Admin delete?
+
+* Users
+* Service providers
+* Services
+* Bookings when required
+
+---
+
+## 2. Customer
+
+### What can Customer see?
+
+* Own profile
+* Available services
+* Service details
+* Own bookings
+* Booking status
+* Own notifications
+* Own messages
+
+### What can Customer create?
+
+* Own profile
+* Bookings
+* Messages
+
+### What can Customer update?
+
+* Own profile
+* Booking details before confirmation, if allowed
+* Own messages, if the application allows editing
+
+### What can Customer delete?
+
+* Own profile, if allowed
+* Own booking before confirmation, if allowed
+* Own messages, if the application allows deletion
+
+---
+
+## 3. Service Provider
+
+### What can Service Provider see?
+
+* Own profile
+* Own services
+* Customer booking requests
+* Assigned bookings
+* Booking status
+* Notifications
+* Messages with customers
+
+### What can Service Provider create?
+
+* Own profile
+* Services
+* Service availability
+* Messages
+
+### What can Service Provider update?
+
+* Own profile
+* Service details
+* Service availability
+* Booking status
+
+### What can Service Provider delete?
+
+* Own services
+* Own service availability
+* Messages, if allowed
+
+---
+
+## Role Summary
+
+| Role             | See                           | Create                     | Update                                 | Delete                        |
+| ---------------- | ----------------------------- | -------------------------- | -------------------------------------- | ----------------------------- |
+| Admin            | All application data          | Users, providers, services | All managed data                       | Managed records               |
+| Customer         | Own data + available services | Bookings, messages         | Own profile, allowed booking data      | Allowed own records           |
+| Service Provider | Own data + assigned bookings  | Services, messages         | Services, availability, booking status | Own services, allowed records |
+
+## Conclusion
+
+The three user roles and their permissions have been identified. These permissions will be used to implement role-based access control in the Django backend.
+
+
+# Task 3 — Application Modules
+
+## 1. Authentication
+
+Handles user registration, login, logout, password management, and authentication.
+
+## 2. User Profile
+
+Manages customer and service provider profile information.
+
+## 3. Service Provider
+
+Manages service provider details, availability, and booking requests.
+
+## 4. Services
+
+Manages available services and service details.
+
+## 5. Search
+
+Allows customers to search and filter available services.
+
+## 6. Booking
+
+Handles creating, viewing, updating, and tracking bookings.
+
+## 7. Payment
+
+Handles payment details and payment status for bookings.
+
+## 8. Notifications
+
+Sends notifications for booking updates, payments, and other important events.
+
+## 9. Chat
+
+Allows customers and service providers to communicate with each other.
+
+## 10. Admin
+
+Allows administrators to manage users, service providers, services, bookings, and other application data.
+
+# Task 4 — Database Design and ER Diagram
+
+## 1. Database Entities
+
+The following entities are identified for the application:
+
+* User
+* Profile
+* Service
+* Service Provider
+* Booking
+* Payment
+
+## 2. Entity Relationships
+
+* One User can have one Profile.
+* One User can create multiple Bookings.
+* One Service can have multiple Bookings.
+* One Service Provider can handle multiple Bookings.
+* One Booking is associated with one Payment.
+
+## 3. ER Diagram
+
+```text
+                         User
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+           Profile                 Booking
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    │                 │                 │
+                 Service           Provider          Payment
+```
+
+## 4. Relationship Summary
+
+| Entity             | Relationship |
+| ------------------ | ------------ |
+| User → Profile     | One-to-One   |
+| User → Booking     | One-to-Many  |
+| Service → Booking  | One-to-Many  |
+| Provider → Booking | One-to-Many  |
+| Booking → Payment  | One-to-One   |
+
+## Conclusion
+
+The main database entities and their relationships were identified and represented using an ER diagram.
+# Task 5 — API Endpoint Design
+
+## 1. Authentication APIs
+
+| Method | Endpoint                 | Purpose             |
+| ------ | ------------------------ | ------------------- |
+| POST   | `/api/v1/auth/register/` | Register a new user |
+| POST   | `/api/v1/auth/login/`    | User login          |
+| POST   | `/api/v1/auth/logout/`   | User logout         |
+
+## 2. Profile APIs
+
+| Method | Endpoint           | Purpose             |
+| ------ | ------------------ | ------------------- |
+| GET    | `/api/v1/profile/` | View user profile   |
+| PUT    | `/api/v1/profile/` | Update user profile |
+
+## 3. Service APIs
+
+| Method | Endpoint                 | Purpose                        |
+| ------ | ------------------------ | ------------------------------ |
+| GET    | `/api/v1/services/`      | List/search available services |
+| GET    | `/api/v1/services/{id}/` | View service details           |
+| POST   | `/api/v1/services/`      | Create a service               |
+| PUT    | `/api/v1/services/{id}/` | Update a service               |
+| DELETE | `/api/v1/services/{id}/` | Delete a service               |
+
+## 4. Booking APIs
+
+| Method | Endpoint                        | Purpose               |
+| ------ | ------------------------------- | --------------------- |
+| POST   | `/api/v1/bookings/`             | Create a booking      |
+| GET    | `/api/v1/bookings/`             | View user bookings    |
+| GET    | `/api/v1/bookings/{id}/`        | View booking details  |
+| PATCH  | `/api/v1/bookings/{id}/status/` | Update booking status |
+| DELETE | `/api/v1/bookings/{id}/`        | Cancel a booking      |
+
+## 5. Payment APIs
+
+| Method | Endpoint                 | Purpose                |
+| ------ | ------------------------ | ---------------------- |
+| POST   | `/api/v1/payments/`      | Create/process payment |
+| GET    | `/api/v1/payments/{id}/` | View payment details   |
+
+## 6. Notification APIs
+
+| Method | Endpoint                      | Purpose                   |
+| ------ | ----------------------------- | ------------------------- |
+| GET    | `/api/v1/notifications/`      | View notifications        |
+| PATCH  | `/api/v1/notifications/{id}/` | Mark notification as read |
+
+## 7. Chat APIs
+
+| Method | Endpoint            | Purpose        |
+| ------ | ------------------- | -------------- |
+| GET    | `/api/v1/messages/` | View messages  |
+| POST   | `/api/v1/messages/` | Send a message |
+
+## 8. Service Provider APIs
+
+| Method | Endpoint                  | Purpose                 |
+| ------ | ------------------------- | ----------------------- |
+| GET    | `/api/v1/providers/`      | List service providers  |
+| GET    | `/api/v1/providers/{id}/` | View provider details   |
+| PUT    | `/api/v1/providers/{id}/` | Update provider details |
+
+## Conclusion
+
+The required API endpoints were identified and documented with their HTTP methods and purposes before starting the implementation.
+
+# Task 6 — API Request & Response Design
+
+## 1. Register API
+
+**Endpoint:** `POST /api/v1/auth/register/`
+
+**Request:**
+
+```json
+{
+  "name": "John",
+  "email": "john@example.com",
+  "password": "Password@123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "User registered successfully"
+}
+```
+
+**Authentication:** Not Required
+
+**Status Codes:**
+
+* `201` — User created successfully
+* `400` — Invalid request
+
+**Validation:**
+
+* Name is required
+* Email must be valid and unique
+* Password is required
+
+**Possible Errors:**
+
+* Email already exists
+* Invalid email
+* Missing required fields
+
+---
+
+## 2. Login API
+
+**Endpoint:** `POST /api/v1/auth/login/`
+
+**Request:**
+
+```json
+{
+  "email": "john@example.com",
+  "password": "Password@123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "access_token": "access_token_value",
+  "refresh_token": "refresh_token_value"
+}
+```
+
+**Authentication:** Not Required
+
+**Status Codes:**
+
+* `200` — Login successful
+* `400` — Invalid request
+* `401` — Invalid credentials
+
+**Validation:**
+
+* Email is required
+* Password is required
+
+**Possible Errors:**
+
+* Invalid email or password
+* User not found
+
+---
+
+## 3. Service List API
+
+**Endpoint:** `GET /api/v1/services/`
+
+**Request:**
+No request body required.
+
+**Response:**
+
+```json
+{
+  "services": [
+    {
+      "id": 1,
+      "name": "Home Cleaning",
+      "price": 500
+    }
+  ]
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `200` — Services retrieved successfully
+* `401` — Unauthorized
+
+**Validation:**
+
+* Valid authentication token required
+
+**Possible Errors:**
+
+* Invalid or expired token
+
+---
+
+## 4. Service Details API
+
+**Endpoint:** `GET /api/v1/services/{id}/`
+
+**Request:**
+
+```text
+/api/v1/services/1/
+```
+
+**Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Home Cleaning",
+  "description": "Home cleaning service",
+  "price": 500
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `200` — Service found
+* `404` — Service not found
+* `401` — Unauthorized
+
+**Validation:**
+
+* Service ID must be valid
+
+**Possible Errors:**
+
+* Service does not exist
+* Invalid token
+
+---
+
+## 5. Create Booking API
+
+**Endpoint:** `POST /api/v1/bookings/`
+
+**Request:**
+
+```json
+{
+  "service_id": 1,
+  "booking_date": "2026-09-25"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": 101,
+  "service_id": 1,
+  "booking_date": "2026-09-25",
+  "status": "PENDING"
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `201` — Booking created
+* `400` — Invalid request
+* `401` — Unauthorized
+* `404` — Service not found
+
+**Validation:**
+
+* Service must exist
+* Booking date is required
+* Booking date must be valid
+* Service must be available
+
+**Possible Errors:**
+
+* Service unavailable
+* Invalid booking date
+* User not authenticated
+
+---
+
+## 6. Get Bookings API
+
+**Endpoint:** `GET /api/v1/bookings/`
+
+**Request:**
+No request body required.
+
+**Response:**
+
+```json
+{
+  "bookings": [
+    {
+      "id": 101,
+      "service": "Home Cleaning",
+      "status": "PENDING"
+    }
+  ]
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `200` — Bookings retrieved
+* `401` — Unauthorized
+
+**Validation:**
+
+* Valid authentication token required
+
+**Possible Errors:**
+
+* Invalid or expired token
+
+---
+
+## 7. Payment API
+
+**Endpoint:** `POST /api/v1/payments/`
+
+**Request:**
+
+```json
+{
+  "booking_id": 101,
+  "amount": 500
+}
+```
+
+**Response:**
+
+```json
+{
+  "payment_id": 501,
+  "status": "SUCCESS"
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `201` — Payment created
+* `400` — Invalid payment data
+* `401` — Unauthorized
+
+**Validation:**
+
+* Booking must exist
+* Amount must be valid
+* Booking must be eligible for payment
+
+**Possible Errors:**
+
+* Invalid amount
+* Booking not found
+* Payment failed
+
+---
+
+## 8. Notifications API
+
+**Endpoint:** `GET /api/v1/notifications/`
+
+**Request:**
+No request body required.
+
+**Response:**
+
+```json
+{
+  "notifications": [
+    {
+      "id": 1,
+      "message": "Your booking has been confirmed",
+      "is_read": false
+    }
+  ]
+}
+```
+
+**Authentication:** Required
+
+**Status Codes:**
+
+* `200` — Notifications retrieved
+* `401` — Unauthorized
+
+**Validation:**
+
+* Valid authentication token required
+
+**Possible Errors:**
+
+* Invalid or expired token
+
+---
+
+## Common HTTP Status Codes
+
+| Status Code | Meaning               |
+| ----------- | --------------------- |
+| `200`       | Success               |
+| `201`       | Created               |
+| `400`       | Bad Request           |
+| `401`       | Unauthorized          |
+| `403`       | Forbidden             |
+| `404`       | Not Found             |
+| `500`       | Internal Server Error |
+
+## Conclusion
+
+The API request and response structure, authentication requirements, status codes, validation rules, and possible errors were defined for the major APIs before implementation.
+
+# Task 7 — Business Rules
+
+1. Customer must register and login before creating a booking.
+
+2. Customer can create a booking for an available service.
+
+3. Service Provider cannot book their own service.
+
+4. A service must be active and available before it can be booked.
+
+5. Customer can view only their own booking details.
+
+6. Service Provider can view bookings assigned to their services.
+
+7. Service Provider can accept or reject a booking.
+
+8. A cancelled booking cannot be completed.
+
+9. A completed booking cannot be cancelled.
+
+10. Payment must be completed before a booking is confirmed.
+
+11. A booking cannot be created for an unavailable service.
+
+12. Booking status must follow the defined booking workflow.
+
+13. Customer can cancel a booking only before it is completed.
+
+14. Service Provider can update the status of their assigned bookings.
+
+15. Users can receive notifications when important booking events occur.
+
+16. Customer and Service Provider can communicate only through authorized bookings or conversations.
+
+17. Only Admin can manage all users, services, providers, and bookings.
+
+18. Users can update only their own profile information unless they are Admin.
+
+19. Payment amount must match the booking amount.
+
+20. Only authenticated users can access protected APIs.
+
+## Conclusion
+
+A set of business rules has been defined to control user actions, booking flow, payment processing, notifications, communication, and role-based access.
+
+
+File name:
+
+```text
+PROJECT_TECHNICAL_DESIGN.md
+```
+
+Include cheyyalsina sections:
+
+1. **Architecture** — Mobile App → Django Backend → Database
+2. **Modules** — Authentication, Profile, Services, Booking, Payment, etc.
+3. **Database** — User, Profile, Service, Provider, Booking, Payment, etc.
+4. **APIs** — Register, Login, Services, Booking, Payment, Notifications, Chat APIs
+5. **Roles** — Admin, Customer, Service Provider
+6. **Business Rules** — Booking, payment, cancellation, access rules
+7. **Security** — Authentication, authorization, validation, password security
+8. **External Integrations** — Payment Gateway, Email, Notifications, Cloud Storage
+
+
