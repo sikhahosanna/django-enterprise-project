@@ -13095,10 +13095,6 @@ Include cheyyalsina sections:
 
 22/9/26
 
-Sure 👍 Below is a simple **README.md** covering **Task 1 to Task 8** for your Service & Booking module.
-
-````markdown
-# Service & Booking Management API
 
 ## Project Overview
 
