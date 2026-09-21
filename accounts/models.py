@@ -378,3 +378,239 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.notification_type}"
+
+# CATEGORY
+
+
+class Category(models.Model):
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    name = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return self.name
+
+
+# PROVIDER
+
+
+class Provider(models.Model):
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="provider"
+    )
+
+    name = models.CharField(
+        max_length=150
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        default="active"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return self.name
+
+
+# PROVIDER PROFILE
+
+
+class ProviderProfile(models.Model):
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    provider = models.OneToOneField(
+        Provider,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+
+    phone = models.CharField(
+        max_length=15,
+        blank=True
+    )
+
+    address = models.TextField(
+        blank=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return f"{self.provider.name} Profile"
+
+
+# SERVICE
+
+
+class Service(models.Model):
+
+    class ServiceStatus(models.TextChoices):
+
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    name = models.CharField(
+        max_length=150
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=ServiceStatus.choices,
+        default=ServiceStatus.ACTIVE
+    )
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        related_name="services"
+    )
+
+    provider = models.ForeignKey(
+        Provider,
+        on_delete=models.PROTECT,
+        related_name="services"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["provider"]),
+            models.Index(fields=["status", "category"]),
+        ]
+
+    def __str__(self):
+        return self.name
+class Booking(models.Model):
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("confirmed", "Confirmed"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="bookings"
+    )
+
+    provider = models.ForeignKey(
+        Provider,
+        on_delete=models.PROTECT,
+        related_name="bookings"
+    )
+
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.PROTECT,
+        related_name="bookings"
+    )
+
+    booking_date = models.DateField()
+
+    booking_time = models.TimeField()
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.customer.email} - {self.service.name}"

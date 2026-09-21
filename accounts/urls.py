@@ -25,6 +25,8 @@ from .views import (
     DriverAvailabilityView,
     RideStatusListView,
     RideViewSet,
+    ServiceViewSet,
+
     # VEHICLE
     VehicleListCreateView,
     VehicleDetailView,
@@ -50,6 +52,7 @@ from .views import (
     NotificationListView,
     NotificationMarkReadView,
     NotificationMarkAllReadView,
+    BookingViewSet,
 
 )
 router = DefaultRouter()
@@ -59,6 +62,13 @@ router.register(
     RideViewSet,
     basename="ride-v2",
 )
+
+router.register(
+    r"services",
+    ServiceViewSet,
+    basename="service",
+)
+router.register(r"bookings", BookingViewSet, basename="booking")
 
 
 

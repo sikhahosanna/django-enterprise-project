@@ -5927,7 +5927,7 @@ Notifications & Background Processing
 ```
 
 21/8/26
-
+www
 
 # 21-Aug-2026 — Friday
 
@@ -12308,7 +12308,7 @@ Rollback          → Procedure available
 
 The production deployment checklist covers the major application, infrastructure, security, monitoring, backup, and recovery requirements needed to operate the Django mobile backend in a production-style environment.
 
-20/9/27
+21/9/26
 
 # Task 1 — Mobile Application Business Requirement Analysis
 
@@ -13093,3 +13093,422 @@ Include cheyyalsina sections:
 8. **External Integrations** — Payment Gateway, Email, Notifications, Cloud Storage
 
 
+22/9/26
+
+Sure 👍 Below is a simple **README.md** covering **Task 1 to Task 8** for your Service & Booking module.
+
+````markdown
+# Service & Booking Management API
+
+## Project Overview
+
+This project is a Django REST Framework based backend for managing services, providers, customers, and bookings.
+
+The module provides Service CRUD, search, filtering, pagination, sorting, booking creation, booking cancellation, and booking validation APIs.
+
+## Technologies Used
+
+- Python
+- Django
+- Django REST Framework
+- PostgreSQL
+- JWT Authentication
+- django-filter
+- Postman
+- Swagger / OpenAPI
+
+---
+
+# Tasks Completed
+
+## Task 1 — Service Models
+
+Created the required Service Management models:
+
+### Category
+- Category name
+- Description
+- Created At
+- Updated At
+
+### Provider
+- Provider linked with User
+- Provider name
+- Description
+- Status
+- Created At
+- Updated At
+
+### Provider Profile
+- Provider linked with Provider
+- Phone
+- Address
+- Created At
+- Updated At
+
+### Service
+- Service name
+- Description
+- Price
+- Status
+- Category
+- Provider
+- Created At
+- Updated At
+
+Database migrations were created and applied successfully.
+
+---
+
+## Task 2 — Service CRUD APIs
+
+Implemented Service CRUD APIs.
+
+### Create Service
+
+```http
+POST /api/v1/services/
+````
+
+### List Services
+
+```http
+GET /api/v1/services/
+```
+
+### Service Details
+
+```http
+GET /api/v1/services/{id}/
+```
+
+### Update Service
+
+```http
+PUT /api/v1/services/{id}/
+PATCH /api/v1/services/{id}/
+```
+
+### Delete Service
+
+```http
+DELETE /api/v1/services/{id}/
+```
+
+All Service APIs require authentication.
+
+---
+
+## Task 3 — Service Search
+
+Implemented service search using DRF SearchFilter.
+
+Search supported by:
+
+* Service name
+* Service description
+* Category name
+* Provider name
+* Provider location
+
+Example:
+
+```http
+GET /api/v1/services/?search=cleaning
+```
+
+---
+
+## Task 4 — Service Filtering
+
+Implemented filtering using `django-filter`.
+
+Supported filters:
+
+* Minimum price
+* Maximum price
+* Category
+* Provider
+* Status
+
+Examples:
+
+```http
+GET /api/v1/services/?min_price=500
+```
+
+```http
+GET /api/v1/services/?max_price=1000
+```
+
+```http
+GET /api/v1/services/?status=active
+```
+
+Multiple filters can also be combined.
+
+---
+
+## Task 5 — Pagination & Sorting
+
+Implemented pagination using DRF `PageNumberPagination`.
+
+Default page size:
+
+```text
+10
+```
+
+Maximum page size:
+
+```text
+100
+```
+
+Examples:
+
+```http
+GET /api/v1/services/?page=1
+```
+
+```http
+GET /api/v1/services/?page=1&page_size=5
+```
+
+### Sorting
+
+Sort by price:
+
+```http
+GET /api/v1/services/?ordering=price
+```
+
+Highest price first:
+
+```http
+GET /api/v1/services/?ordering=-price
+```
+
+Sort by newest:
+
+```http
+GET /api/v1/services/?ordering=-created_at
+```
+
+---
+
+## Task 6 — Booking Model
+
+Created the Booking model with:
+
+* Customer
+* Provider
+* Service
+* Booking Date
+* Booking Time
+* Amount
+* Status
+* Created At
+* Updated At
+
+### Booking Status
+
+```text
+Pending
+Confirmed
+Completed
+Cancelled
+```
+
+Booking uses UUID as the primary key.
+
+Database migration was created and applied successfully.
+
+---
+
+## Task 7 — Booking APIs
+
+Implemented Booking APIs.
+
+### Create Booking
+
+```http
+POST /api/v1/bookings/
+```
+
+### List Bookings
+
+```http
+GET /api/v1/bookings/
+```
+
+### Booking Details
+
+```http
+GET /api/v1/bookings/{id}/
+```
+
+### Cancel Booking
+
+```http
+POST /api/v1/bookings/{id}/cancel/
+```
+
+### Booking Creation
+
+The authenticated customer is automatically assigned.
+
+The booking amount is automatically taken from the selected service price.
+
+Example request:
+
+```json
+{
+    "provider": "provider-uuid",
+    "service": "service-uuid",
+    "booking_date": "2026-09-25",
+    "booking_time": "10:00:00"
+}
+```
+
+Example response:
+
+```json
+{
+    "id": "booking-uuid",
+    "customer": "customer-uuid",
+    "provider": "provider-uuid",
+    "service": "service-uuid",
+    "booking_date": "2026-09-25",
+    "booking_time": "10:00:00",
+    "amount": "750.00",
+    "status": "pending"
+}
+```
+
+---
+
+# Task 8 — Booking Validation
+
+Implemented validation requirements for bookings.
+
+### Service Validation
+
+The selected service must exist.
+
+### Provider Validation
+
+The provider must be active before creating a booking.
+
+### Customer Authentication
+
+Only authenticated customers can create bookings.
+
+### Requested Time Validation
+
+The requested booking date and time must be valid.
+
+### Provider Availability
+
+A provider cannot have another active booking for the same requested time.
+
+### Cancelled Booking
+
+A cancelled booking cannot be modified.
+
+### Completed Booking
+
+A completed booking cannot be cancelled.
+
+---
+
+# Acceptance Criteria
+
+* [x] Service models completed
+* [x] CRUD APIs completed
+* [x] Search implemented
+* [x] Filtering implemented
+* [x] Pagination implemented
+* [x] Booking APIs completed
+* [x] Booking validation completed
+* [x] Permissions verified
+
+---
+
+# Authentication
+
+The APIs use JWT authentication.
+
+Add the JWT access token in Postman:
+
+```text
+Authorization
+Bearer Token
+```
+
+---
+
+# API Base URL
+
+```text
+http://127.0.0.1:8000/api/v1/
+```
+
+---
+
+# Testing
+
+APIs were tested using:
+
+* Postman
+* Django system checks
+* Swagger / OpenAPI
+
+Django validation:
+
+```powershell
+python manage.py check
+```
+
+Expected result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+---
+
+# Project Structure
+
+```text
+myproject/
+│
+├── accounts/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── views.py
+│   ├── urls.py
+│   ├── filters.py
+│   ├── pagination.py
+│   └── migrations/
+│
+├── myproject/
+│   └── settings/
+│
+├── manage.py
+└── README.md
+```
+
+---
+
+# Expected Effort
+
+```text
+8–10 hours
+```
+
+# Status
+
+Service and Booking Management module developed with CRUD, search, filtering, pagination, booking APIs, validation, and authentication support.
+
+````

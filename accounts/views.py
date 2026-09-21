@@ -8,14 +8,17 @@ from django.db.models import Count, Sum, Avg, Min, Max, Q
 from django.utils import timezone
 from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-
+from .pagination import ServicePagination
+from .models import Booking
 
 from rest_framework import generics, status, filters, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
+from .filters import ServiceFilter
 
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django_filters.rest_framework import DjangoFilterBackend
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -52,6 +55,7 @@ from .models import (
     Vehicle,
     VehicleType,
     Notification,
+    Service,
 )
 
 from .serializers import (
@@ -68,6 +72,8 @@ from .serializers import (
     ProfileSerializer,
     DriverLocationSerializer,
     NotificationSerializer,
+    ServiceSerializer,
+    BookingSerializer,
 )
 
 from .services.fare_service import FareService
@@ -2547,4 +2553,58 @@ class NotificationMarkAllReadView(APIView):
             message="All notifications marked as read.",
             data={"updated_count": updated_count},
             status_code=status.HTTP_200_OK,
+        )
+
+class ServiceViewSet(viewsets.ModelViewSet):
+    queryset = Service.objects.select_related(
+        "category",
+        "provider",
+        "provider__profile",
+    ).all()
+
+    serializer_class = ServiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+        DjangoFilterBackend,
+    ]
+
+    filterset_class = ServiceFilter
+    pagination_class = ServicePagination
+
+    search_fields = [
+        "name",
+        "description",
+        "category__name",
+        "provider__name",
+        "provider__profile__address",
+    ]
+
+    ordering_fields = [
+        "price",
+        "created_at",
+        "name",
+    ]
+
+
+class BookingViewSet(viewsets.ModelViewSet):
+    queryset = Booking.objects.select_related(
+        "customer",
+        "provider",
+        "service",
+    ).all()
+
+    serializer_class = BookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    http_method_names = ["get", "post"]
+
+    def perform_create(self, serializer):
+        service = serializer.validated_data["service"]
+
+        serializer.save(
+            customer=self.request.user,
+            amount=service.price,
         )

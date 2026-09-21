@@ -6,6 +6,7 @@ from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from django.db import transaction
+from .models import Booking
 
 
 from .models import (
@@ -18,8 +19,8 @@ from .models import (
     Ride,
     RideStatus,
     Notification,
+    Service,
 )
-
 from .services.fare_service import (
     FareService,
 )
@@ -823,4 +824,54 @@ class NotificationSerializer(serializers.ModelSerializer):
             "ride",
             "title",
             "created_at",
+        ]
+# SERVICE SERIALIZER
+
+
+class ServiceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = Service
+
+        fields = [
+            "id",
+            "name",
+            "description",
+            "price",
+            "status",
+            "category",
+            "provider",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+        ]
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "customer",
+            "provider",
+            "service",
+            "booking_date",
+            "booking_time",
+            "amount",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "customer",
+            "amount",
+            "status",
+            "created_at",
+            "updated_at",
         ]
