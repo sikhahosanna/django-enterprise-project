@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     # AUTH
+    MockPaymentView,
     RegisterView,
     LoginView,
     ChangePasswordView,
@@ -53,6 +54,10 @@ from .views import (
     NotificationMarkReadView,
     NotificationMarkAllReadView,
     BookingViewSet,
+    PaymentInitiateView,
+    MockPaymentView,
+    PaymentWebhookView,
+    BookingStatusUpdateView,
 
 )
 router = DefaultRouter()
@@ -246,6 +251,25 @@ path("users/profile/restore/", RestoreProfileView.as_view()),
         NotificationMarkAllReadView.as_view(),
         name="notification-read-all",
     ),
-    
+     path(
+    "payments/initiate/",
+    PaymentInitiateView.as_view(),
+    name="payment-initiate",
+),
+path(
+    "payments/process/",
+    MockPaymentView.as_view(),
+    name="payment-process",
+),
+path(
+    "payments/webhook/",
+    PaymentWebhookView.as_view(),
+    name="payment-webhook",
+),
+path(
+    "bookings/<uuid:booking_id>/status/",
+    BookingStatusUpdateView.as_view(),
+    name="booking-status-update",
+),
 ]
 urlpatterns += router.urls

@@ -6,7 +6,14 @@ from ..tasks import (
     ride_started_notification,
     ride_completed_event_notification,
     ride_cancelled_notification,
+    booking_created_notification,
+    payment_successful_notification,
+    booking_confirmed_notification,
+    provider_started_notification,
+    booking_completed_notification,
+    booking_cancelled_notification,
 )
+
 
 celery_logger = logging.getLogger("celery")
 
@@ -51,4 +58,45 @@ class NotificationService:
         ride_cancelled_notification.delay(
             ride_id=str(ride.id),
             passenger_id=str(ride.rider.id),
+        )
+    @staticmethod
+    def booking_created(booking):
+        booking_created_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
+        )
+
+    @staticmethod
+    def payment_successful(booking):
+        payment_successful_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
+        )
+
+    @staticmethod
+    def booking_confirmed(booking):
+        booking_confirmed_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
+        )
+
+    @staticmethod
+    def provider_started(booking):
+        provider_started_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
+        )
+
+    @staticmethod
+    def booking_completed(booking):
+        booking_completed_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
+        )
+
+    @staticmethod
+    def booking_cancelled(booking):
+        booking_cancelled_notification.delay(
+            booking_id=str(booking.id),
+            user_id=str(booking.customer.id),
         )

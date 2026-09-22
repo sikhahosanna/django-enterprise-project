@@ -1,5 +1,7 @@
 import time
 import logging
+import uuid
+from .models import Payment
 logger = logging.getLogger(__name__)
 authentication_logger = logging.getLogger("authentication")
 from django.core.cache import cache
@@ -10,8 +12,13 @@ from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from .pagination import ServicePagination
 from .models import Booking
+from accounts.services.notification_service import NotificationService
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 
 from rest_framework import generics, status, filters, viewsets
+from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
@@ -74,6 +81,7 @@ from .serializers import (
     NotificationSerializer,
     ServiceSerializer,
     BookingSerializer,
+    PaymentInitiateSerializer,
 )
 
 from .services.fare_service import FareService
@@ -2604,7 +2612,264 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         service = serializer.validated_data["service"]
 
-        serializer.save(
-            customer=self.request.user,
-            amount=service.price,
+        booking = serializer.save(
+        customer=self.request.user,
+        amount=service.price,
+    )
+        NotificationService.booking_created(booking)
+
+class PaymentInitiateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = PaymentInitiateSerializer(
+            data=request.data,
+            context={"request": request}
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        booking = serializer.validated_data["booking"]
+
+        payment = Payment.objects.create(
+            booking=booking,
+            amount=booking.amount,
+            transaction_id=str(uuid.uuid4()),
+            payment_status=Payment.PaymentStatus.PENDING,
+            payment_method="upi"
+        )
+
+        return Response(
+            {
+                "message": "Payment initiated successfully",
+                "payment_id": str(payment.id),
+                "transaction_id": payment.transaction_id,
+                "amount": str(payment.amount),
+                "status": payment.payment_status,
+            },
+            status=status.HTTP_201_CREATED
+        )
+class MockPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        payment_id = request.data.get("payment_id")
+        result = request.data.get("result", "success")
+
+        try:
+            payment = Payment.objects.get(
+                id=payment_id,
+                booking__customer=request.user
+            )
+        except Payment.DoesNotExist:
+            return Response(
+                {
+                    "message": "Payment not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if payment.payment_status != Payment.PaymentStatus.PENDING:
+            return Response(
+                {
+                    "message": "Payment is already processed.",
+                    "status": payment.payment_status
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        payment.payment_status = (
+            Payment.PaymentStatus.SUCCESS
+            if result == "success"
+            else Payment.PaymentStatus.FAILED
+        )
+
+        payment.save(
+            update_fields=["payment_status"]
+        )
+
+        return Response(
+            {
+                "message": "Payment processed successfully",
+                "payment_id": str(payment.id),
+                "transaction_id": payment.transaction_id,
+                "amount": str(payment.amount),
+                "status": payment.payment_status
+            },
+            status=status.HTTP_200_OK
+        )
+class PaymentWebhookView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payment_id = request.data.get("payment_id")
+        event = request.data.get("event")
+
+        try:
+            payment = Payment.objects.get(id=payment_id)
+        except Payment.DoesNotExist:
+            return Response(
+                {
+                    "message": "Payment not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Validate payment event
+        if event not in ["success", "failed"]:
+            return Response(
+                {
+                    "message": "Invalid payment event."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate payment status
+        if payment.payment_status != Payment.PaymentStatus.PENDING:
+            return Response(
+                {
+                    "message": "Payment already processed.",
+                    "status": payment.payment_status
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update payment status
+        if event == "success":
+            payment.payment_status = Payment.PaymentStatus.SUCCESS
+        else:
+            payment.payment_status = Payment.PaymentStatus.FAILED
+
+        payment.save(
+            update_fields=["payment_status"]
+        )
+
+        # Update booking after successful payment
+        booking = payment.booking
+
+        if event == "success":
+           booking.status = "confirmed"
+           booking.save(update_fields=["status"])
+
+           NotificationService.payment_successful(booking)
+           NotificationService.booking_confirmed(booking)
+
+        return Response(
+            {
+                "message": "Payment confirmation received.",
+                "payment_id": str(payment.id),
+                "transaction_id": payment.transaction_id,
+                "payment_status": payment.payment_status,
+                "booking_id": str(booking.id),
+                "booking_status": booking.status
+            },
+            status=status.HTTP_200_OK
+        )
+class BookingStatusUpdateView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    allowed_transitions = {
+        "pending": [
+            "confirmed",
+            "cancelled",
+            "payment_failed",
+        ],
+        "confirmed": [
+            "in_progress",
+        ],
+        "in_progress": [
+            "completed",
+        ],
+        "completed": [],
+        "cancelled": [],
+        "payment_failed": [],
+    }
+
+    def patch(self, request, booking_id):
+
+        new_status = request.data.get("status")
+
+        try:
+            booking = Booking.objects.get(
+                id=booking_id,
+                customer=request.user
+            )
+        except Booking.DoesNotExist:
+            return Response(
+                {
+                    "message": "Booking not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        valid_statuses = dict(
+            Booking.BookingStatus.choices
+        )
+
+        if new_status not in valid_statuses:
+            return Response(
+                {
+                    "message": "Invalid booking status."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        current_status = booking.status
+
+        if new_status not in self.allowed_transitions.get(
+            current_status,
+            []
+        ):
+            return Response(
+                {
+                    "message": (
+                        f"Invalid transition: "
+                        f"{current_status} → {new_status}"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update booking status
+        booking.status = new_status
+
+        booking.save(
+            update_fields=[
+                "status",
+                "updated_at"
+            ]
+        )
+
+        # WebSocket broadcast
+        channel_layer = get_channel_layer()
+
+        async_to_sync(channel_layer.group_send)(
+            f"booking_{booking.id}",
+            {
+                "type": "booking_status_update",
+                "booking_id": str(booking.id),
+                "status": booking.status,
+            }
+        )
+
+        # Notifications
+        if new_status == "in_progress":
+            NotificationService.provider_started(booking)
+
+        elif new_status == "completed":
+            NotificationService.booking_completed(booking)
+
+        elif new_status == "cancelled":
+            NotificationService.booking_cancelled(booking)
+
+        return Response(
+            {
+                "message": "Booking status updated successfully.",
+                "booking_id": str(booking.id),
+                "previous_status": current_status,
+                "current_status": booking.status
+            },
+            status=status.HTTP_200_OK
         )

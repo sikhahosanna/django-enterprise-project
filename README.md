@@ -13508,3 +13508,366 @@ myproject/
 Service and Booking Management module developed with CRUD, search, filtering, pagination, booking APIs, validation, and authentication support.
 
 ````
+23/9/26
+
+# Service Listing, Search, Booking & Payment APIs
+
+## Project Overview
+
+This project provides REST APIs for service listing, service search, provider management, booking, payment processing, notifications, and real-time booking status updates.
+
+### Technologies Used
+
+* Python
+* Django
+* Django REST Framework
+* PostgreSQL
+* Redis
+* Celery
+* Django Channels
+* WebSocket
+* JWT Authentication
+* Postman
+
+---
+
+# Task 1 — Service Models
+
+Created the following models:
+
+* `Service`
+* `Category`
+* `Provider`
+* `ProviderProfile`
+
+### Service
+
+Stores service details such as name, description, price, duration, and active status.
+
+### Category
+
+Groups services into different categories.
+
+### Provider
+
+Stores service provider information.
+
+### ProviderProfile
+
+Stores additional provider profile information such as profile image and other details.
+
+### Status
+
+**Completed**
+
+---
+
+# Task 2 — Payment Initiation API
+
+Created an API to initiate payment for a booking.
+
+### Endpoint
+
+```text
+POST /api/v1/payments/initiate/
+```
+
+### Validations
+
+* Booking must exist.
+* Booking must belong to the authenticated customer.
+* Payment amount must match the booking amount.
+* Booking must be in a payable state.
+
+### Response
+
+```json
+{
+    "message": "Payment initiated successfully",
+    "payment_id": "payment-uuid",
+    "transaction_id": "transaction-uuid",
+    "amount": "750.00",
+    "status": "pending"
+}
+```
+
+### Status
+
+**Completed**
+
+---
+
+# Task 3 — Mock Payment Gateway
+
+Implemented a mock payment processing workflow for testing.
+
+### Endpoint
+
+```text
+POST /api/v1/payments/process/
+```
+
+### Payment Flow
+
+```text
+Pending
+   ↓
+Success / Failed
+```
+
+The system does not store sensitive card information.
+
+### Status
+
+**Completed**
+
+---
+
+# Task 4 — Payment Confirmation
+
+Implemented payment confirmation through a webhook API.
+
+### Endpoint
+
+```text
+POST /api/v1/payments/webhook/
+```
+
+### Payment Events
+
+```text
+success
+failed
+```
+
+When payment is successful:
+
+```text
+Payment
+   ↓
+Success
+   ↓
+Booking Confirmed
+```
+
+The payment status and booking status are updated after successful confirmation.
+
+### Status
+
+**Completed**
+
+---
+
+# Task 5 — Booking State Machine
+
+Implemented booking status transitions.
+
+### Booking Flow
+
+```text
+PENDING
+   ↓
+CONFIRMED
+   ↓
+IN_PROGRESS
+   ↓
+COMPLETED
+```
+
+### Alternative Transitions
+
+```text
+PENDING → CANCELLED
+
+PENDING → PAYMENT_FAILED
+```
+
+Invalid status transitions are rejected by the API.
+
+### Status
+
+**Completed**
+
+---
+
+# Task 6 — Notification System
+
+Implemented booking-related notifications using Celery background tasks.
+
+### Notification Types
+
+* Booking Created
+* Payment Successful
+* Booking Confirmed
+* Provider Started Service
+* Booking Completed
+* Booking Cancelled
+
+### Architecture
+
+```text
+Django API
+    ↓
+NotificationService
+    ↓
+Celery Task
+    ↓
+Redis
+    ↓
+Celery Worker
+    ↓
+Notification Database
+```
+
+### Celery Queue
+
+```text
+notifications
+```
+
+Celery worker was started and notification tasks were verified.
+
+### Status
+
+**Completed**
+
+---
+
+# Task 7 — Real-Time Booking Status
+
+Implemented real-time booking status updates using Django Channels and WebSocket.
+
+### WebSocket Endpoint
+
+```text
+ws://127.0.0.1:8000/ws/booking/<booking_id>/?token=<access_token>
+```
+
+### Flow
+
+```text
+Customer
+    ↑
+WebSocket
+    ↑
+Django Channels
+    ↑
+Booking Status Update
+```
+
+When the booking status changes, the connected WebSocket client receives the update.
+
+### Example Message
+
+```json
+{
+    "success": true,
+    "message": "Booking status updated.",
+    "type": "booking_status_update",
+    "booking_id": "booking-uuid",
+    "status": "confirmed"
+}
+```
+
+### Status
+
+**Completed**
+
+---
+
+# Task 8 — End-to-End Testing
+
+Tested the complete booking workflow.
+
+### Complete Flow
+
+```text
+Booking
+   ↓
+Payment Initiation
+   ↓
+Payment Processing
+   ↓
+Payment Confirmation
+   ↓
+Notification
+   ↓
+Real-Time Status
+   ↓
+Completion
+```
+
+### Acceptance Criteria
+
+* Payment model completed.
+* Mock payment workflow completed.
+* Payment validation implemented.
+* Booking state machine implemented.
+* Invalid state transitions rejected.
+* Notifications generated.
+* Celery processing verified.
+* WebSocket status updates working.
+* Complete workflow tested.
+
+### Status
+
+**Completed**
+
+---
+
+# API Summary
+
+| Module         | Method | Endpoint                                         |
+| -------------- | ------ | ------------------------------------------------ |
+| Services       | GET    | `/api/v1/services/`                              |
+| Services       | POST   | `/api/v1/services/`                              |
+| Bookings       | GET    | `/api/v1/bookings/`                              |
+| Bookings       | POST   | `/api/v1/bookings/`                              |
+| Payment        | POST   | `/api/v1/payments/initiate/`                     |
+| Payment        | POST   | `/api/v1/payments/process/`                      |
+| Payment        | POST   | `/api/v1/payments/webhook/`                      |
+| Booking Status | PATCH  | `/api/v1/bookings/<booking_id>/status/`          |
+| WebSocket      | WS     | `/ws/booking/<booking_id>/?token=<access_token>` |
+
+---
+
+# Testing Tools
+
+The APIs were tested using:
+
+* Postman
+* Django development server
+* Celery Worker
+* Redis
+* WebSocket client
+
+### Django Check
+
+```bash
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+---
+
+# Final Implementation Status
+
+| Task   | Description           | Status    |
+| ------ | --------------------- | --------- |
+| Task 1 | Service Models        | Completed |
+| Task 2 | Payment Initiation    | Completed |
+| Task 3 | Mock Payment Gateway  | Completed |
+| Task 4 | Payment Confirmation  | Completed |
+| Task 5 | Booking State Machine | Completed |
+| Task 6 | Notification System   | Completed |
+| Task 7 | Real-Time Status      | Completed |
+| Task 8 | End-to-End Testing    | Completed |
+
+## Overall Status
+
+**All Tasks 1–8 Completed Successfully.**

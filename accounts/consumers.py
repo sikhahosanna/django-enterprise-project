@@ -334,3 +334,178 @@ class RideConsumer(AsyncWebsocketConsumer):
             return await User.objects.aget(id=user_id)
         except User.DoesNotExist:
             return None
+class BookingConsumer(AsyncWebsocketConsumer):
+
+    async def connect(self):
+        try:
+            self.booking_id = self.scope["url_route"]["kwargs"]["booking_id"]
+
+            self.user = await self.get_user_from_token()
+
+            if not self.user:
+                websocket_logger.warning(
+                    "Booking WebSocket connection denied: user not found"
+                )
+                await self.close(code=4003)
+                return
+
+            self.booking = await self.get_booking(self.booking_id)
+
+            if not self.booking:
+                websocket_logger.warning(
+                    "Booking WebSocket connection denied: booking not found"
+                )
+                await self.close(code=4004)
+                return
+
+            # Only customer or provider can connect
+            if self.user != self.booking.customer and (
+                not self.booking.provider
+                or self.user != self.booking.provider.user
+            ):
+                websocket_logger.warning(
+                    "Booking WebSocket connection denied: unauthorized user"
+                )
+                await self.close(code=4003)
+                return
+
+            self.room_group_name = f"booking_{self.booking_id}"
+
+            await self.channel_layer.group_add(
+                self.room_group_name,
+                self.channel_name,
+            )
+
+            await self.accept()
+
+            await self.send(
+                text_data=json.dumps({
+                    "success": True,
+                    "message": "Booking WebSocket connected",
+                    "booking_id": str(self.booking_id),
+                    "status": self.booking.status,
+                })
+            )
+
+            websocket_logger.info(
+                f"Booking WebSocket connected: booking={self.booking_id}"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Booking WebSocket connection error: {str(e)}"
+            )
+            await self.close(code=4003)
+
+    async def disconnect(self, close_code):
+        try:
+            if hasattr(self, "room_group_name"):
+                await self.channel_layer.group_discard(
+                    self.room_group_name,
+                    self.channel_name,
+                )
+
+            websocket_logger.info(
+                f"Booking WebSocket disconnected: "
+                f"booking={getattr(self, 'booking_id', None)}"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Booking WebSocket disconnect error: {str(e)}"
+            )
+
+    async def receive(self, text_data):
+        try:
+            json.loads(text_data)
+
+            websocket_logger.info(
+                f"Booking WebSocket message received: "
+                f"booking={self.booking_id}"
+            )
+
+        except json.JSONDecodeError:
+            websocket_logger.warning(
+                "Booking WebSocket received invalid JSON"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Booking WebSocket message processing error: {str(e)}"
+            )
+
+    async def booking_status_update(self, event):
+        try:
+            await self.send(
+                text_data=json.dumps({
+                    "success": True,
+                    "message": "Booking status updated.",
+                    "type": "booking_status_update",
+                    "booking_id": str(self.booking_id),
+                    "status": event.get("status"),
+                })
+            )
+
+            websocket_logger.info(
+                f"Booking status update sent: "
+                f"booking={self.booking_id}"
+            )
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Booking status update error: {str(e)}"
+            )
+
+    async def get_booking(self, booking_id):
+        try:
+            from accounts.models import Booking
+
+            return await Booking.objects.select_related(
+                "customer",
+                "provider__user",
+            ).aget(id=booking_id)
+
+        except Booking.DoesNotExist:
+            return None
+
+    async def get_user_from_token(self):
+        try:
+            token = self.scope.get("query_string", b"").decode()
+
+            if not token:
+                websocket_logger.warning(
+                    "Booking WebSocket authentication failed: token missing"
+                )
+                return None
+
+            token_value = token.split("token=")[-1]
+
+            validated_token = UntypedToken(token_value)
+
+            user_id = validated_token.get("user_id")
+
+            if not user_id:
+                websocket_logger.warning(
+                    "Booking WebSocket authentication failed: user ID missing"
+                )
+                return None
+
+            return await self.get_user(user_id)
+
+        except (InvalidToken, TokenError):
+            websocket_logger.warning(
+                "Booking WebSocket authentication failed: invalid token"
+            )
+            return None
+
+        except Exception as e:
+            websocket_logger.error(
+                f"Booking WebSocket token processing error: {str(e)}"
+            )
+            return None
+
+    async def get_user(self, user_id):
+        try:
+            return await User.objects.aget(id=user_id)
+        except User.DoesNotExist:
+            return None

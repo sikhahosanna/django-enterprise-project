@@ -6,8 +6,6 @@ from django.db import models
 
 # USER MANAGER
 
-
-
 class UserManager(BaseUserManager):
 
     def create_user(self, email, password=None, **extra_fields):
@@ -17,7 +15,10 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
 
-        user = self.model(email=email, **extra_fields)
+        user = self.model(
+            email=email,
+            **extra_fields
+        )
 
         user.set_password(password)
         user.save(using=self._db)
@@ -29,18 +30,26 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(
+            email,
+            password,
+            **extra_fields
+        )
 
 
 # USER
 
-
-
 class User(AbstractUser):
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
-    email = models.EmailField(unique=True)
+    email = models.EmailField(
+        unique=True
+    )
 
     username = None
 
@@ -55,23 +64,35 @@ class User(AbstractUser):
 
 # PROFILE
 
-
-
 class Profile(models.Model):
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-
-    first_name = models.CharField(max_length=100)
-
-    last_name = models.CharField(max_length=100)
-
-    phone = models.CharField(max_length=15)
-
-    profile_image = models.ImageField(
-        upload_to="profile_images/", null=True, blank=True
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="profile"
     )
 
-    is_deleted = models.BooleanField(default=False)
+    first_name = models.CharField(
+        max_length=100
+    )
+
+    last_name = models.CharField(
+        max_length=100
+    )
+
+    phone = models.CharField(
+        max_length=15
+    )
+
+    profile_image = models.ImageField(
+        upload_to="profile_images/",
+        null=True,
+        blank=True
+    )
+
+    is_deleted = models.BooleanField(
+        default=False
+    )
 
     class Meta:
         indexes = [
@@ -84,8 +105,6 @@ class Profile(models.Model):
 
 # DRIVER PROFILE
 
-
-
 class DriverProfile(models.Model):
 
     class DriverStatus(models.TextChoices):
@@ -94,21 +113,36 @@ class DriverProfile(models.Model):
         INACTIVE = "inactive", "Inactive"
         SUSPENDED = "suspended", "Suspended"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
     user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="driver_profile"
+        User,
+        on_delete=models.CASCADE,
+        related_name="driver_profile"
     )
 
-    license_number = models.CharField(max_length=50, unique=True)
+    license_number = models.CharField(
+        max_length=50,
+        unique=True
+    )
 
     status = models.CharField(
-        max_length=20, choices=DriverStatus.choices, default=DriverStatus.INACTIVE
+        max_length=20,
+        choices=DriverStatus.choices,
+        default=DriverStatus.INACTIVE
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         indexes = [
@@ -122,8 +156,6 @@ class DriverProfile(models.Model):
 
 # VEHICLE TYPE
 
-
-
 class VehicleType(models.Model):
 
     class Type(models.TextChoices):
@@ -133,17 +165,43 @@ class VehicleType(models.Model):
         CAR = "car", "Car"
         SUV = "suv", "SUV"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
-    name = models.CharField(max_length=20, choices=Type.choices, unique=True)
-    base_fare = models.DecimalField(max_digits=10, decimal_places=2, default=50)
-    cost_per_km = models.DecimalField(max_digits=10, decimal_places=2, default=15)
-    cost_per_minute = models.DecimalField(max_digits=10, decimal_places=2, default=2)
+    name = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        unique=True
+    )
 
+    base_fare = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=50
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    cost_per_km = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=15
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    cost_per_minute = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=2
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         indexes = [
@@ -156,27 +214,42 @@ class VehicleType(models.Model):
 
 # VEHICLE
 
-
-
 class Vehicle(models.Model):
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
     driver = models.ForeignKey(
-        DriverProfile, on_delete=models.CASCADE, related_name="vehicles"
+        DriverProfile,
+        on_delete=models.CASCADE,
+        related_name="vehicles"
     )
 
     vehicle_type = models.ForeignKey(
-        VehicleType, on_delete=models.PROTECT, related_name="vehicles"
+        VehicleType,
+        on_delete=models.PROTECT,
+        related_name="vehicles"
     )
 
-    registration_number = models.CharField(max_length=20, unique=True)
+    registration_number = models.CharField(
+        max_length=20,
+        unique=True
+    )
 
-    model = models.CharField(max_length=100)
+    model = models.CharField(
+        max_length=100
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         indexes = [
@@ -191,8 +264,6 @@ class Vehicle(models.Model):
 
 # RIDE STATUS
 
-
-
 class RideStatus(models.Model):
 
     class Status(models.TextChoices):
@@ -204,13 +275,25 @@ class RideStatus(models.Model):
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
-    name = models.CharField(max_length=30, choices=Status.choices, unique=True)
+    name = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        unique=True
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         indexes = [
@@ -221,22 +304,28 @@ class RideStatus(models.Model):
         return self.name
 
 
-
 # RIDE
-
 
 class Ride(models.Model):
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
-    rider = models.ForeignKey(User, on_delete=models.PROTECT, related_name="rides")
+    rider = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="rides"
+    )
 
     driver = models.ForeignKey(
         DriverProfile,
         on_delete=models.PROTECT,
         related_name="rides",
         null=True,
-        blank=True,
+        blank=True
     )
 
     vehicle_type = models.ForeignKey(
@@ -244,41 +333,63 @@ class Ride(models.Model):
         on_delete=models.PROTECT,
         related_name="rides",
         null=True,
-        blank=True,
+        blank=True
     )
 
     status = models.ForeignKey(
-        RideStatus, on_delete=models.PROTECT, related_name="rides"
+        RideStatus,
+        on_delete=models.PROTECT,
+        related_name="rides"
     )
 
-    pickup_address = models.CharField(max_length=255)
+    pickup_address = models.CharField(
+        max_length=255
+    )
 
-    pickup_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    pickup_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
 
-    pickup_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    pickup_longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
 
-    dropoff_address = models.CharField(max_length=255)
+    dropoff_address = models.CharField(
+        max_length=255
+    )
 
-    dropoff_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    dropoff_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
 
-    dropoff_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    dropoff_longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
 
-    fare = models.DecimalField(max_digits=10, decimal_places=2)
+    fare = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
-
         indexes = [
-            # Frequently searched fields
             models.Index(fields=["rider"]),
             models.Index(fields=["driver"]),
             models.Index(fields=["status"]),
             models.Index(fields=["vehicle_type"]),
             models.Index(fields=["created_at"]),
-            # Frequently combined queries
             models.Index(fields=["rider", "created_at"]),
             models.Index(fields=["driver", "created_at"]),
             models.Index(fields=["status", "created_at"]),
@@ -287,7 +398,8 @@ class Ride(models.Model):
 
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(fare__gte=0), name="ride_fare_non_negative"
+                condition=models.Q(fare__gte=0),
+                name="ride_fare_non_negative"
             ),
         ]
 
@@ -297,30 +409,44 @@ class Ride(models.Model):
 
 # DRIVER LOCATION
 
-
 class DriverLocation(models.Model):
 
     class AvailabilityStatus(models.TextChoices):
+
         ONLINE = "online", "Online"
         OFFLINE = "offline", "Offline"
         BUSY = "busy", "Busy"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    driver = models.OneToOneField(
-        DriverProfile, on_delete=models.CASCADE, related_name="location"
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
     )
 
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    driver = models.OneToOneField(
+        DriverProfile,
+        on_delete=models.CASCADE,
+        related_name="location"
+    )
 
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
 
-    last_updated = models.DateTimeField(auto_now=True)
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6
+    )
+
+    last_updated = models.DateTimeField(
+        auto_now=True
+    )
 
     availability_status = models.CharField(
         max_length=20,
         choices=AvailabilityStatus.choices,
-        default=AvailabilityStatus.OFFLINE,
+        default=AvailabilityStatus.OFFLINE
     )
 
     class Meta:
@@ -332,55 +458,51 @@ class DriverLocation(models.Model):
         return f"{self.driver} - {self.latitude}, {self.longitude}"
 
 
-class Notification(models.Model):
+# SERVICE
 
-    class NotificationType(models.TextChoices):
-        RIDE_REQUESTED = "ride_requested", "Ride Requested"
-        RIDE_ACCEPTED = "ride_accepted", "Ride Accepted"
-        DRIVER_ARRIVING = "driver_arriving", "Driver Arriving"
-        RIDE_STARTED = "ride_started", "Ride Started"
-        RIDE_COMPLETED = "ride_completed", "Ride Completed"
-        RIDE_CANCELLED = "ride_cancelled", "Ride Cancelled"
+class Service(models.Model):
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="notifications"
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
     )
 
-    title = models.CharField(max_length=255, default="Notification")
-
-    ride = models.ForeignKey(
-        Ride, on_delete=models.CASCADE, related_name="notifications"
+    name = models.CharField(
+        max_length=255
     )
 
-    notification_type = models.CharField(
-        max_length=30, choices=NotificationType.choices
+    description = models.TextField(
+        blank=True,
+        null=True
     )
 
-    message = models.CharField(max_length=255)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
 
-    is_read = models.BooleanField(default=False)
+    duration = models.PositiveIntegerField(
+        help_text="Duration in minutes"
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(
+        default=True
+    )
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["user", "created_at"]),
-            models.Index(fields=["user", "is_read"]),
-        ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "ride", "notification_type"],
-                name="unique_ride_notification",
-            ),
-        ]
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     def __str__(self):
-        return f"{self.user.email} - {self.notification_type}"
+        return self.name
+
 
 # CATEGORY
-
 
 class Category(models.Model):
 
@@ -400,6 +522,10 @@ class Category(models.Model):
         null=True
     )
 
+    is_active = models.BooleanField(
+        default=True
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )
@@ -413,7 +539,6 @@ class Category(models.Model):
 
 
 # PROVIDER
-
 
 class Provider(models.Model):
 
@@ -430,17 +555,11 @@ class Provider(models.Model):
     )
 
     name = models.CharField(
-        max_length=150
+        max_length=255
     )
 
-    description = models.TextField(
-        blank=True,
-        null=True
-    )
-
-    status = models.CharField(
-        max_length=20,
-        default="active"
+    is_active = models.BooleanField(
+        default=True
     )
 
     created_at = models.DateTimeField(
@@ -457,7 +576,6 @@ class Provider(models.Model):
 
 # PROVIDER PROFILE
 
-
 class ProviderProfile(models.Model):
 
     id = models.UUIDField(
@@ -473,72 +591,18 @@ class ProviderProfile(models.Model):
     )
 
     phone = models.CharField(
-        max_length=15,
-        blank=True
+        max_length=15
     )
 
     address = models.TextField(
-        blank=True
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
-
-    def __str__(self):
-        return f"{self.provider.name} Profile"
-
-
-# SERVICE
-
-
-class Service(models.Model):
-
-    class ServiceStatus(models.TextChoices):
-
-        ACTIVE = "active", "Active"
-        INACTIVE = "inactive", "Inactive"
-
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
-
-    name = models.CharField(
-        max_length=150
-    )
-
-    description = models.TextField(
         blank=True,
         null=True
     )
 
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=ServiceStatus.choices,
-        default=ServiceStatus.ACTIVE
-    )
-
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,
-        related_name="services"
-    )
-
-    provider = models.ForeignKey(
-        Provider,
-        on_delete=models.PROTECT,
-        related_name="services"
+    profile_image = models.ImageField(
+        upload_to="provider_profiles/",
+        null=True,
+        blank=True
     )
 
     created_at = models.DateTimeField(
@@ -549,25 +613,22 @@ class Service(models.Model):
         auto_now=True
     )
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["name"]),
-            models.Index(fields=["status"]),
-            models.Index(fields=["category"]),
-            models.Index(fields=["provider"]),
-            models.Index(fields=["status", "category"]),
-        ]
-
     def __str__(self):
-        return self.name
+        return str(self.provider)
+
+
+# BOOKING
+
 class Booking(models.Model):
 
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("confirmed", "Confirmed"),
-        ("completed", "Completed"),
-        ("cancelled", "Cancelled"),
-    ]
+    class BookingStatus(models.TextChoices):
+
+        PENDING = "pending", "Pending"
+        CONFIRMED = "confirmed", "Confirmed"
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+        PAYMENT_FAILED = "payment_failed", "Payment Failed"
 
     id = models.UUIDField(
         primary_key=True,
@@ -604,13 +665,177 @@ class Booking(models.Model):
 
     status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
-        default="pending"
+        choices=BookingStatus.choices,
+        default=BookingStatus.PENDING
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
 
     def __str__(self):
-        return f"{self.customer.email} - {self.service.name}"
+        return str(self.id)
+
+
+# PAYMENT
+
+class Payment(models.Model):
+
+    class PaymentStatus(models.TextChoices):
+
+        PENDING = "pending", "Pending"
+        SUCCESS = "success", "Success"
+        FAILED = "failed", "Failed"
+        REFUNDED = "refunded", "Refunded"
+
+    class PaymentMethod(models.TextChoices):
+
+        UPI = "upi", "UPI"
+        CARD = "card", "Card"
+        NET_BANKING = "net_banking", "Net Banking"
+        CASH = "cash", "Cash"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.PROTECT,
+        related_name="payments"
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    transaction_id = models.CharField(
+        max_length=255,
+        unique=True
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING
+    )
+
+    payment_method = models.CharField(
+        max_length=30,
+        choices=PaymentMethod.choices
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+
+# NOTIFICATION
+
+class Notification(models.Model):
+
+    class NotificationType(models.TextChoices):
+
+        RIDE_REQUESTED = "ride_requested", "Ride Requested"
+        RIDE_ACCEPTED = "ride_accepted", "Ride Accepted"
+        DRIVER_ARRIVING = "driver_arriving", "Driver Arriving"
+        RIDE_STARTED = "ride_started", "Ride Started"
+        RIDE_COMPLETED = "ride_completed", "Ride Completed"
+        RIDE_CANCELLED = "ride_cancelled", "Ride Cancelled"
+
+        BOOKING_CREATED = "booking_created", "Booking Created"
+        PAYMENT_SUCCESSFUL = "payment_successful", "Payment Successful"
+        BOOKING_CONFIRMED = "booking_confirmed", "Booking Confirmed"
+        PROVIDER_STARTED = "provider_started", "Provider Started Service"
+        BOOKING_COMPLETED = "booking_completed", "Booking Completed"
+        BOOKING_CANCELLED = "booking_cancelled", "Booking Cancelled"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    title = models.CharField(
+        max_length=255,
+        default="Notification"
+    )
+
+    ride = models.ForeignKey(
+        Ride,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True
+    )
+
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=NotificationType.choices
+    )
+
+    message = models.CharField(
+        max_length=255
+    )
+
+    is_read = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        indexes = [
+            models.Index(
+                fields=["user", "created_at"]
+            ),
+            models.Index(
+                fields=["user", "is_read"]
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "user",
+                    "ride",
+                    "notification_type"
+                ],
+                name="unique_ride_notification"
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "user",
+                    "booking",
+                    "notification_type"
+                ],
+                name="unique_booking_notification"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.notification_type}"

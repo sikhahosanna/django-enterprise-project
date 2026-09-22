@@ -490,3 +490,75 @@ def process_background_records():
             exc_info=True,
         )
         raise
+# Booking notifications
+
+@shared_task(queue="notifications")
+def booking_created_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.BOOKING_CREATED,
+        defaults={
+            "message": "Your booking has been created successfully.",
+        },
+    )
+
+
+@shared_task(queue="notifications")
+def payment_successful_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.PAYMENT_SUCCESSFUL,
+        defaults={
+            "message": "Your payment was successful.",
+        },
+    )
+
+
+@shared_task(queue="notifications")
+def booking_confirmed_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.BOOKING_CONFIRMED,
+        defaults={
+            "message": "Your booking has been confirmed.",
+        },
+    )
+
+
+@shared_task(queue="notifications")
+def provider_started_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.PROVIDER_STARTED,
+        defaults={
+            "message": "The provider has started the service.",
+        },
+    )
+
+
+@shared_task(queue="notifications")
+def booking_completed_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.BOOKING_COMPLETED,
+        defaults={
+            "message": "Your booking has been completed.",
+        },
+    )
+
+
+@shared_task(queue="notifications")
+def booking_cancelled_notification(booking_id, user_id):
+    Notification.objects.get_or_create(
+        user_id=user_id,
+        booking_id=booking_id,
+        notification_type=Notification.NotificationType.BOOKING_CANCELLED,
+        defaults={
+            "message": "Your booking has been cancelled.",
+        },
+    )
