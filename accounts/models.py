@@ -839,3 +839,29 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.notification_type}"
+# SERVICE IMAGE
+
+class ServiceImage(models.Model):
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name="images"
+    )
+
+    image = models.ImageField(
+        upload_to="service_images/"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return f"{self.service.name} - {self.id}"

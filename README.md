@@ -13871,3 +13871,481 @@ System check identified no issues (0 silenced).
 ## Overall Status
 
 **All Tasks 1–8 Completed Successfully.**
+
+24/9/26
+
+# Mobile API Consumption
+
+## Objective
+
+Understand how a Flutter or React Native mobile application communicates with the Django REST API backend.
+
+## Architecture
+
+```text
+Mobile Application
+(Flutter / React Native)
+          ↓
+        HTTPS
+          ↓
+    Django REST API
+          ↓
+   JWT Authentication
+          ↓
+   Protected API Endpoints
+          ↓
+      PostgreSQL
+```
+
+## API Communication Flow
+
+1. The mobile application sends an HTTP/HTTPS request to the Django REST API.
+2. The user logs in using the Login API with email and password.
+3. Django validates the user credentials.
+4. Django generates an Access Token and Refresh Token using JWT.
+5. The mobile application stores the tokens securely.
+6. The Access Token is sent with protected API requests.
+7. Django validates the JWT token before processing the request.
+8. Django returns the API response in JSON format.
+9. The mobile application displays the response to the user.
+
+## Login API
+
+**Endpoint:**
+
+```text
+POST /api/v1/login/
+```
+
+**Request:**
+
+```json
+{
+    "email": "customer@test.com",
+    "password": "password123"
+}
+```
+
+**Response:**
+
+```json
+{
+    "access": "jwt-access-token",
+    "refresh": "jwt-refresh-token"
+}
+```
+
+## Authenticated API Request
+
+After login, the mobile application sends the Access Token in the Authorization header.
+
+```http
+GET /api/v1/bookings/
+Authorization: Bearer <access_token>
+```
+
+Django verifies the token and returns the requested data.
+
+## JWT Token Flow
+
+```text
+User Login
+    ↓
+Django Authentication
+    ↓
+Access Token + Refresh Token
+    ↓
+Mobile App Stores Token
+    ↓
+Access Token Sent with API Request
+    ↓
+Django Validates Token
+    ↓
+API Response
+```
+
+## HTTP Methods Used
+
+| Method    | Purpose       |
+| --------- | ------------- |
+| GET       | Retrieve data |
+| POST      | Create data   |
+| PUT/PATCH | Update data   |
+| DELETE    | Delete data   |
+
+## API Response Format
+
+The Django backend returns data mainly in JSON format so that Flutter or React Native can easily process and display it.
+
+## Security
+
+* HTTPS is used for secure communication.
+* JWT is used for authentication.
+* Protected APIs require a valid Access Token.
+* Invalid or expired tokens are rejected by the backend.
+
+## Conclusion
+
+The backend is designed to support mobile application integration through REST APIs. Flutter or React Native can communicate with Django using HTTPS, JWT authentication, JSON requests, and JSON responses.
+
+# Mobile Application Backend
+
+## Project Overview
+
+This project is a **Django REST Framework based backend** for a mobile service-booking application.
+
+The backend provides APIs for authentication, services, bookings, payments, notifications, image uploads, and automated testing.
+
+---
+
+# Task 2 — Service Listing, Search & Booking APIs
+
+## What is Service Listing?
+
+**Service Listing** means displaying all available services to the customer.
+
+Example:
+
+```text
+Home Cleaning
+Plumbing
+Electrician
+AC Repair
+```
+
+## What is Service Search?
+
+**Service Search** allows customers to find a service based on their requirement.
+
+Example:
+
+```text
+Search: Cleaning
+Result: Home Cleaning
+```
+
+## What is Booking?
+
+**Booking** means a customer selects a service and requests that service for a particular date and time.
+
+### Completed
+
+* Service Listing API
+* Service Search API
+* Booking API
+* Customer authentication
+* Booking validation
+* Service price calculation
+* Customer-Service relationship
+* Postman API testing
+
+### APIs
+
+```text
+GET  /api/v1/services/
+POST /api/v1/bookings/
+GET  /api/v1/bookings/
+```
+
+---
+
+# Task 3 — Profile Image Upload
+
+## What is Profile Image Upload?
+
+**Profile Image Upload** allows a logged-in user to upload or update their profile picture.
+
+### API
+
+```text
+POST /api/v1/profile/image/
+```
+
+### Validations
+
+* File type
+* File size
+* Filename
+* Missing file
+* Invalid image
+
+### Supported Formats
+
+```text
+JPG
+JPEG
+PNG
+```
+
+### Maximum Size
+
+```text
+5 MB
+```
+
+---
+
+# Task 4 — Service Image Upload
+
+## What is Service Image Upload?
+
+**Service Image Upload** allows a service provider to upload images related to a service.
+
+Example:
+
+A **Home Cleaning** service can have images showing the cleaning service.
+
+### APIs
+
+```text
+POST   /api/v1/services/{id}/images/
+GET    /api/v1/services/{id}/images/
+DELETE /api/v1/services/{id}/images/{image_id}/
+```
+
+### Completed
+
+* Upload service image
+* View service images
+* Delete service image
+* Validate file type
+* Validate file size
+* Validate filename
+* Validate service
+* Validate image
+
+### Supported Formats
+
+```text
+JPG
+JPEG
+PNG
+```
+
+### Maximum Size
+
+```text
+5 MB
+```
+
+---
+
+# Task 5 — API Error Standards
+
+## What is API Error Standardization?
+
+**API Error Standardization** means returning errors in the same format across all APIs.
+
+Instead of every API returning a different error format, all APIs follow one standard structure.
+
+### Standard Error Response
+
+```json
+{
+    "success": false,
+    "message": "Error message",
+    "error_code": "ERROR_CODE",
+    "data": null
+}
+```
+
+### Example
+
+```json
+{
+    "success": false,
+    "message": "Service not found.",
+    "error_code": "SERVICE_NOT_FOUND",
+    "data": null
+}
+```
+
+### Completed
+
+* Standard error messages
+* Standard error codes
+* Standard HTTP status codes
+* Predictable error responses
+
+---
+
+# Task 6 — Mobile-Friendly API Responses
+
+## What is a Mobile-Friendly API Response?
+
+A **mobile-friendly API response** is a simple and consistent response that is easy for Android/iOS applications to consume.
+
+It should contain only the required information and follow a predictable structure.
+
+### Standard Success Response
+
+```json
+{
+    "success": true,
+    "message": "Success message",
+    "error_code": null,
+    "data": {}
+}
+```
+
+### Completed
+
+* Removed unnecessary fields
+* Standardized field names
+* Standardized status codes
+* Standardized pagination
+* Standardized error responses
+* Reviewed serializers
+* Standardized payment and booking responses
+
+### Pagination
+
+**Pagination** means dividing a large list of records into smaller pages.
+
+```text
+Default page size: 10
+Maximum page size: 50
+```
+
+Example:
+
+```text
+/api/v1/services/?page=1
+/api/v1/services/?page=2
+```
+
+---
+
+# Task 7 — API Validation & Response Review
+
+## What is API Validation?
+
+**API Validation** checks whether the data sent by the client is correct before processing it.
+
+Example:
+
+```text
+Invalid email
+Missing required field
+Invalid image
+Invalid booking status
+```
+
+## What is Response Review?
+
+**Response Review** means checking whether APIs return the correct data, fields, messages, and HTTP status codes.
+
+### Completed
+
+* Reviewed Authentication APIs
+* Reviewed Profile APIs
+* Reviewed Service APIs
+* Checked serializers
+* Checked validations
+* Reviewed API responses
+* Fixed API configuration issues
+* Verified Django system checks
+
+### Verification Command
+
+```powershell
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues.
+```
+
+---
+
+# Task 8 — Automated Integration Testing
+
+## What is Automated Integration Testing?
+
+**Automated Integration Testing** means automatically testing multiple parts of the application together to verify that the complete user flow works correctly.
+
+Instead of manually testing every API, automated tests execute predefined test cases.
+
+### Tested Journeys
+
+#### Customer Journey
+
+Tests the customer flow such as:
+
+```text
+Login
+→ View Services
+→ Create Booking
+→ Payment
+```
+
+#### Provider Journey
+
+Tests provider-related operations such as:
+
+```text
+Provider Login
+→ View Services/Bookings
+→ Update Booking
+```
+
+#### Admin Journey
+
+Tests administrative operations and access permissions.
+
+#### Payment Journey
+
+Tests payment-related operations such as:
+
+```text
+Payment Initiation
+→ Payment Processing
+→ Payment Status
+```
+
+#### Notification Journey
+
+Tests notification creation and retrieval.
+
+### Test Command
+
+```powershell
+python manage.py test
+```
+
+### Test Result
+
+```text
+Found 51 test(s).
+Ran 9 tests in 22.606s
+
+OK
+```
+
+### Result
+
+* No test failures
+* No test errors
+* Django system check passed
+* Test database created successfully
+* Test database destroyed successfully
+
+---
+
+# Task Status
+
+| Task                                            | Status    |
+| ----------------------------------------------- | --------- |
+| Task 2 — Service Listing, Search & Booking APIs | Completed |
+| Task 3 — Profile Image Upload                   | Completed |
+| Task 4 — Service Image Upload                   | Completed |
+| Task 5 — API Error Standards                    | Completed |
+| Task 6 — Mobile-Friendly API Responses          | Completed |
+| Task 7 — API Validation & Response Review       | Completed |
+| Task 8 — Automated Integration Testing          | Completed |
+
+## Final Status
+
+**Task 2 to Task 8 completed successfully.**

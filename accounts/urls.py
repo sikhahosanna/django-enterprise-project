@@ -1,22 +1,21 @@
-
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-
-
-
 from .views import (
     # AUTH
     MockPaymentView,
+    ProfileImageUploadView,
     RegisterView,
     LoginView,
     ChangePasswordView,
     LogoutView,
+
     # PROFILE
     ProfileView,
     ProfileListView,
     DeleteProfileView,
     RestoreProfileView,
+
     # DRIVER
     DriverListCreateView,
     DriverDetailView,
@@ -26,12 +25,14 @@ from .views import (
     DriverAvailabilityView,
     RideStatusListView,
     RideViewSet,
+    ServiceImageView,
     ServiceViewSet,
 
     # VEHICLE
     VehicleListCreateView,
     VehicleDetailView,
     VehicleTypeListView,
+
     # RIDES
     RideListCreateView,
     RideDetailView,
@@ -39,12 +40,14 @@ from .views import (
     RideAcceptView,
     RideCancelView,
     RideFareView,
+
     # RIDE HISTORY
     UserActiveRidesView,
     UserCompletedRidesView,
     UserCancelledRidesView,
     DailyRideCountView,
     TotalCompletedRidesView,
+
     # DATABASE OPTIMIZATION
     OptimizedRideHistoryView,
     SlowRideHistoryView,
@@ -53,13 +56,18 @@ from .views import (
     NotificationListView,
     NotificationMarkReadView,
     NotificationMarkAllReadView,
+
+    # BOOKING / PAYMENT
     BookingViewSet,
     PaymentInitiateView,
-    MockPaymentView,
     PaymentWebhookView,
     BookingStatusUpdateView,
 
+    # SERVICE IMAGE
+    ServiceImageDeleteView,
 )
+
+
 router = DefaultRouter()
 
 router.register(
@@ -270,6 +278,22 @@ path(
     "bookings/<uuid:booking_id>/status/",
     BookingStatusUpdateView.as_view(),
     name="booking-status-update",
+),
+path(
+    "profile/image/",
+    ProfileImageUploadView.as_view(),
+    name="profile-image-upload"
+),
+path(
+    "services/<uuid:service_id>/images/",
+    ServiceImageView.as_view(),
+    name="service-images",
+),
+
+path(
+    "services/<uuid:service_id>/images/<uuid:image_id>/",
+    ServiceImageDeleteView.as_view(),
+    name="service-image-delete",
 ),
 ]
 urlpatterns += router.urls
