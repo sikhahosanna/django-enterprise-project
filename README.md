@@ -14349,6 +14349,650 @@ OK
 ## Final Status
 
 **Task 2 to Task 8 completed successfully.**
+25/8/27
+
+## Task 1 — Receive Final Requirement
+
+### Definition
+
+**Requirement Analysis** means understanding what the system should do, who will use it, and what functionalities are required before starting development.
+
+### Final Requirement
+
+The system should allow a customer to register through the mobile application, search available services, select a provider, book a service, complete a mock payment, receive notifications, track booking status in real time, and view booking history.
+
+The provider should be able to manage services and update booking status.
+
+The admin should be able to monitor the complete system.
+
+### User Roles
+
+#### 1. Customer
+
+The customer should be able to:
+
+* Register and login.
+* Search available services.
+* Select a service provider.
+* Book a service.
+* Make a mock payment.
+* Receive booking and payment notifications.
+* Track booking status in real time.
+* View booking history.
+
+#### 2. Service Provider
+
+The provider should be able to:
+
+* Login to the system.
+* Manage services.
+* View customer bookings.
+* Accept or update bookings.
+* Update booking status.
+* Receive relevant notifications.
+
+#### 3. Admin
+
+The admin should be able to:
+
+* Monitor customers.
+* Monitor service providers.
+* Monitor services.
+* Monitor bookings.
+* Monitor payments.
+* Monitor notifications.
+* Monitor overall system activity.
+
+### Main Modules
+
+Based on the requirement, the following modules are required:
+
+```text
+Authentication
+     ↓
+Customer Profile
+     ↓
+Service Management
+     ↓
+Provider Management
+     ↓
+Service Search
+     ↓
+Booking
+     ↓
+Mock Payment
+     ↓
+Notifications
+     ↓
+Real-time Booking Tracking
+     ↓
+Booking History
+     ↓
+Admin Monitoring
+```
+
+### Complete User Flow
+
+```text
+Customer Registration
+        ↓
+Customer Login
+        ↓
+Search Services
+        ↓
+Select Service / Provider
+        ↓
+Create Booking
+        ↓
+Mock Payment
+        ↓
+Payment Success
+        ↓
+Booking Confirmation
+        ↓
+Provider Updates Booking
+        ↓
+Real-time Status Update
+        ↓
+Customer Receives Notification
+        ↓
+Booking Completed
+        ↓
+Customer Views Booking History
+```
+
+### Requirement Understanding
+
+The requirement was reviewed and converted into:
+
+* User roles
+* Functional modules
+* Customer flow
+* Provider flow
+* Admin monitoring requirements
+* Booking lifecycle
+* Payment flow
+* Notification flow
+* Real-time communication requirement
+
+### Task 1 Status
+
+**Final requirement received, analyzed, and documented.** ✅
+## Task 2 — Design Before Coding
+
+### Definition
+
+**Design Before Coding** means defining the database structure, APIs, user permissions, booking flow, and system architecture before starting implementation.
+
+The purpose is to make the application structure clear and reduce changes during development.
+
+---
+
+## 1. ER Diagram
+
+### Definition
+
+**ER Diagram (Entity Relationship Diagram)** shows the main database entities and the relationships between them.
+
+### Main Entities
+
+```text
+User
+ │
+ ├── Profile
+ │
+ └── Provider
+       │
+       └── ProviderProfile
+
+Service
+ │
+ └── ServiceImage
+
+Category
+
+Booking
+ ├── Customer → User
+ ├── Provider → Provider
+ └── Service → Service
+       │
+       └── Payment
+
+Notification
+ ├── User
+ └── Booking
+```
+
+### Main Relationships
+
+```text
+User 1 ─── 1 Profile
+
+User 1 ─── 1 Provider
+
+Provider 1 ─── 1 ProviderProfile
+
+Service 1 ─── * ServiceImage
+
+User 1 ─── * Booking
+
+Provider 1 ─── * Booking
+
+Service 1 ─── * Booking
+
+Booking 1 ─── * Payment
+
+User 1 ─── * Notification
+
+Booking 1 ─── * Notification
+```
+
+---
+
+## 2. API Specification
+
+### Definition
+
+**API Specification** defines the API endpoints, HTTP methods, request data, response data, authentication, and expected errors.
+
+### Authentication APIs
+
+```text
+POST /api/v1/auth/register/
+POST /api/v1/auth/login/
+POST /api/v1/auth/token/refresh/
+POST /api/v1/auth/logout/
+```
+
+### Service APIs
+
+```text
+GET    /api/v1/services/
+POST   /api/v1/services/
+GET    /api/v1/services/<id>/
+PATCH  /api/v1/services/<id>/
+DELETE /api/v1/services/<id>/
+```
+
+### Booking APIs
+
+```text
+GET   /api/v1/bookings/
+POST  /api/v1/bookings/
+GET   /api/v1/bookings/<id>/
+PATCH /api/v1/bookings/<id>/status/
+```
+
+### Payment API
+
+```text
+POST /api/v1/payments/initiate/
+```
+
+### Notification APIs
+
+```text
+GET   /api/v1/notifications/
+PATCH /api/v1/notifications/<id>/read/
+```
+
+### API Authentication
+
+Protected APIs use:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+---
+
+## 3. Role / Permission Matrix
+
+### Definition
+
+**Role/Permission Matrix** defines which actions each user role is allowed to perform.
+
+| Functionality         | Customer | Provider | Admin |
+| --------------------- | -------- | -------- | ----- |
+| Register/Login        | Yes      | Yes      | Yes   |
+| View Services         | Yes      | Yes      | Yes   |
+| Search Services       | Yes      | Yes      | Yes   |
+| Manage Services       | No       | Yes      | Yes   |
+| Create Booking        | Yes      | No       | Yes   |
+| View Own Bookings     | Yes      | Yes      | Yes   |
+| Update Booking Status | No       | Yes      | Yes   |
+| Make Payment          | Yes      | No       | Yes   |
+| View Notifications    | Yes      | Yes      | Yes   |
+| View Booking History  | Yes      | Yes      | Yes   |
+| Monitor System        | No       | No       | Yes   |
+
+---
+
+## 4. Booking State Diagram
+
+### Definition
+
+**Booking State Diagram** shows how a booking moves from one status to another based on business rules.
+
+### Booking Lifecycle
+
+```text
+                 ┌──────────────┐
+                 │    PENDING   │
+                 └──────┬───────┘
+                        │
+                   Payment Success
+                        ↓
+                 ┌──────────────┐
+                 │   CONFIRMED  │
+                 └──────┬───────┘
+                        │
+                 Provider Starts
+                        ↓
+                 ┌──────────────┐
+                 │ IN_PROGRESS  │
+                 └──────┬───────┘
+                        │
+                    Service Done
+                        ↓
+                 ┌──────────────┐
+                 │  COMPLETED   │
+                 └──────────────┘
+```
+
+Cancellation flow:
+
+```text
+PENDING ──────→ CANCELLED
+
+CONFIRMED ────→ CANCELLED
+
+IN_PROGRESS ──→ CANCELLED
+```
+
+Payment failure:
+
+```text
+PENDING
+   ↓
+Payment Failed
+   ↓
+PAYMENT_FAILED
+```
+
+---
+
+## 5. System Architecture
+
+### Definition
+
+**System Architecture** describes how different components of the application communicate and work together.
+
+### Architecture Flow
+
+```text
+                 Mobile Application
+                         ↓
+                    API Gateway
+                         ↓
+                Django REST Framework
+                         ↓
+          ┌──────────────┴──────────────┐
+          ↓                             ↓
+   Authentication                 Permissions
+          ↓
+     Service Layer
+          ↓
+       Django ORM
+          ↓
+      PostgreSQL
+```
+
+### Supporting Components
+
+```text
+Mobile Application
+        │
+        ├── REST API
+        │      ↓
+        │   Django
+        │
+        └── WebSocket
+               ↓
+        Django Channels
+               ↓
+       Real-time Booking Status
+
+
+Django
+   ↓
+Celery
+   ↓
+Redis
+   ↓
+Background Tasks
+```
+
+### Component Responsibilities
+
+* **Mobile Application:** Customer/provider interface.
+* **Django REST Framework:** Handles REST API requests.
+* **Authentication:** Verifies user identity using JWT.
+* **Permissions:** Controls access based on user roles.
+* **Service Layer:** Handles business logic.
+* **Django ORM:** Communicates with PostgreSQL.
+* **PostgreSQL:** Stores application data.
+* **Django Channels:** Handles real-time communication.
+* **Celery:** Executes background tasks.
+* **Redis:** Used for caching and Celery message handling.
+
+---
+
+## Design Completion
+
+Before starting implementation, the following designs were prepared:
+
+* ✅ ER Diagram
+* ✅ API Specification
+* ✅ Role/Permission Matrix
+* ✅ Booking State Diagram
+* ✅ System Architecture
+
+**No coding should start until these designs are reviewed and finalized.**
+# Task 3 — Implement Customer Flow
+
+## Objective
+
+Implement and verify the complete customer service-booking flow from registration to booking completion and booking history.
+
+## Customer Flow
+
+**Register → Login → Profile → Search Services → View Service → Create Booking → Mock Payment → Confirmation → Notification → Real-Time Status → Completion → Booking History**
+
+## Implementation
+
+* Customer registration and login were verified.
+* Customer profile flow was verified.
+* Services can be searched and viewed.
+* Customer can create a booking for a selected service/provider.
+* Mock payment flow was implemented and tested.
+* Booking confirmation and notification flow were verified.
+* Booking status updates can be tracked in real time.
+* Completed bookings are available in booking history.
+
+## Result
+
+The complete customer booking flow was implemented and verified from registration through booking completion and history.
+
+## Definition
+
+**Customer Flow:** The complete sequence of actions performed by a customer to book and track a service.
+# Task 4 — Implement Provider Flow
+
+## Objective
+
+Implement and verify the complete provider flow for managing services and processing customer bookings.
+
+## Provider Flow
+
+**Provider Login → Create Service → Upload Image → Receive Booking → Accept Booking → Start Service → Complete Service**
+
+## Implementation
+
+* Provider login was verified.
+* Provider can create and manage services.
+* Service image upload was verified.
+* Provider can receive and view customer bookings.
+* Provider can accept a booking by updating the booking status to `confirmed`.
+* Provider can start the service by updating the status to `in_progress`.
+* Provider can complete the service by updating the status to `completed`.
+* Booking status changes are reflected to the customer through notifications and real-time updates.
+
+## Result
+
+The complete provider service and booking flow was implemented and verified from provider login to service completion.
+
+## Definition
+
+**Provider Flow:** The sequence of actions performed by a service provider to manage services and process customer bookings.
+# Task 5 — Implement Admin Flow
+
+## Objective
+
+Implement and verify the admin flow with proper permissions to monitor the complete system.
+
+## Admin Flow
+
+**Admin Login → View Users → View Providers → View Services → View Bookings → View Payments → View Notifications**
+
+## Implementation
+
+* Admin authentication was verified.
+* Admin can view registered users.
+* Admin can view service providers.
+* Admin can view available services.
+* Admin can view customer bookings.
+* Admin can view payment records.
+* Admin can view notifications.
+* Proper role-based permissions were applied to restrict admin-only access.
+
+## Permission Validation
+
+* **Admin:** Full access to admin monitoring APIs.
+* **Customer:** Admin-only APIs are restricted.
+* **Provider:** Admin-only APIs are restricted.
+
+## Testing
+
+Admin APIs were tested using the admin access token and permission restrictions were verified for non-admin users.
+
+## Result
+
+The admin flow was implemented and verified with proper role-based access control for monitoring users, providers, services, bookings, payments, and notifications.
+
+## Definition
+
+**Admin Flow:** The process through which an administrator monitors and manages system-level data with appropriate permissions.
+# Task 6 — Security Verification
+
+## Objective
+
+Verify that protected APIs are accessible only to authorized users and that unauthorized requests are rejected.
+
+## Security Tests
+
+* Customer access to Provider APIs was tested and restricted.
+* Provider access to Admin APIs was tested and restricted.
+* User A access to User B's booking was tested and restricted.
+* Unauthenticated access to protected APIs was tested and rejected.
+* Role-based permissions and authentication were verified.
+
+## Expected Security Behavior
+
+* Unauthorized users receive appropriate `401` or `403` responses.
+* Users can access only the resources permitted for their role.
+* Protected APIs require valid authentication.
+
+## Result
+
+Security and role-based access controls were verified to ensure that unauthorized requests are rejected.
+
+## Definition
+
+**Security Verification:** Testing authentication, authorization, and access controls to ensure protected resources cannot be accessed by unauthorized u# Task 7 — Performance Verification
+
+## Objective
+
+Verify API performance and identify opportunities to improve database queries, pagination, search, caching, and response time.
+
+## Performance Checks
+
+* Database query usage was reviewed for unnecessary or repeated queries.
+* Pagination was verified for list APIs.
+* Search API performance was reviewed.
+* Redis/cache configuration and usage were reviewed.
+* API response times were measured during testing.
+* A slow API was identified and optimized.
+
+## Optimization
+
+The identified API was optimized by reducing unnecessary database operations and improving data retrieval efficiency.
+
+## Verification
+
+The API was tested before and after optimization to compare performance and verify the improvement.
+
+## Result
+
+API performance was reviewed and at least one API was optimized and re-tested. The improvement was documented based on the measured test results.
+
+## Definition
+
+**Performance Verification:** Testing and improving an application's response time, database efficiency, query usage, pagination, search, and caching behavior.
+sers.
+# Task 8 — Final Presentation
+
+## Objective
+
+Present the complete backend architecture, application flow, supporting services, security, and overall system design.
+
+## System Architecture
+
+```text
+Mobile App
+     ↓
+REST API
+     ↓
+Django REST Framework
+     ↓
+Service Layer
+     ↓
+PostgreSQL
+
+WebSocket → Real-Time Updates
+Celery    → Background Tasks
+Redis     → Cache / Queue
+```
+
+## Architecture Components
+
+### Mobile Application
+
+The mobile application acts as the client and communicates with the backend through REST APIs.
+
+### REST API
+
+Provides endpoints for authentication, services, bookings, payments, notifications, and other application operations.
+
+### Django REST Framework
+
+Handles API requests, authentication, permissions, validation, serializers, and responses.
+
+### Service Layer
+
+Contains reusable business logic and keeps complex operations separate from API views.
+
+### PostgreSQL
+
+Stores application data such as users, providers, services, bookings, payments, and notifications.
+
+### WebSocket
+
+Provides real-time updates for booking and service status changes.
+
+### Celery
+
+Handles background and asynchronous tasks.
+
+### Redis
+
+Used for caching and as a message broker/queue for background tasks.
+
+## Presentation Coverage
+
+The final presentation covers:
+
+* System Architecture
+* Application Architecture
+* Database Architecture
+* Customer Flow
+* Provider Flow
+* Admin Flow
+* Authentication and Security
+* Booking and Payment Flow
+* Real-Time Updates
+* Celery and Redis
+* Performance Verification
+
+## Result
+
+The complete backend architecture and application workflow were reviewed and prepared for final presentation.
+
+## Definition
+
+**Final Presentation:** A structured explanation of the complete system architecture, workflows, technologies, security, and implementation completed during the project.
+
+
 28/9/26
 
 ## Task 1 — Clone & Run the Project
