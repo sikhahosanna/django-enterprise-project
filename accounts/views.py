@@ -15,7 +15,7 @@ from .models import Booking
 from accounts.services.notification_service import NotificationService
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from rest_framework import generics, status, filters, viewsets, serializers
+
 
 
 from rest_framework import generics, status, filters, viewsets
@@ -28,13 +28,11 @@ from .filters import ServiceFilter
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 
-from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
-from .utils.helpers import calculate_distance_km
+
 from rest_framework.permissions import AllowAny
 
 from .services.notification_service import NotificationService

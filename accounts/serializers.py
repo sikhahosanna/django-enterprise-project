@@ -8,6 +8,7 @@ from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from django.db import transaction
+from .services.ride import RideService
 
 from .models import (
     User,
@@ -632,69 +633,36 @@ class RideCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
+   # Create ride
+def create(self, validated_data):
+    request = self.context["request"]
 
-        request = self.context["request"]
-
-        validated_data.pop("rider", None)
-
-        try:
-            requested_status = RideStatus.objects.get(
-                name=RideStatus.Status.REQUESTED
-            )
-
-        except RideStatus.DoesNotExist:
-            raise serializers.ValidationError(
-                {
-                    "status":
-                    "Requested ride status is not configured."
-                }
-            )
-
-        try:
-            fare_details = FareService.calculate_fare(
-                vehicle_type=validated_data[
-                    "vehicle_type"
-                ],
-                pickup_latitude=validated_data[
-                    "pickup_latitude"
-                ],
-                pickup_longitude=validated_data[
-                    "pickup_longitude"
-                ],
-                dropoff_latitude=validated_data[
-                    "dropoff_latitude"
-                ],
-                dropoff_longitude=validated_data[
-                    "dropoff_longitude"
-                ],
-                duration_minutes=0,
-            )
-
-        except ValueError as exc:
-            raise serializers.ValidationError(
-                {"fare": str(exc)}
-            )
-
-        except KeyError as exc:
-            raise serializers.ValidationError(
-                {
-                    "fare":
-                    f"Fare configuration is incomplete: {exc}"
-                }
-            )
-
-        final_fare = fare_details["total"]
-
-        ride = Ride.objects.create(
+    try:
+        return RideService.create_ride(
             rider=request.user,
-            driver=None,
-            status=requested_status,
-            fare=final_fare,
-            **validated_data,
+            validated_data=validated_data,
         )
 
-        return ride
+    except ValueError as exc:
+        error_message = str(exc)
+
+        if "Requested ride status" in error_message:
+            raise serializers.ValidationError(
+                {"status": error_message}
+            )
+
+        raise serializers.ValidationError(
+            {"fare": error_message}
+        )
+
+    except KeyError as exc:
+        raise serializers.ValidationError(
+            {
+                "fare":
+                f"Fare configuration is incomplete: {exc}"
+            }
+        )
+       
 
 
 # RIDE LIST SERIALIZER
@@ -977,17 +945,12 @@ class ServiceSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "price",
-            "status",
-            "category",
-            "provider",
-            "created_at",
-            "updated_at",
+            "duration",
         ]
 
         read_only_fields = [
             "id",
-            "created_at",
-            "updated_at",
+            
         ]
 
 
@@ -1019,8 +982,6 @@ class BookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-
-
 # PAYMENT INITIATE SERIALIZER
 
 class PaymentInitiateSerializer(serializers.Serializer):

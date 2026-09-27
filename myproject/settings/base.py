@@ -49,9 +49,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "core",
     "accounts",
-    "common",
     "channels",
 
     "rest_framework",

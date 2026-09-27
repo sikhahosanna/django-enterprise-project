@@ -8,79 +8,98 @@ from ..models import (
     DriverProfile,
 )
 
+from .fare_service import FareService
+
 
 class RideService:
 
-    # =========================================================
-    # ACCEPT RIDE
-    # =========================================================
-
+    # Create ride
     @staticmethod
     @transaction.atomic
-    def accept_ride(
-        ride_id,
-        user,
-    ):
+    def create_ride(rider, validated_data):
+        validated_data.pop("rider", None)
 
-        # -----------------------------------------------------
-        # GET RIDE
-        # -----------------------------------------------------
-
+        # Get requested status
         try:
-            ride = Ride.objects.select_for_update(of=("self",)).get(id=ride_id)
+            requested_status = RideStatus.objects.get(
+                name=RideStatus.Status.REQUESTED
+            )
+        except RideStatus.DoesNotExist:
+            raise ValueError(
+                "Requested ride status is not configured."
+            )
 
+        # Calculate fare
+        fare_details = FareService.calculate_fare(
+            vehicle_type=validated_data["vehicle_type"],
+            pickup_latitude=validated_data["pickup_latitude"],
+            pickup_longitude=validated_data["pickup_longitude"],
+            dropoff_latitude=validated_data["dropoff_latitude"],
+            dropoff_longitude=validated_data["dropoff_longitude"],
+            duration_minutes=0,
+        )
+
+        final_fare = fare_details["total"]
+
+        # Create ride
+        return Ride.objects.create(
+            rider=rider,
+            driver=None,
+            status=requested_status,
+            fare=final_fare,
+            **validated_data,
+        )
+
+    # Accept ride
+    @staticmethod
+    @transaction.atomic
+    def accept_ride(ride_id, user):
+
+        # Get ride
+        try:
+            ride = Ride.objects.select_for_update(
+                of=("self",)
+            ).get(id=ride_id)
         except Ride.DoesNotExist:
             raise
 
-        # -----------------------------------------------------
-        # DRIVER CHECK
-        # -----------------------------------------------------
-
+        # Driver check
         try:
-            driver = DriverProfile.objects.select_related("user").get(user=user)
-
+            driver = DriverProfile.objects.select_related(
+                "user"
+            ).get(user=user)
         except DriverProfile.DoesNotExist:
-            raise PermissionError("You are not registered as a driver.")
+            raise PermissionError(
+                "You are not registered as a driver."
+            )
 
-        # -----------------------------------------------------
-        # DRIVER ACTIVE CHECK
-        # -----------------------------------------------------
-
+        # Driver active check
         if driver.status != DriverProfile.DriverStatus.ACTIVE:
-            raise PermissionError("Your driver account is not active.")
+            raise PermissionError(
+                "Your driver account is not active."
+            )
 
-        # -----------------------------------------------------
-        # RIDE STATUS CHECK
-        # -----------------------------------------------------
-
+        # Ride status check
         if ride.status.name != RideStatus.Status.REQUESTED:
             raise ValueError(
                 f"Ride cannot be accepted from "
                 f"'{ride.status.name}' status."
             )
 
-        # -----------------------------------------------------
-        # ASSIGN DRIVER
-        # -----------------------------------------------------
-
+        # Assign driver
         ride.driver = driver
 
-        # -----------------------------------------------------
-        # GET ACCEPTED STATUS
-        # -----------------------------------------------------
-
+        # Get accepted status
         try:
             accepted_status = RideStatus.objects.get(
                 name=RideStatus.Status.ACCEPTED
             )
-
         except RideStatus.DoesNotExist:
-            raise ValueError("Accepted ride status is not configured.")
+            raise ValueError(
+                "Accepted ride status is not configured."
+            )
 
-        # -----------------------------------------------------
-        # UPDATE RIDE
-        # -----------------------------------------------------
-
+        # Update ride
         ride.status = accepted_status
 
         ride.save(
@@ -91,10 +110,7 @@ class RideService:
             ]
         )
 
-        # -----------------------------------------------------
-        # BROADCAST RIDE ACCEPTED
-        # -----------------------------------------------------
-
+        # Broadcast ride accepted
         channel_layer = get_channel_layer()
 
         async_to_sync(channel_layer.group_send)(
@@ -109,10 +125,7 @@ class RideService:
 
         return ride
 
-    # =========================================================
-    # UPDATE RIDE STATUS
-    # =========================================================
-
+    # Update ride status
     @staticmethod
     @transaction.atomic
     def update_status(
@@ -121,47 +134,36 @@ class RideService:
         new_status_name,
     ):
 
-        # -----------------------------------------------------
-        # GET RIDE
-        # -----------------------------------------------------
-
+        # Get ride
         try:
             ride = (
                 Ride.objects.select_for_update()
                 .select_related("status")
                 .get(id=ride_id)
             )
-
         except Ride.DoesNotExist:
             raise
 
-        # -----------------------------------------------------
-        # DRIVER CHECK
-        # -----------------------------------------------------
-
+        # Driver check
         try:
-            driver_profile = DriverProfile.objects.get(user=driver)
-
+            driver_profile = DriverProfile.objects.get(
+                user=driver
+            )
         except DriverProfile.DoesNotExist:
-            raise PermissionError("You are not registered as a driver.")
+            raise PermissionError(
+                "You are not registered as a driver."
+            )
 
-        # -----------------------------------------------------
-        # RIDE DRIVER OWNERSHIP
-        # -----------------------------------------------------
-
+        # Driver ownership check
         if ride.driver_id != driver_profile.id:
-            raise PermissionError("You are not assigned to this ride.")
+            raise PermissionError(
+                "You are not assigned to this ride."
+            )
 
-        # -----------------------------------------------------
-        # CURRENT STATUS
-        # -----------------------------------------------------
-
+        # Current status
         current_status = ride.status.name
 
-        # -----------------------------------------------------
-        # ALLOWED TRANSITIONS
-        # -----------------------------------------------------
-
+        # Allowed status transitions
         allowed_transitions = {
             RideStatus.Status.REQUESTED: [
                 RideStatus.Status.ACCEPTED,
@@ -189,10 +191,7 @@ class RideService:
             []
         )
 
-        # -----------------------------------------------------
-        # VALIDATE TRANSITION
-        # -----------------------------------------------------
-
+        # Validate transition
         if new_status_name not in allowed_statuses:
             raise ValueError(
                 f"Cannot change ride status "
@@ -200,25 +199,18 @@ class RideService:
                 f"to '{new_status_name}'."
             )
 
-        # -----------------------------------------------------
-        # GET NEW STATUS
-        # -----------------------------------------------------
-
+        # Get new status
         try:
             new_status = RideStatus.objects.get(
                 name=new_status_name
             )
-
         except RideStatus.DoesNotExist:
             raise ValueError(
                 f"Ride status '{new_status_name}' "
                 f"is not configured."
             )
 
-        # -----------------------------------------------------
-        # UPDATE
-        # -----------------------------------------------------
-
+        # Update status
         ride.status = new_status
 
         ride.save(
@@ -228,10 +220,7 @@ class RideService:
             ]
         )
 
-        # -----------------------------------------------------
-        # BROADCAST RIDE STATUS
-        # -----------------------------------------------------
-
+        # Broadcast status
         channel_layer = get_channel_layer()
 
         async_to_sync(channel_layer.group_send)(
@@ -246,50 +235,31 @@ class RideService:
 
         return ride
 
-    # =========================================================
-    # CANCEL RIDE
-    # =========================================================
-
+    # Cancel ride
     @staticmethod
     @transaction.atomic
-    def cancel_ride(
-        ride_id,
-        rider,
-    ):
+    def cancel_ride(ride_id, rider):
 
-        # -----------------------------------------------------
-        # GET RIDE
-        # -----------------------------------------------------
-
+        # Get ride
         try:
             ride = (
                 Ride.objects.select_for_update()
                 .select_related("status")
                 .get(id=ride_id)
             )
-
         except Ride.DoesNotExist:
             raise
 
-        # -----------------------------------------------------
-        # RIDER OWNERSHIP
-        # -----------------------------------------------------
-
+        # Rider ownership check
         if ride.rider_id != rider.id:
             raise PermissionError(
                 "You are not allowed to cancel this ride."
             )
 
-        # -----------------------------------------------------
-        # CURRENT STATUS
-        # -----------------------------------------------------
-
+        # Current status
         current_status = ride.status.name
 
-        # -----------------------------------------------------
-        # CANCELLABLE STATUSES
-        # -----------------------------------------------------
-
+        # Cancellable statuses
         cancellable_statuses = [
             RideStatus.Status.REQUESTED,
             RideStatus.Status.ACCEPTED,
@@ -302,24 +272,17 @@ class RideService:
                 f"'{current_status}' status."
             )
 
-        # -----------------------------------------------------
-        # GET CANCELLED STATUS
-        # -----------------------------------------------------
-
+        # Get cancelled status
         try:
             cancelled_status = RideStatus.objects.get(
                 name=RideStatus.Status.CANCELLED
             )
-
         except RideStatus.DoesNotExist:
             raise ValueError(
                 "Cancelled ride status is not configured."
             )
 
-        # -----------------------------------------------------
-        # CANCEL RIDE
-        # -----------------------------------------------------
-
+        # Cancel ride
         ride.status = cancelled_status
 
         ride.save(

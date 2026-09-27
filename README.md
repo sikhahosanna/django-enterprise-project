@@ -14349,3 +14349,480 @@ OK
 ## Final Status
 
 **Task 2 to Task 8 completed successfully.**
+28/9/26
+
+## Task 1 — Clone & Run the Project
+
+### Setup Completed
+
+* Cloned the latest project repository.
+* Created a fresh Python virtual environment.
+* Activated the virtual environment.
+* Installed all required dependencies using `requirements.txt`.
+* Configured the `.env` file.
+* Verified Django configuration using `python manage.py check`.
+* Verified database migrations using `python manage.py migrate`.
+* Started the Django/Daphne development server.
+* Verified the API documentation through Swagger at `/api/docs/`.
+* Verified that the available APIs are accessible through Swagger.
+
+### Setup Problems Encountered
+
+* The old virtual environment could not initially be deleted because a Python process was using it. The process was cleared and the virtual environment was recreated successfully.
+* Port `8000` was already in use by an existing Python process. The existing server was verified and the API documentation was accessible.
+* During Swagger schema generation, some serializer fields did not match the current models. The affected serializers were corrected according to the actual model fields.
+
+### Verification
+
+* Django system check: **Passed**
+* Database migrations: **No pending migrations**
+* Django/Daphne server: **Running**
+* Swagger API documentation: **Verified**
+## Task 2 — Understand the Complete Architecture
+
+### Main Architecture
+
+```text
+Mobile Application
+        ↓
+API Gateway / Nginx
+        ↓
+Django REST Framework
+        ↓
+Authentication
+        ↓
+Permissions
+        ↓
+Service Layer
+        ↓
+Django ORM
+        ↓
+PostgreSQL
+```
+
+### Supporting Components
+
+```text
+WebSocket → Django Channels
+Celery    → Background Tasks
+Redis     → Cache / Queue
+```
+
+### Component Responsibilities
+
+* **Mobile Application:** Sends requests to the backend APIs.
+* **API Gateway / Nginx:** Receives and forwards client requests to Django.
+* **Django REST Framework:** Handles REST API requests and responses.
+* **Authentication:** Verifies users using JWT authentication.
+* **Permissions:** Controls access to APIs based on user permissions.
+* **Service Layer:** Handles application business logic.
+* **Django ORM:** Communicates with the database using Django models and queries.
+* **PostgreSQL:** Stores application data.
+* **Django Channels:** Handles real-time WebSocket communication.
+* **Celery:** Executes background and asynchronous tasks.
+* **Redis:** Used for caching and as a message broker/queue.
+
+## Task 3 — Review Django Applications
+
+### Definition
+
+**Django Application:**
+A Django application is a module that handles a specific functionality of the project, such as users, rides, bookings, or payments.
+
+### What I Reviewed
+
+* **Models:** Define database tables and relationships.
+* **Serializers:** Validate and convert API data.
+* **Views:** Handle API requests and responses.
+* **URLs:** Define API endpoints.
+* **Permissions:** Control user access.
+* **Services:** Contain reusable business logic.
+* **Tasks:** Handle background operations.
+* **Tests:** Verify application functionality.
+
+### Refactoring
+
+* Reviewed the `accounts` application.
+* Identified `common` and `core` as unused placeholder applications.
+* Removed unused applications from active `INSTALLED_APPS`.
+* Reviewed the service layer and test structure.
+* Verified the application using Django system checks and tests.
+
+### Verification
+
+* Django system check: Passed
+* Tests: **51/51 Passed**
+
+---
+
+## Task 4 — Review Business Logic
+
+### Definition
+
+**Business Logic:**
+Business logic is the set of rules that defines how the application should process data and perform operations.
+
+For example, in a ride application:
+
+```text
+Requested → Accepted → Driver Arriving → Started → Completed
+```
+
+These ride status rules are business logic.
+
+### What I Reviewed
+
+* Views
+* Serializers
+* Models
+* WebSocket Consumers
+* Service Layer
+
+### Refactoring Completed
+
+* Reviewed business logic inside views and serializers.
+* Identified complex ride creation logic inside the serializer.
+* Moved ride creation and fare calculation logic to `RideService`.
+* Kept simple request and field validation inside serializers.
+* Reused the existing service layer for business operations.
+
+### Verification
+
+```text
+python manage.py check
+
+System check identified no issues (0 silenced).
+```
+
+---
+
+## Task 5 — Review Database Design
+
+### Definition
+
+**Database Architecture:**
+Database architecture defines how application data is stored, related, protected, and accessed.
+
+### What I Reviewed
+
+* **Foreign Key:** Creates a relationship between two tables.
+* **One-to-One:** Allows one record to be associated with one record.
+* **UUID:** A unique identifier used as a primary key.
+* **Unique Constraint:** Prevents duplicate values.
+* **Index:** Improves database query performance.
+* **Nullable Field:** Allows a database field to contain `NULL`.
+* **Check Constraint:** Ensures stored data follows a specific rule.
+
+### Main Models Reviewed
+
+* User
+* Profile
+* DriverProfile
+* VehicleType
+* Vehicle
+* RideStatus
+* Ride
+* DriverLocation
+* Service
+* Category
+* Provider
+* ProviderProfile
+* Booking
+* Payment
+* Notification
+* ServiceImage
+
+### Verification
+
+```text
+python manage.py check
+System check identified no issues (0 silenced).
+
+python manage.py makemigrations --check
+No changes detected.
+```
+
+---
+
+## Task 6 — Review API Structure
+
+### Definition
+
+**API:**
+An API (Application Programming Interface) allows different applications to communicate with each other.
+
+**REST API:**
+A REST API uses HTTP methods such as GET, POST, PUT, PATCH, and DELETE to perform operations on resources.
+
+### What I Reviewed
+
+* API versioning
+* HTTP methods
+* Request validation
+* Response structure
+* HTTP status codes
+* Error handling
+* Error codes
+
+### API Version
+
+The project uses:
+
+```text
+/api/v1/
+```
+
+### HTTP Methods
+
+* **GET:** Retrieve data.
+* **POST:** Create data.
+* **PUT:** Replace existing data.
+* **PATCH:** Partially update data.
+* **DELETE:** Delete data.
+
+### Error Handling Definition
+
+**Error Code:**
+An error code identifies the type of error returned by an API.
+
+Examples:
+
+* `VALIDATION_ERROR`
+* `AUTHENTICATION_REQUIRED`
+* `PERMISSION_DENIED`
+* `NOT_FOUND`
+* `METHOD_NOT_ALLOWED`
+* `API_ERROR`
+* `INTERNAL_SERVER_ERROR`
+
+---
+
+## Task 7 — Remove Technical Debt
+
+### Definition
+
+**Technical Debt:**
+Technical debt means code or design issues that may make the project harder to maintain, understand, or modify in the future.
+
+### What I Reviewed
+
+* Duplicate imports
+* Unused imports
+* Duplicate code
+* Unused functions
+* Hardcoded values
+* Large functions
+* Poor naming
+* Repeated database queries
+* Business logic placement
+
+### Cleanup Completed
+
+* Removed duplicate imports from `views.py`.
+* Verified required imports such as `serializers`.
+* Verified `NotificationService` import.
+* Reviewed business logic placement.
+* Moved complex ride creation logic to `RideService`.
+* Removed unused application structure.
+
+### Verification
+
+```text
+python manage.py check
+
+System check identified no issues (0 silenced).
+```
+
+---
+
+## Task 8 — Architecture Documentation
+
+### Definition
+
+**System Architecture:**
+System architecture describes how different components of the application communicate and work together.
+
+### Main Architecture
+
+```text
+Mobile Application
+        ↓
+API Gateway / Nginx
+        ↓
+Django REST Framework
+        ↓
+Authentication
+        ↓
+Permissions
+        ↓
+Service Layer
+        ↓
+Django ORM
+        ↓
+PostgreSQL
+```
+
+### Application Architecture
+
+**Service Layer:**
+A service layer contains reusable business logic separately from API views.
+
+```text
+accounts/
+├── models.py
+├── serializers.py
+├── views.py
+├── urls.py
+├── permissions.py
+├── consumers.py
+├── tasks.py
+└── services/
+    ├── driver_service.py
+    ├── fare_service.py
+    ├── notification_service.py
+    ├── profile_service.py
+    ├── ride.py
+    ├── user_service.py
+    └── vehicle_service.py
+```
+
+### Database Architecture
+
+**PostgreSQL:**
+PostgreSQL is the relational database used to store application data.
+
+**Django ORM:**
+Django ORM allows Python code to interact with database tables without writing SQL for common operations.
+
+```text
+Django Application
+        ↓
+Django ORM
+        ↓
+PostgreSQL
+```
+
+### Authentication
+
+**JWT Authentication:**
+JWT (JSON Web Token) is used to authenticate API requests.
+
+```text
+Register
+   ↓
+Login
+   ↓
+Access Token + Refresh Token
+   ↓
+API Request
+   ↓
+Token Validation
+   ↓
+API Response
+```
+
+**Access Token:** Used to access protected APIs.
+
+**Refresh Token:** Used to obtain a new access token after the access token expires.
+
+### WebSocket Architecture
+
+**WebSocket:**
+WebSocket provides real-time, two-way communication between the client and server.
+
+**Django Channels:**
+Django Channels enables WebSocket and real-time communication in Django.
+
+```text
+Mobile Application
+        ↓
+WebSocket
+        ↓
+Django Channels
+        ↓
+WebSocket Consumer
+        ↓
+Real-time Events
+```
+
+Used for:
+
+* Ride status updates
+* Driver location updates
+* Booking status updates
+
+### Celery Architecture
+
+**Celery:**
+Celery is used to execute background and asynchronous tasks.
+
+```text
+Django
+   ↓
+Celery Task
+   ↓
+Redis
+   ↓
+Celery Worker
+   ↓
+Background Processing
+```
+
+**Celery Worker:** Executes background tasks.
+
+**Celery Beat:** Handles scheduled/periodic tasks.
+
+### Redis Usage
+
+**Redis:**
+Redis is an in-memory data store used in the project for caching and as a Celery message broker.
+
+```text
+Django
+   ↓
+Redis
+   ↓
+Celery Worker
+```
+
+Redis is used for:
+
+* Celery task queue/message broker
+* Application caching where configured
+
+### Overall Architecture
+
+```text
+                 Mobile Application
+                         ↓
+                 REST API / WebSocket
+                         ↓
+              ┌──────────┴──────────┐
+              ↓                     ↓
+       Django REST API       Django Channels
+              ↓                     ↓
+       Authentication          Real-time Events
+              ↓
+         Permissions
+              ↓
+        Service Layer
+              ↓
+          Django ORM
+              ↓
+         PostgreSQL
+
+              Django
+                 ↓
+              Celery
+                 ↓
+               Redis
+                 ↓
+          Celery Worker
+```
+
+### Task 8 Completion
+
+Architecture documentation covering system architecture, application architecture, database architecture, authentication, WebSocket, Celery, and Redis has been completed.
+
+
+
