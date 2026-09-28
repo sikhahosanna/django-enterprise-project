@@ -1,4 +1,3 @@
-import json
 
 from django.test import TestCase, TransactionTestCase, override_settings
 from asgiref.sync import sync_to_async
@@ -21,9 +20,6 @@ from accounts.routing import websocket_urlpatterns
 
 from accounts.tasks import (
     ride_notification,
-    driver_assignment_notification,
-    ride_completion_notification,
-    reminder_notification,
     retry_test_task,
 )
 

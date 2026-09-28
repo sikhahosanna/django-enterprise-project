@@ -139,10 +139,11 @@ class DriverProfile(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True
     )
+   
 
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
+
+    
+    
 
     class Meta:
         indexes = [
@@ -735,7 +736,19 @@ class Payment(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True
     )
-
+    
+    idempotency_key = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["booking", "idempotency_key"],
+                name="unique_booking_idempotency_key",
+            ),
+        ]
 
 # NOTIFICATION
 

@@ -23,10 +23,8 @@ from .models import (
     Service,
     ServiceImage,
     Booking,
-    Payment,
 )
 
-from .services.fare_service import FareService
 
 
 # REGISTER SERIALIZER

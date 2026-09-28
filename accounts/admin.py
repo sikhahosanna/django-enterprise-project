@@ -64,7 +64,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "user",
         "status",
         "created_at",
-        "updated_at",
+    
     )
 
     search_fields = (

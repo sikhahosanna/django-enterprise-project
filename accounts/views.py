@@ -5,21 +5,21 @@ from .models import Payment
 logger = logging.getLogger(__name__)
 authentication_logger = logging.getLogger("authentication")
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 from django.db import connection, reset_queries
 from django.db.models import Count, Sum, Avg, Min, Max, Q
 from django.utils import timezone
 from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from .pagination import ServicePagination
+from .utils.helpers import calculate_distance_km
 from .models import Booking
-from accounts.services.notification_service import NotificationService
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 
 
-from rest_framework import generics, status, filters, viewsets
-from rest_framework.response import Response
+from rest_framework import generics, serializers, status, filters, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
@@ -31,7 +31,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from asgiref.sync import async_to_sync
 
 from rest_framework.permissions import AllowAny
 
@@ -852,44 +851,6 @@ class VehicleDetailView(
 
         driver = self.get_driver()
 
-        serializer.save(driver=driver)
-
-#vehicle view set
-
-class VehicleViewSet(
-    VehicleBaseView,
-    viewsets.ModelViewSet,
-):
-
-    serializer_class = VehicleSerializer
-
-    def get_queryset(self):
-
-        queryset = self.get_vehicle_queryset()
-
-        if self.request.user.is_staff:
-            return queryset
-
-        return queryset.filter(
-            driver__user=self.request.user
-        )
-
-    def perform_create(self, serializer):
-
-        if self.request.user.is_staff:
-            serializer.save()
-            return
-
-        driver = self.get_driver()
-        serializer.save(driver=driver)
-
-    def perform_update(self, serializer):
-
-        if self.request.user.is_staff:
-            serializer.save()
-            return
-
-        driver = self.get_driver()
         serializer.save(driver=driver)
 
 # TASK 6 - ADVANCED RIDE FILTERING
@@ -2614,6 +2575,7 @@ class NotificationMarkAllReadView(APIView):
             status_code=status.HTTP_200_OK,
         )
 # PAYMENT VIEWS
+# PAYMENT VIEWS
 
 class PaymentInitiateView(APIView):
 
@@ -2621,33 +2583,192 @@ class PaymentInitiateView(APIView):
 
     def post(self, request):
 
-        serializer = PaymentInitiateSerializer(
-            data=request.data,
-            context={"request": request}
+        idempotency_key = request.headers.get(
+            "Idempotency-Key"
         )
 
-        serializer.is_valid(raise_exception=True)
+        if not idempotency_key:
+
+            return error_response(
+                message="Idempotency-Key header is required.",
+                error_code="IDEMPOTENCY_KEY_REQUIRED",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = PaymentInitiateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
 
         booking = serializer.validated_data["booking"]
 
-        payment = Payment.objects.create(
+        # Check whether this request was already processed
+        existing_payment = Payment.objects.filter(
             booking=booking,
-            amount=booking.amount,
-            transaction_id=str(uuid.uuid4()),
-            payment_status=Payment.PaymentStatus.PENDING,
-            payment_method="upi"
-        )
+            idempotency_key=idempotency_key,
+        ).first()
+
+        if existing_payment:
+
+            return success_response(
+                message="Payment already initiated.",
+                data={
+                    "payment_id": str(existing_payment.id),
+                    "transaction_id": existing_payment.transaction_id,
+                    "amount": str(existing_payment.amount),
+                    "status": existing_payment.payment_status,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        try:
+
+            with transaction.atomic():
+
+                payment = Payment.objects.create(
+                    booking=booking,
+                    amount=booking.amount,
+                    transaction_id=str(uuid.uuid4()),
+                    payment_status=Payment.PaymentStatus.PENDING,
+                    payment_method="upi",
+                    idempotency_key=idempotency_key,
+                )
+
+        except IntegrityError:
+
+            payment = Payment.objects.get(
+                booking=booking,
+                idempotency_key=idempotency_key,
+            )
+
+            return success_response(
+                message="Payment already initiated.",
+                data={
+                    "payment_id": str(payment.id),
+                    "transaction_id": payment.transaction_id,
+                    "amount": str(payment.amount),
+                    "status": payment.payment_status,
+                },
+                status_code=status.HTTP_200_OK,
+            )
 
         return success_response(
-             message="Payment initiated successfully.",
-             data={
-             "payment_id": str(payment.id),
-             "transaction_id": payment.transaction_id,
-             "amount": str(payment.amount),
-        "status": payment.payment_status,
-    },
-    status_code=status.HTTP_201_CREATED,
-)
+            message="Payment initiated successfully.",
+            data={
+                "payment_id": str(payment.id),
+                "transaction_id": payment.transaction_id,
+                "amount": str(payment.amount),
+                "status": payment.payment_status,
+            },
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    # BOOKING STATUS UPDATE
+
+class BookingStatusUpdateView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    allowed_transitions = {
+        "pending": [
+            "confirmed",
+            "cancelled",
+            "payment_failed",
+        ],
+        "confirmed": [
+            "in_progress",
+            "cancelled",
+        ],
+        "in_progress": [
+            "completed",
+        ],
+        "completed": [],
+        "cancelled": [],
+        "payment_failed": [],
+    }
+
+    def patch(self, request, booking_id):
+
+        new_status = request.data.get("status")
+
+        if not new_status:
+            return error_response(
+                message="Status is required.",
+                error_code="STATUS_REQUIRED",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        valid_statuses = [
+            choice[0]
+            for choice in Booking.BookingStatus.choices
+        ]
+
+        if new_status not in valid_statuses:
+            return error_response(
+                message="Invalid booking status.",
+                error_code="INVALID_BOOKING_STATUS",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+
+                booking = (
+                    Booking.objects
+                    .select_for_update()
+                    .get(
+                        id=booking_id,
+                        customer=request.user,
+                    )
+                )
+
+                current_status = booking.status
+
+                if new_status not in self.allowed_transitions.get(
+                    current_status,
+                    [],
+                ):
+                    return error_response(
+                        message=(
+                            f"Invalid transition: "
+                            f"{current_status} → {new_status}"
+                        ),
+                        error_code="INVALID_STATUS_TRANSITION",
+                        data={
+                            "current_status": current_status,
+                            "requested_status": new_status,
+                        },
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                booking.status = new_status
+
+                booking.save(
+                    update_fields=[
+                        "status",
+                        "updated_at",
+                    ]
+                )
+
+        except Booking.DoesNotExist:
+            return error_response(
+                message="Booking not found.",
+                error_code="BOOKING_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        return success_response(
+            message="Booking status updated successfully.",
+            data={
+                "booking_id": str(booking.id),
+                "status": booking.status,
+            },
+            status_code=status.HTTP_200_OK,
+        )
 
 class MockPaymentView(APIView):
 
@@ -2701,8 +2822,7 @@ class MockPaymentView(APIView):
     },
     status_code=status.HTTP_200_OK,
 )
-
-
+#payment
 class PaymentWebhookView(APIView):
 
     permission_classes = [AllowAny]
@@ -2712,168 +2832,93 @@ class PaymentWebhookView(APIView):
         payment_id = request.data.get("payment_id")
         event = request.data.get("event")
 
-        try:
-            payment = Payment.objects.get(
-                id=payment_id
+        if event not in ["success", "failed"]:
+
+            return error_response(
+                message="Invalid payment event.",
+                error_code="INVALID_PAYMENT_EVENT",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
+
+        try:
+
+            with transaction.atomic():
+
+                payment = (
+                    Payment.objects
+                    .select_for_update()
+                    .select_related("booking")
+                    .get(id=payment_id)
+                )
+
+                # Repeated webhook callback
+                if payment.payment_status != Payment.PaymentStatus.PENDING:
+
+                    return success_response(
+                        message="Payment already processed.",
+                        data={
+                            "payment_id": str(payment.id),
+                            "transaction_id": payment.transaction_id,
+                            "payment_status": payment.payment_status,
+                            "booking_id": str(payment.booking.id),
+                            "booking_status": payment.booking.status,
+                        },
+                        status_code=status.HTTP_200_OK,
+                    )
+
+                if event == "success":
+
+                    payment.payment_status = (
+                        Payment.PaymentStatus.SUCCESS
+                    )
+
+                else:
+
+                    payment.payment_status = (
+                        Payment.PaymentStatus.FAILED
+                    )
+
+                payment.save(
+                    update_fields=["payment_status"]
+                )
+
+                booking = payment.booking
+
+                if event == "success":
+
+                    booking.status = "confirmed"
+
+                    booking.save(
+                        update_fields=["status"]
+                    )
 
         except Payment.DoesNotExist:
 
             return error_response(
-    message="Payment not found.",
-    error_code="PAYMENT_NOT_FOUND",
-    status_code=status.HTTP_404_NOT_FOUND,
-)
-
-        if event not in ["success", "failed"]:
-
-            return error_response(
-    message="Invalid payment event.",
-    error_code="INVALID_PAYMENT_EVENT",
-    status_code=status.HTTP_400_BAD_REQUEST,
-)
-
-        if payment.payment_status != Payment.PaymentStatus.PENDING:
-
-            return error_response(
-    message="Payment already processed.",
-    error_code="PAYMENT_ALREADY_PROCESSED",
-    data={"status": payment.payment_status},
-    status_code=status.HTTP_400_BAD_REQUEST,
-)
-
-        if event == "success":
-            payment.payment_status = Payment.PaymentStatus.SUCCESS
-        else:
-            payment.payment_status = Payment.PaymentStatus.FAILED
-
-        payment.save(
-            update_fields=["payment_status"]
-        )
-
-        booking = payment.booking
-
-        if event == "success":
-
-            booking.status = "confirmed"
-
-            booking.save(
-                update_fields=["status"]
+                message="Payment not found.",
+                error_code="PAYMENT_NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
             )
+
+        # Send notifications only for the first successful callback
+        if event == "success":
 
             NotificationService.payment_successful(booking)
             NotificationService.booking_confirmed(booking)
 
         return success_response(
-    message="Payment confirmation received.",
-    data={
-        "payment_id": str(payment.id),
-        "transaction_id": payment.transaction_id,
-        "payment_status": payment.payment_status,
-        "booking_id": str(booking.id),
-        "booking_status": booking.status,
-    },
-    status_code=status.HTTP_200_OK,
-)
-# BOOKING STATUS UPDATE
-
-class BookingStatusUpdateView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    allowed_transitions = {
-        "pending": ["confirmed", "cancelled", "payment_failed"],
-        "confirmed": ["in_progress"],
-        "in_progress": ["completed"],
-        "completed": [],
-        "cancelled": [],
-        "payment_failed": [],
-    }
-
-    def patch(self, request, booking_id):
-
-        new_status = request.data.get("status")
-
-        try:
-            booking = Booking.objects.get(
-                id=booking_id,
-                customer=request.user
-            )
-
-        except Booking.DoesNotExist:
-
-            return error_response(
-    message="Booking not found.",
-    error_code="BOOKING_NOT_FOUND",
-    status_code=status.HTTP_404_NOT_FOUND,
-)
-
-        valid_statuses = dict(
-            Booking.BookingStatus.choices
-        )
-
-        if new_status not in valid_statuses:
-
-            return error_response(
-    message="Invalid booking status.",
-    error_code="INVALID_BOOKING_STATUS",
-    status_code=status.HTTP_400_BAD_REQUEST,
-)
-
-        current_status = booking.status
-
-        if new_status not in self.allowed_transitions.get(
-            current_status,
-            []
-        ):
-
-            return error_response(
-    message=f"Invalid transition: {current_status} → {new_status}",
-    error_code="INVALID_STATUS_TRANSITION",
-    data={
-        "current_status": current_status,
-        "requested_status": new_status,
-    },
-    status_code=status.HTTP_400_BAD_REQUEST,
-)
-
-        booking.status = new_status
-
-        booking.save(
-            update_fields=["status", "updated_at"]
-        )
-
-        channel_layer = get_channel_layer()
-
-        async_to_sync(
-            channel_layer.group_send
-        )(
-            f"booking_{booking.id}",
-            {
-                "type": "booking_status_update",
+            message="Payment confirmation received.",
+            data={
+                "payment_id": str(payment.id),
+                "transaction_id": payment.transaction_id,
+                "payment_status": payment.payment_status,
                 "booking_id": str(booking.id),
-                "status": booking.status,
-            }
+                "booking_status": booking.status,
+            },
+            status_code=status.HTTP_200_OK,
         )
 
-        if new_status == "in_progress":
-            NotificationService.provider_started(booking)
 
-        elif new_status == "completed":
-            NotificationService.booking_completed(booking)
-
-        elif new_status == "cancelled":
-            NotificationService.booking_cancelled(booking)
-
-        return success_response(
-    message="Booking status updated successfully.",
-    data={
-        "booking_id": str(booking.id),
-        "previous_status": current_status,
-        "current_status": booking.status,
-    },
-    status_code=status.HTTP_200_OK,
-)
 # BOOKING VIEWS
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -3048,3 +3093,6 @@ class ServiceImageDeleteView(APIView):
             data=None,
             status_code=status.HTTP_200_OK,
         )
+
+
+

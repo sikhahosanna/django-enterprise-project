@@ -179,3 +179,35 @@ class DatabaseTests(TestCase):
     def test_invalid_rider_relationship(self):
         with self.assertRaises(ValueError):
             Ride(rider=self.vehicle_type)
+    # 7. TRANSACTION ROLLBACK
+
+    def test_transaction_rolls_back_on_failure(self):
+        ride_id = None
+
+        try:
+            with transaction.atomic():
+                ride = Ride.objects.create(
+                    rider=self.user,
+                    vehicle_type=self.vehicle_type,
+                    status=self.ride_status,
+                    pickup_address="Hyderabad",
+                    pickup_latitude=Decimal("17.385000"),
+                    pickup_longitude=Decimal("78.486700"),
+                    dropoff_address="Secunderabad",
+                    dropoff_latitude=Decimal("17.439900"),
+                    dropoff_longitude=Decimal("78.498300"),
+                    fare=Decimal("100.00"),
+                )
+
+                ride_id = ride.id
+
+                # Simulate failure after the database write
+                raise RuntimeError("Simulated transaction failure")
+
+        except RuntimeError:
+            pass
+
+        # Verify that the database change was rolled back
+        self.assertFalse(
+            Ride.objects.filter(id=ride_id).exists()
+        )

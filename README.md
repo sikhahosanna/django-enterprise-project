@@ -15468,5 +15468,738 @@ Redis is used for:
 
 Architecture documentation covering system architecture, application architecture, database architecture, authentication, WebSocket, Celery, and Redis has been completed.
 
+29/9/26
 
+# 29-Sep-2026 — Tuesday
+
+# Jira Story: Advanced Business Workflow & Data Integrity
+
+## Objective
+
+Strengthen the core business workflow and ensure the system behaves correctly under real-world conditions such as invalid state changes, transaction failures, concurrent requests, duplicate requests, payment retries, and database integrity issues.
+
+The implementation focuses on maintaining a reliable booking lifecycle from creation through service completion.
+
+---
+
+# 1. Core Business Workflow
+
+The primary business workflow implemented and validated in the project is:
+
+```text
+Customer
+   ↓
+Service Search
+   ↓
+Booking
+   ↓
+Payment
+   ↓
+Provider Confirmation
+   ↓
+Service Started
+   ↓
+Service Completed
+```
+
+## Workflow State Definitions
+
+### 1. PENDING
+
+**Definition:**
+The booking has been created and is waiting for confirmation/payment processing.
+
+**Initial State:**
+
+```text
+Booking Created → PENDING
+```
+
+---
+
+### 2. CONFIRMED
+
+**Definition:**
+The booking has been successfully confirmed after the required business conditions are satisfied.
+
+```text
+PENDING → CONFIRMED
+```
+
+---
+
+### 3. IN_PROGRESS
+
+**Definition:**
+The provider has started delivering the requested service.
+
+```text
+CONFIRMED → IN_PROGRESS
+```
+
+---
+
+### 4. COMPLETED
+
+**Definition:**
+The service has been successfully completed.
+
+```text
+IN_PROGRESS → COMPLETED
+```
+
+---
+
+### 5. CANCELLED
+
+**Definition:**
+The booking has been cancelled before completion.
+
+Valid cancellation paths include:
+
+```text
+PENDING → CANCELLED
+CONFIRMED → CANCELLED
+```
+
+---
+
+### 6. PAYMENT_FAILED
+
+**Definition:**
+The payment process failed and the booking cannot continue through the normal confirmed workflow.
+
+```text
+PENDING → PAYMENT_FAILED
+```
+
+---
+
+# 2. State Machine
+
+The booking state machine defines which status changes are allowed.
+
+## Primary Flow
+
+```text
+PENDING
+   ↓
+CONFIRMED
+   ↓
+IN_PROGRESS
+   ↓
+COMPLETED
+```
+
+## Alternative Flows
+
+```text
+PENDING ─────────→ CANCELLED
+
+PENDING ─────────→ PAYMENT_FAILED
+
+CONFIRMED ───────→ CANCELLED
+```
+
+## Invalid Transitions
+
+The system rejects invalid state changes.
+
+Examples:
+
+```text
+COMPLETED → PENDING        ✗
+CANCELLED → COMPLETED      ✗
+PAYMENT_FAILED → IN_PROGRESS ✗
+PENDING → COMPLETED        ✗
+```
+
+The API returns an appropriate HTTP 400 response with an error code such as:
+
+```text
+INVALID_STATUS_TRANSITION
+```
+
+This prevents the booking from entering an inconsistent state.
+
+---
+
+# 3. Invalid Transition Protection
+
+A centralized transition mapping is used:
+
+```python
+allowed_transitions = {
+    "pending": [
+        "confirmed",
+        "cancelled",
+        "payment_failed",
+    ],
+    "confirmed": [
+        "in_progress",
+        "cancelled",
+    ],
+    "in_progress": [
+        "completed",
+    ],
+    "completed": [],
+    "cancelled": [],
+    "payment_failed": [],
+}
+```
+
+Before updating a booking, the requested status is checked against the allowed transitions.
+
+Example:
+
+```text
+Current Status: COMPLETED
+Requested Status: PENDING
+
+Result:
+400 Bad Request
+INVALID_STATUS_TRANSITION
+```
+
+This ensures that completed or terminal bookings cannot be moved backward.
+
+---
+
+# 4. Transaction Management
+
+## Definition
+
+A database transaction groups multiple database operations into one logical unit.
+
+If an operation succeeds:
+
+```text
+COMMIT
+```
+
+If an operation fails:
+
+```text
+ROLLBACK
+```
+
+Django provides transaction handling through:
+
+```python
+transaction.atomic()
+```
+
+## Implementation
+
+Transaction management is used in important business operations where database consistency is required.
+
+Examples include:
+
+* Ride creation
+* Ride acceptance
+* Ride status updates
+* Ride cancellation
+* Booking status updates
+* Payment processing
+
+Example:
+
+```python
+with transaction.atomic():
+    booking = Booking.objects.select_for_update().get(...)
+    booking.status = new_status
+    booking.save()
+```
+
+## Rollback Testing
+
+The project contains transaction tests that intentionally raise an exception inside an atomic block.
+
+Expected behavior:
+
+```text
+Database Operation
+      ↓
+Exception
+      ↓
+ROLLBACK
+      ↓
+No partial record remains
+```
+
+The transaction rollback tests were executed successfully.
+
+---
+
+# 5. Concurrency Testing
+
+## Definition
+
+Concurrency occurs when two requests attempt to modify the same database record at nearly the same time.
+
+Example:
+
+```text
+Request A ──┐
+            ├── Same Booking
+Request B ──┘
+```
+
+Without proper locking, both requests could potentially modify the same record incorrectly.
+
+## Protection
+
+The booking update uses PostgreSQL row-level locking:
+
+```python
+Booking.objects.select_for_update().get(...)
+```
+
+combined with:
+
+```python
+transaction.atomic()
+```
+
+This ensures that concurrent requests are processed safely.
+
+## Concurrency Test
+
+Two threads were created to update the same booking simultaneously.
+
+Expected result:
+
+```text
+Request A → HTTP 200
+Request B → HTTP 400
+```
+
+Actual test result:
+
+```text
+CONCURRENCY RESULTS: [200, 400]
+```
+
+The concurrency test completed successfully.
+
+This confirms that only one request can perform the valid state transition while the conflicting request is rejected.
+
+---
+
+# 6. Idempotency
+
+## Definition
+
+Idempotency means repeating the same request should not create multiple unintended side effects.
+
+This is especially important for mobile applications because network failures can cause clients to retry requests.
+
+Common causes include:
+
+* Mobile network retries
+* Duplicate requests
+* Background task retries
+* Payment gateway callbacks
+
+---
+
+## Payment Initiation Idempotency
+
+Payment initiation uses an idempotency key supplied through the request header:
+
+```text
+Idempotency-Key
+```
+
+Example:
+
+```text
+Idempotency-Key: workflow-payment-001
+```
+
+The database stores the key:
+
+```python
+idempotency_key = models.CharField(
+    max_length=255,
+    null=True,
+    blank=True,
+)
+```
+
+A database-level unique constraint prevents duplicate payment records for the same booking and idempotency key:
+
+```python
+models.UniqueConstraint(
+    fields=["booking", "idempotency_key"],
+    name="unique_booking_idempotency_key",
+)
+```
+
+## Duplicate Payment Request
+
+First request:
+
+```text
+HTTP 201
+Payment Created
+```
+
+Repeated request with the same key:
+
+```text
+HTTP 200
+Existing Payment Returned
+```
+
+The system does not create another payment record.
+
+---
+
+# 7. Payment Webhook Idempotency
+
+Payment callbacks can sometimes be delivered more than once.
+
+The payment webhook therefore uses:
+
+```python
+select_for_update()
+```
+
+inside:
+
+```python
+transaction.atomic()
+```
+
+The payment status is checked before processing.
+
+If the payment has already been processed, the system returns the existing payment information instead of performing the payment operation again.
+
+Example:
+
+```text
+First Callback
+      ↓
+PENDING → SUCCESS
+      ↓
+Booking → CONFIRMED
+      ↓
+Notification Sent
+```
+
+Repeated callback:
+
+```text
+SUCCESS
+   ↓
+Already Processed
+   ↓
+HTTP 200
+   ↓
+No duplicate side effects
+```
+
+This prevents duplicate booking confirmation and duplicate notifications.
+
+---
+
+# 8. Database Data Integrity
+
+Data integrity ensures that database records remain accurate, valid, and consistent.
+
+The following areas were verified.
+
+## 8.1 Unique Constraints
+
+Important unique fields/constraints include:
+
+* User email
+* Driver license number
+* Payment transaction ID
+* Booking + idempotency key
+
+Example:
+
+```python
+transaction_id = models.CharField(
+    max_length=255,
+    unique=True,
+)
+```
+
+---
+
+## 8.2 Foreign Keys
+
+Important relationships include:
+
+```text
+Booking
+ ├── Customer → User
+ ├── Provider → Provider
+ └── Service  → Service
+
+Payment
+ └── Booking → Booking
+```
+
+Foreign keys prevent invalid references between related records.
+
+Important relationships use appropriate deletion protection such as:
+
+```python
+on_delete=models.PROTECT
+```
+
+where required by the business model.
+
+---
+
+## 8.3 Required Fields
+
+Required business fields include:
+
+### Booking
+
+* Customer
+* Provider
+* Service
+* Booking date
+* Booking time
+* Amount
+* Status
+
+### Payment
+
+* Booking
+* Amount
+* Transaction ID
+* Payment status
+* Payment method
+
+This prevents incomplete business records.
+
+---
+
+# 9. Valid Status Values
+
+Booking status values are defined using Django `TextChoices`:
+
+```python
+class BookingStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    CONFIRMED = "confirmed", "Confirmed"
+    IN_PROGRESS = "in_progress", "In Progress"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    PAYMENT_FAILED = "payment_failed", "Payment Failed"
+```
+
+Only defined business states are accepted.
+
+Invalid status values are rejected by the API.
+
+---
+
+# 10. Duplicate Prevention
+
+Duplicate prevention is implemented at multiple levels.
+
+### Application Level
+
+* Status transition validation
+* Idempotency key validation
+* Payment processing checks
+
+### Database Level
+
+* Unique fields
+* Unique constraints
+* Foreign key constraints
+
+### Concurrency Level
+
+* Database transactions
+* `select_for_update()`
+* PostgreSQL row-level locking
+
+This provides multiple layers of protection.
+
+---
+
+# 11. Automated Workflow Tests
+
+Automated tests were created to validate the complete workflow.
+
+Test file:
+
+```text
+accounts/tests/test_booking_workflow.py
+```
+
+The workflow test suite contains **9 tests**.
+
+Test coverage includes:
+
+```text
+Create Booking
+     ↓
+Confirm
+     ↓
+Start
+     ↓
+Complete
+```
+
+and alternative scenarios:
+
+```text
+Cancel
+Payment Failure
+Invalid Transition
+Duplicate Request
+Payment Idempotency
+```
+
+## Workflow Test Result
+
+Command:
+
+```powershell
+python manage.py test accounts.tests.test_booking_workflow
+```
+
+Result:
+
+```text
+Found 9 test(s).
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 22.824s
+
+OK
+```
+
+All workflow tests passed successfully.
+
+---
+
+# 12. Concurrency Test
+
+Separate concurrency test file:
+
+```text
+accounts/tests/test_booking_concurrency.py
+```
+
+The test creates two simultaneous requests for the same booking.
+
+Result:
+
+```text
+CONCURRENCY RESULTS: [200, 400]
+```
+
+Test result:
+
+```text
+Ran 1 test
+
+OK
+```
+
+Therefore, the concurrency scenario was successfully validated.
+
+---
+
+# 13. Verification Commands
+
+The following commands were used during implementation and verification.
+
+### Django System Check
+
+```powershell
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+### Ruff Code Validation
+
+```powershell
+python -m ruff check .\accounts --select F
+```
+
+Result:
+
+```text
+All checks passed!
+```
+
+### Migration Consistency
+
+```powershell
+python manage.py makemigrations --check
+```
+
+Result:
+
+```text
+No changes detected
+```
+
+### Workflow Tests
+
+```powershell
+python manage.py test accounts.tests.test_booking_workflow
+```
+
+Result:
+
+```text
+Found 9 test(s).
+.........
+Ran 9 tests
+OK
+```
+
+### Concurrency Tests
+
+```powershell
+python manage.py test accounts.tests.test_booking_concurrency
+```
+
+Result:
+
+```text
+Ran 1 test
+OK
+```
+
+---
+
+# 14. Acceptance Criteria
+
+| Acceptance Criteria                     | Status      |
+| --------------------------------------- | ----------- |
+| State machine implemented               | ✅ Completed |
+| Invalid transitions rejected            | ✅ Completed |
+| Transactions implemented where required | ✅ Completed |
+| Concurrency scenario tested             | ✅ Completed |
+| Idempotency implemented where required  | ✅ Completed |
+| Database integrity verified             | ✅ Completed |
+| Complete workflow tests passing         | ✅ Completed |
+
+---
+
+# 15. Final Implementation Summary
+
+The Advanced Business Workflow & Data Integrity story strengthened the booking and payment workflow by introducing controlled state transitions, transactional database operations, row-level locking for concurrent requests, payment idempotency, duplicate callback protection, database constraints, and automated workflow testing.
+
+The implementation was verified through Django system checks, Ruff validation, migration consistency checks, workflow tests, transaction tests, and concurrency tests.
 
