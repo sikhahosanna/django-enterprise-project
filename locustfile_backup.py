@@ -1,5 +1,4 @@
 from locust import HttpUser, task, between
-import os
 
 
 class RideBookingUser(HttpUser):
@@ -7,7 +6,7 @@ class RideBookingUser(HttpUser):
     wait_time = between(1, 2)
 
     def on_start(self):
-        self.token = os.getenv("TEST_ACCESS_TOKEN", "")
+        self.token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MzgzMzc3LCJpYXQiOjE3ODgzODE1NzcsImp0aSI6ImZjYTJhNzBjZjlmYzQ1NzdiZmJlOWIzOWQ1YmMzZTk5IiwidXNlcl9pZCI6IjkzMWVlYTdlLTdjMGYtNGUwNy1iNWI3LTIwNzI3NzZiOWFmNCJ9.oTA3PpRYM9D7hxpgdw-abmLoIlzVPeQ-_L-YHsIhPeI"
 
     @task
     def nearby_drivers(self):

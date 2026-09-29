@@ -16203,3 +16203,1019 @@ The Advanced Business Workflow & Data Integrity story strengthened the booking a
 
 The implementation was verified through Django system checks, Ruff validation, migration consistency checks, workflow tests, transaction tests, and concurrency tests.
 
+30/9/26
+
+# Task 1 — Authentication Audit
+
+## Objective
+
+The objective of this task is to audit and verify the authentication system of the Django REST API. The authentication flow was tested for valid tokens, invalid tokens, expired tokens, refresh tokens, logout, and password change functionality.
+
+## Authentication Tests Performed
+
+### 1. Valid Token Test
+
+**Test:**
+A valid JWT access token was generated through the login API and used to access a protected API endpoint.
+
+**Expected Result:**
+The API should accept the valid token and return a successful response.
+
+**Result:**
+The valid access token was accepted successfully and the protected API returned a successful response.
+
+**Status:** ✅ PASS
+
+---
+
+### 2. Invalid Token Test
+
+**Test:**
+An invalid JWT token was provided in the Authorization header while accessing a protected API.
+
+**Expected Result:**
+The API should reject the invalid token with an authentication error.
+
+**Result:**
+The API rejected the invalid token and returned `401 Unauthorized`.
+
+**Status:** ✅ PASS
+
+---
+
+### 3. Expired Token Test
+
+**Test:**
+An expired JWT access token was used to access a protected API endpoint.
+
+**Expected Result:**
+The API should reject the expired token.
+
+**Result:**
+The expired access token was rejected and the API returned `401 Unauthorized`.
+
+**Status:** ✅ PASS
+
+---
+
+### 4. Refresh Token Test
+
+**Test:**
+A valid refresh token was submitted to the refresh token endpoint after the access token expired.
+
+**Expected Result:**
+The API should validate the refresh token and generate a new access token.
+
+**Result:**
+The refresh token was accepted successfully and a new access token was generated.
+
+**Status:** ✅ PASS
+
+---
+
+### 5. Logout Test
+
+**Test:**
+The logout API was tested using a valid refresh token.
+
+**Expected Result:**
+The refresh token should be blacklisted and should no longer be usable after logout.
+
+**Result:**
+Logout was completed successfully. The refresh token was blacklisted and could not be reused for generating a new access token.
+
+**Status:** ✅ PASS
+
+---
+
+### 6. Password Change Test
+
+**Test:**
+The password change functionality was tested using the existing password and a new password.
+
+**Expected Result:**
+The password should be updated successfully. The new password should work for login and the old password should no longer be accepted.
+
+**Result:**
+The password change functionality was verified successfully. The new password was accepted for authentication and the old password was rejected.
+
+**Status:** ✅ PASS
+
+---
+
+## Test Summary
+
+| Test Case       | Result                        | Status |
+| --------------- | ----------------------------- | ------ |
+| Valid Token     | Authentication successful     | ✅ PASS |
+| Invalid Token   | Request rejected with 401     | ✅ PASS |
+| Expired Token   | Request rejected with 401     | ✅ PASS |
+| Refresh Token   | New access token generated    | ✅ PASS |
+| Logout          | Refresh token blacklisted     | ✅ PASS |
+| Password Change | Password updated successfully | ✅ PASS |
+
+## Conclusion
+
+The authentication audit was completed successfully. JWT authentication, token validation, token expiration handling, refresh token functionality, logout, and password change flows were verified.
+
+The authentication system correctly handles valid and invalid authentication scenarios and protects secured API endpoints from unauthorized access.
+
+# Task 2 — Authorization Audit
+
+## Objective
+
+The objective of this task is to verify role-based authorization across the important APIs of the application.
+
+The APIs were tested using the following access levels:
+
+* Admin
+* Provider
+* Customer
+* Anonymous User
+
+The purpose was to ensure that each role can access only the APIs and operations permitted for that role.
+
+## Roles Tested
+
+### 1. Admin
+
+The Admin role was tested against the important APIs to verify administrative access and management permissions.
+
+**Result:** Admin access was verified successfully for the APIs permitted to the Admin role.
+
+**Status:** ✅ PASS
+
+---
+
+### 2. Provider
+
+The Provider role was tested against service-related, profile, booking, and other applicable APIs.
+
+**Result:** Provider access was allowed only for the permitted operations. Restricted operations were rejected appropriately.
+
+**Status:** ✅ PASS
+
+---
+
+### 3. Customer
+
+The Customer role was tested against profile, service listing, booking, payment, and other applicable APIs.
+
+**Result:** Customer access was allowed for permitted customer operations, while restricted operations were denied.
+
+**Status:** ✅ PASS
+
+---
+
+### 4. Anonymous User
+
+Important protected APIs were tested without providing an authentication token.
+
+**Result:** Protected APIs rejected unauthenticated requests with an authentication error.
+
+**Status:** ✅ PASS
+
+## Authorization Test Summary
+
+| Role      | Access Verification                | Result |
+| --------- | ---------------------------------- | ------ |
+| Admin     | Administrative and permitted APIs  | ✅ PASS |
+| Provider  | Provider-specific permitted APIs   | ✅ PASS |
+| Customer  | Customer-specific permitted APIs   | ✅ PASS |
+| Anonymous | Protected API access without token | ✅ PASS |
+
+## Authorization Behavior
+
+The following authorization behavior was verified:
+
+* Authenticated users can access APIs permitted for their role.
+* Users cannot access restricted operations belonging to other roles.
+* Anonymous users cannot access protected APIs.
+* Unauthorized authenticated requests are rejected with appropriate permission responses.
+* Authentication and authorization restrictions are enforced at the API level.
+
+## Expected HTTP Responses
+
+| Scenario                                  | Expected Response        |
+| ----------------------------------------- | ------------------------ |
+| Authorized user                           | `200 OK` / `201 Created` |
+| Unauthenticated request                   | `401 Unauthorized`       |
+| Authenticated but insufficient permission | `403 Forbidden`          |
+
+## Conclusion
+
+The Authorization Audit was completed successfully.
+
+Role-based access control was verified using Admin, Provider, Customer, and Anonymous access levels. The important APIs were tested to ensure that users receive only the permissions assigned to their respective roles.
+
+The authorization mechanism correctly restricts protected resources and prevents unauthorized role-based access.
+# Task 3 — IDOR Testing
+
+## Objective
+
+The objective of this task is to test the application for Insecure Direct Object Reference (IDOR) vulnerabilities.
+
+The testing verifies whether an authenticated user can access or modify another user's resources by changing resource identifiers such as profile IDs, booking IDs, or service IDs.
+
+## IDOR Test Scenarios
+
+### 1. Customer A → Customer B Profile
+
+**Test:**
+Customer A was authenticated and an attempt was made to access Customer B's profile using Customer B's profile identifier.
+
+**Expected Result:**
+Customer A must not be able to access Customer B's profile information.
+
+**Result:**
+Access to another customer's profile was restricted.
+
+**Status:** ✅ PASS
+
+---
+
+### 2. Customer A → Customer B Booking
+
+**Test:**
+Customer A was authenticated and an attempt was made to access Customer B's booking by using Customer B's booking identifier.
+
+**Expected Result:**
+Customer A must not be able to view or access Customer B's booking details.
+
+**Result:**
+Access to another customer's booking was restricted.
+
+**Status:** ✅ PASS
+
+---
+
+### 3. Provider A → Provider B Service
+
+**Test:**
+Provider A was authenticated and an attempt was made to access or modify Provider B's service using Provider B's service identifier.
+
+**Expected Result:**
+Provider A must not be able to access or modify Provider B's service without permission.
+
+**Result:**
+Access to another provider's service was restricted.
+
+**Status:** ✅ PASS
+
+## IDOR Test Summary
+
+| Test Scenario                   | Expected Result | Actual Result | Status |
+| ------------------------------- | --------------- | ------------- | ------ |
+| Customer A → Customer B Profile | Access denied   | Access denied | ✅ PASS |
+| Customer A → Customer B Booking | Access denied   | Access denied | ✅ PASS |
+| Provider A → Provider B Service | Access denied   | Access denied | ✅ PASS |
+
+## Security Verification
+
+The following controls were verified:
+
+* Users cannot access another user's profile using a different resource ID.
+* Customers cannot access bookings belonging to other customers.
+* Providers cannot access or modify services belonging to other providers.
+* Resource ownership is validated before allowing access.
+* Unauthorized resource access is rejected by the API.
+
+## Expected HTTP Responses
+
+Unauthorized access may return:
+
+* `403 Forbidden` when the authenticated user does not have permission.
+* `404 Not Found` when the application intentionally hides the existence of the resource.
+
+Both responses prevent unauthorized users from obtaining the protected resource.
+
+## Conclusion
+
+IDOR testing was completed for customer profiles, customer bookings, and provider services.
+
+The tested resources were protected against unauthorized cross-user access, ensuring that users can access only the resources they are authorized to access.
+
+**Overall Status: ✅ PASS**
+
+# Task 4 — Input Validation
+
+## Objective
+
+The objective of this task is to verify that the API correctly validates and safely handles invalid, malformed, oversized, and unexpected input data.
+
+The API was tested with different invalid input scenarios to ensure that invalid requests are rejected safely without causing application failures or unexpected server errors.
+
+## Test Scenarios
+
+### 1. Empty Data
+
+**Test Performed:**
+Requests were submitted with empty or missing required input data.
+
+**Result:**
+The API validated the request and rejected incomplete input with an appropriate validation response.
+
+**Status:** ✅ PASS
+
+---
+
+### 2. Invalid UUID
+
+**Test Performed:**
+An invalid UUID value was provided where a valid UUID was expected.
+
+**Example:**
+
+```text
+12345
+```
+
+**Result:**
+The API safely rejected the invalid identifier and returned an appropriate `404 Not Found` response.
+
+**Status:** ✅ PASS
+
+---
+
+### 3. Extremely Long Strings
+
+**Test Performed:**
+Extremely long text values were submitted to text-based input fields.
+
+**Result:**
+The API safely handled the oversized input and prevented invalid data from causing an application failure.
+
+**Status:** ✅ PASS
+
+---
+
+### 4. Invalid Numbers
+
+**Test Performed:**
+Invalid numeric values, including non-numeric and inappropriate numeric inputs, were submitted to numeric fields.
+
+**Result:**
+The API rejected invalid numeric input through validation.
+
+**Status:** ✅ PASS
+
+---
+
+### 5. Invalid Dates
+
+**Test Performed:**
+Malformed and invalid date values were submitted to date/datetime fields.
+
+**Result:**
+The API correctly validated the date input and rejected invalid date values.
+
+**Status:** ✅ PASS
+
+---
+
+### 6. Invalid File Types
+
+**Test Performed:**
+Unsupported file types were submitted through the file upload functionality.
+
+**Result:**
+The API rejected unsupported file types and prevented invalid files from being accepted.
+
+**Status:** ✅ PASS
+
+---
+
+### 7. Unexpected JSON Fields
+
+**Test Performed:**
+Additional unexpected fields were included in JSON API requests.
+
+**Result:**
+The API safely handled the unexpected fields without causing an application error or server failure.
+
+**Status:** ✅ PASS
+
+---
+
+## Test Summary
+
+| Test Case              | Result                             | Status |
+| ---------------------- | ---------------------------------- | ------ |
+| Empty Data             | Safely rejected                    | ✅ PASS |
+| Invalid UUID           | Rejected with appropriate response | ✅ PASS |
+| Extremely Long Strings | Safely handled                     | ✅ PASS |
+| Invalid Numbers        | Rejected by validation             | ✅ PASS |
+| Invalid Dates          | Rejected by validation             | ✅ PASS |
+| Invalid File Types     | Rejected                           | ✅ PASS |
+| Unexpected JSON Fields | Safely handled                     | ✅ PASS |
+
+## Security Validation
+
+The following input validation controls were verified:
+
+* Required fields are validated.
+* Invalid UUID values are handled safely.
+* Oversized text input is handled safely.
+* Invalid numeric values are rejected.
+* Invalid date values are rejected.
+* Unsupported file types are blocked.
+* Unexpected JSON fields are handled safely.
+* Invalid requests do not result in unintended application failures.
+
+## Conclusion
+
+Task 4 — Input Validation was completed successfully.
+
+The API was tested against multiple invalid and unexpected input scenarios. The validation mechanisms correctly handled the tested inputs and ensured that invalid requests were safely rejected or handled without causing application failures.
+
+**Overall Status: ✅ COMPLETED**
+
+# TASK 5 — API THROTTLING AUDIT
+
+## Objective
+
+The objective of this task was to verify API rate limiting and ensure that sensitive APIs are protected against excessive and repeated requests.
+
+## APIs Tested
+
+The following APIs were covered during the API throttling audit:
+
+1. Login API
+2. Registration API
+3. Password Operations
+4. Booking Creation API
+5. Payment Initiation API
+
+---
+
+## 1. Login API
+
+**Endpoint:**
+
+```text
+POST /api/v1/login/
+```
+
+### Testing
+
+Repeated login requests were tested to verify rate-limiting behavior.
+
+### Result
+
+The Login API throttling configuration was verified to protect the endpoint from excessive login attempts.
+
+**Status: PASS**
+
+---
+
+## 2. Registration API
+
+**Endpoint:**
+
+```text
+POST /api/v1/register/
+```
+
+### Testing
+
+Multiple registration requests were tested within a short period to verify request-rate protection.
+
+### Result
+
+The Registration API throttling behavior was verified successfully.
+
+**Status: PASS**
+
+---
+
+## 3. Password Operations
+
+### Testing
+
+Repeated password-related requests were tested to verify that excessive password operations are restricted.
+
+### Result
+
+Password operation rate limiting was verified successfully.
+
+**Status: PASS**
+
+---
+
+## 4. Booking Creation API
+
+**Endpoint:**
+
+```text
+POST /api/v1/bookings/
+```
+
+### Testing
+
+Multiple booking creation requests were tested using an authenticated customer account.
+
+### Result
+
+The Booking Creation API rate-limiting behavior was verified successfully.
+
+**Status: PASS**
+
+---
+
+## 5. Payment Initiation API
+
+**Endpoint:**
+
+```text
+POST /api/v1/payments/initiate/
+```
+
+### Testing
+
+Repeated payment initiation requests were tested using an authenticated customer account.
+
+### Result
+
+The Payment API throttling behavior was verified successfully.
+
+**Status: PASS**
+
+---
+
+## Test Summary
+
+| API                 | Method | Throttling Verification | Status |
+| ------------------- | ------ | ----------------------- | ------ |
+| Login               | POST   | Rate limiting verified  | PASS   |
+| Registration        | POST   | Rate limiting verified  | PASS   |
+| Password Operations | POST   | Rate limiting verified  | PASS   |
+| Booking Creation    | POST   | Rate limiting verified  | PASS   |
+| Payment Initiation  | POST   | Rate limiting verified  | PASS   |
+
+## Security Benefits
+
+API throttling helps protect the application against:
+
+* Brute-force login attempts
+* Excessive registration requests
+* Repeated password operations
+* Booking API abuse
+* Repeated payment requests
+* High-frequency API requests
+
+## Conclusion
+
+Task 5 — **API Throttling Audit** was completed successfully. Rate-limiting protection was reviewed for Login, Registration, Password Operations, Booking Creation, and Payment APIs.
+
+**Overall Status: COMPLETED**
+# TASK 6 — FILE UPLOAD SECURITY AUDIT
+
+## Objective
+
+The objective of this task was to verify the security of file upload functionality and ensure that only safe and valid files are accepted by the application.
+
+The following security validations were tested:
+
+* Invalid file extension
+* Large file size
+* Missing file
+* Malicious filename
+* Incorrect MIME type
+
+---
+
+## API Tested
+
+**Profile Image Upload API**
+
+```text
+POST /api/v1/profile/image/
+```
+
+The API was tested using Postman with authenticated user access.
+
+---
+
+## 1. Invalid File Extension
+
+### Test
+
+Files with unsupported extensions were uploaded, including:
+
+```text
+test.txt
+test.exe
+test.php
+```
+
+### Expected Behavior
+
+The application should reject unsupported file extensions.
+
+### Result
+
+Invalid file extensions were safely rejected.
+
+**Status: PASS**
+
+---
+
+## 2. Large File
+
+### Test
+
+A file exceeding the configured upload size limit was uploaded.
+
+The application has a maximum profile image size validation of approximately **5 MB**.
+
+### Expected Behavior
+
+Files exceeding the allowed size should be rejected and should not be stored.
+
+### Result
+
+Large files were safely rejected by the file-size validation.
+
+**Status: PASS**
+
+---
+
+## 3. Missing File
+
+### Test
+
+The upload request was sent without providing the `profile_image` field.
+
+### Expected Behavior
+
+The API should return a validation error instead of processing an incomplete request.
+
+### Result
+
+The missing file request was safely rejected.
+
+**Status: PASS**
+
+---
+
+## 4. Malicious Filename
+
+### Test
+
+Suspicious filenames containing path traversal or special characters were tested.
+
+Examples:
+
+```text
+../../test.jpg
+<script>.jpg
+test..jpg
+```
+
+### Expected Behavior
+
+The application should prevent unsafe filenames from being used for file storage or path traversal.
+
+### Result
+
+Malicious filename input was handled safely and did not allow unsafe file access.
+
+**Status: PASS**
+
+---
+
+## 5. Incorrect MIME Type
+
+### Test
+
+Files with incorrect or unsupported MIME types were tested.
+
+Examples:
+
+```text
+text/plain
+application/pdf
+application/octet-stream
+```
+
+### Expected Behavior
+
+Files with unsupported MIME types should be rejected.
+
+### Result
+
+Incorrect MIME type uploads were safely rejected.
+
+**Status: PASS**
+
+---
+
+## Validation Rules
+
+The file upload functionality applies the following validation rules:
+
+| Validation         | Requirement                   |
+| ------------------ | ----------------------------- |
+| File Extension     | JPG, JPEG, PNG                |
+| File Size          | Less than 5 MB                |
+| Missing File       | Reject                        |
+| Malicious Filename | Safely handle/reject          |
+| MIME Type          | Validate supported image type |
+
+---
+
+## Security Verification
+
+The file upload security testing helps protect the application against:
+
+* Uploading executable files
+* Oversized file uploads
+* Invalid or incomplete requests
+* Path traversal attacks
+* Unsafe filenames
+* Incorrect file types
+* Potential malicious file uploads
+
+---
+
+## Test Summary
+
+| Test Case           | Result          | Status |
+| ------------------- | --------------- | ------ |
+| Invalid Extension   | Safely rejected | PASS   |
+| Large File          | Safely rejected | PASS   |
+| Missing File        | Safely rejected | PASS   |
+| Malicious Filename  | Safely handled  | PASS   |
+| Incorrect MIME Type | Safely rejected | PASS   |
+
+---
+
+## Conclusion
+
+Task 6 — **File Upload Security Audit** was completed successfully. File upload validation was verified for invalid extensions, large files, missing files, malicious filenames, and incorrect MIME types.
+
+The implemented validation ensures that unsafe or unsupported files are not accepted by the application.
+
+**Overall Status: COMPLETED**
+# Task 7 — Sensitive Data Review
+
+## Objective
+
+Review the project repository for sensitive information such as passwords, authentication tokens, secret keys, database credentials, API keys, and private keys, and ensure that sensitive values are not exposed in source code or version control.
+
+## Activities Performed
+
+### 1. Repository Secret Search
+
+The repository was searched for sensitive keywords including:
+
+* `password`
+* `secret`
+* `token`
+* `API_KEY`
+* `DATABASE_PASSWORD`
+* `PRIVATE_KEY`
+
+This review helped identify authentication tokens and sensitive configuration references.
+
+### 2. Hard-Coded Token Review
+
+Performance testing and Locust files were reviewed for hard-coded JWT access tokens.
+
+Hard-coded test tokens were identified in performance-testing scripts and Locust configuration.
+
+### 3. Environment Variable Configuration
+
+Hard-coded authentication tokens were removed from the Locust test configuration.
+
+The token is now retrieved using an environment variable:
+
+```python
+import os
+
+self.token = os.getenv("TEST_ACCESS_TOKEN", "")
+```
+
+The actual token is supplied through the PowerShell environment:
+
+```powershell
+$env:TEST_ACCESS_TOKEN="YOUR_ACCESS_TOKEN"
+```
+
+This prevents the authentication token from being stored directly in the source code.
+
+### 4. `.env` Security Review
+
+The project uses environment-based configuration for sensitive values such as:
+
+* Django `SECRET_KEY`
+* Database password
+* Email credentials
+* JWT configuration
+
+The `.env` file is excluded from Git tracking through `.gitignore`.
+
+### 5. Git Tracking Verification
+
+The repository was checked to ensure that `.env` is not tracked by Git.
+
+Sensitive configuration was therefore separated from application source code.
+
+## Security Improvements
+
+* Removed hard-coded JWT tokens from performance-testing code.
+* Changed Locust authentication to environment-variable based configuration.
+* Reviewed password and secret-key references.
+* Verified `.env` is included in `.gitignore`.
+* Reviewed tracked performance-testing files for exposed credentials.
+* Applied environment-based secret management practices.
+
+## Test Result
+
+The sensitive-data review was completed successfully.
+
+Hard-coded authentication tokens identified during the review were moved to environment-variable based configuration.
+
+**Status: Completed**
+# Task 8 — Security Final Audit
+
+## Objective
+
+Prepare the final security audit report covering authentication, authorization, IDOR protection, input validation, rate limiting, file upload security, sensitive-data review, and security fixes.
+
+## Security Areas Audited
+
+### 1. Authentication Audit
+
+**Issue:** Authentication mechanisms were reviewed for valid, invalid, expired, and refresh-token scenarios.
+
+**Severity:** High
+
+**Affected Component:** JWT Authentication APIs
+
+**Risk:** Incorrect token handling could allow unauthorized access to protected APIs.
+
+**Fix:** JWT authentication and token validation were reviewed, including access and refresh token handling.
+
+**Test Result:** Invalid and expired authentication tokens return `401 Unauthorized`.
+
+---
+
+### 2. Authorization Audit
+
+**Issue:** Role-based access was reviewed for Admin, Provider, Customer, and Anonymous users.
+
+**Severity:** High
+
+**Affected Component:** DRF permissions and protected APIs
+
+**Risk:** Incorrect authorization could allow users to access APIs outside their permitted role.
+
+**Fix:** Authentication and role-based permission controls were reviewed.
+
+**Test Result:** Unauthorized requests are handled through `401 Unauthorized` or `403 Forbidden` based on authentication and permission requirements.
+
+---
+
+### 3. IDOR Testing
+
+**Issue:** Object-level access control was reviewed for profiles, bookings, and provider services.
+
+**Severity:** High
+
+**Affected Component:** Profile, Booking, and Service APIs
+
+**Risk:** Users could potentially access another user's resources by changing resource IDs.
+
+**Fix:** Object ownership and permission checks were reviewed.
+
+**Test Result:** Unauthorized object access is expected to return `403` or `404` rather than exposing protected information.
+
+---
+
+### 4. Input Validation
+
+**Issue:** API input validation was tested against invalid and unexpected input.
+
+**Severity:** Medium
+
+**Affected Component:** REST API serializers and request validation
+
+**Risk:** Improper input handling could result in invalid data or unexpected application behavior.
+
+**Fix:** Validation was reviewed for required fields, UUIDs, strings, numbers, dates, files, and unexpected JSON fields.
+
+**Test Result:** Invalid input is rejected through API validation.
+
+### Tested Scenarios
+
+* Empty data
+* Invalid UUID
+* Extremely long strings
+* Invalid numbers
+* Invalid dates
+* Invalid file types
+* Unexpected JSON fields
+
+---
+
+### 5. Rate Limiting
+
+**Issue:** Sensitive APIs were reviewed for request throttling.
+
+**Severity:** High
+
+**Affected Component:** Authentication and sensitive APIs
+
+**Risk:** Excessive requests could increase the risk of brute-force attacks and API abuse.
+
+**Fix:** API throttling configuration was reviewed for sensitive operations.
+
+**Test Result:** Rate-limiting behavior was reviewed for repeated requests.
+
+### APIs Reviewed
+
+* Login
+* Registration
+* Password operations
+* Booking creation
+* Payment APIs
+
+---
+
+### 6. File Upload Security
+
+**Issue:** Profile image upload functionality was reviewed for unsafe file uploads.
+
+**Severity:** High
+
+**Affected Component:** `/api/v1/profile/image/`
+
+**Risk:** Unsafe or malicious files could create application and storage security risks.
+
+**Fix:** File type, file size, filename, missing-file, and MIME-type validation were reviewed.
+
+**Test Result:** Invalid upload scenarios are rejected through validation.
+
+### Tested Scenarios
+
+* Invalid file extension
+* Large file
+* Missing file
+* Malicious filename
+* Incorrect MIME type
+
+---
+
+### 7. Sensitive Data Review
+
+**Issue:** Source code was reviewed for hard-coded passwords, tokens, secrets, API keys, and private keys.
+
+**Severity:** High
+
+**Affected Component:** Configuration and performance-testing files
+
+**Risk:** Exposed credentials or JWT tokens could be misused by unauthorized users.
+
+**Fix:** Hard-coded test JWT tokens were removed from source code and replaced with environment-variable based configuration.
+
+**Test Result:** Sensitive configuration is maintained through environment variables, and `.env` is excluded from Git tracking.
+
+---
+
+# Security Issue Summary
+
+| Security Area         | Status    |
+| --------------------- | --------- |
+| Authentication Audit  | Completed |
+| Authorization Audit   | Completed |
+| IDOR Testing          | Completed |
+| Input Validation      | Completed |
+| Rate Limiting         | Completed |
+| File Upload Security  | Completed |
+| Secrets Review        | Completed |
+| Security Issues Fixed | Completed |
+| Final Security Report | Completed |
+
+# Security Improvements Implemented
+
+The following improvements were completed:
+
+1. Reviewed JWT authentication and token validation.
+2. Reviewed role-based authorization.
+3. Reviewed object-level access control.
+4. Tested API input validation scenarios.
+5. Reviewed rate limiting for sensitive APIs.
+6. Reviewed file upload security controls.
+7. Removed hard-coded JWT tokens from performance-testing configuration.
+8. Changed Locust authentication to environment-variable based token handling.
+9. Verified `.env` is excluded from Git tracking.
+10. Reviewed repository files for sensitive credentials and secrets.
+
+# Final Result
+
+The security audit covered the major security areas of the Django Enterprise API. Authentication, authorization, IDOR, input validation, rate limiting, file upload security, and sensitive-data handling were reviewed and documented.
+
+Security improvements identified during the audit were applied, particularly the removal of hard-coded authentication tokens and adoption of environment-variable based secret handling.
+
+**Final Status: Security Audit Completed**
