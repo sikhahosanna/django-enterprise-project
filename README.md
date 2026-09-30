@@ -2149,8 +2149,6 @@ Developed as a Django REST Framework backend project implementing authentication
 
 12/08/2026
 
-Sure. **README lo direct ga paste chesukune professional notes format** lo ila pettuko:
-
 ````markdown
 # Ride Management API – Development Notes
 
@@ -5232,7 +5230,7 @@ Task 8 - Performance Testing        COMPLETED
 ```
 19/08/26
 
-Sure 👍 Nee current Jira story **Real-Time Communication Using Django Channels & WebSockets** ki suitable ga `README.md` first create cheddam.
+
 
 Project root:
 
@@ -5240,13 +5238,6 @@ Project root:
 C:\Users\BlackRoth\Desktop\django\myproject
 ```
 
-### 1. `README.md` create cheyyi
-
-VS Code lo project root folder meeda:
-
-**Right Click → New File → `README.md`**
-
-### 2. `README.md` lo idi complete ga paste cheyyi
 
 ````markdown
 # Real-Time Communication Using Django Channels & WebSockets
@@ -5927,7 +5918,7 @@ Notifications & Background Processing
 ```
 
 21/8/26
-www
+
 
 # 21-Aug-2026 — Friday
 
