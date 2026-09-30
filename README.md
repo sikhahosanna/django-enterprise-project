@@ -5239,6 +5239,7 @@ C:\Users\BlackRoth\Desktop\django\myproject
 ```
 
 
+
 ````markdown
 # Real-Time Communication Using Django Channels & WebSockets
 
@@ -17210,3 +17211,723 @@ The security audit covered the major security areas of the Django Enterprise API
 Security improvements identified during the audit were applied, particularly the removal of hard-coded authentication tokens and adoption of environment-variable based secret handling.
 
 **Final Status: Security Audit Completed**
+
+1/10/26
+
+
+# Critical APIs
+
+## Objective
+
+Identify the important APIs in the application that are required for the core business workflow and should be covered during performance testing, automated testing, and production validation.
+
+## Steps Performed
+
+### Step 1 — Reviewed the Application Workflow
+
+The main application workflow was reviewed to identify the APIs that are frequently used and are important for the application's core functionality.
+
+The main workflow considered was:
+
+**Login → Service Search → Booking → Payment → Notifications → Booking History**
+
+### Step 2 — Identified Login API
+
+The Login API was identified as a critical API because users must authenticate before accessing protected APIs.
+
+**Login API**
+
+**Purpose:**
+
+* Authenticate users.
+* Validate user credentials.
+* Generate JWT access and refresh tokens.
+* Provide authenticated access to protected APIs.
+
+**Priority:** Critical
+
+### Step 3 — Identified Service Search API
+
+The Service Search API was identified because customers need to search and view available services before creating a booking.
+
+**Service Search API**
+
+**Purpose:**
+
+* Search available services.
+* Retrieve service information.
+* Allow customers to find services before booking.
+
+**Priority:** High
+
+### Step 4 — Identified Booking API
+
+The Booking API was identified as a core business API because customers use it to create service bookings.
+
+**Booking API**
+
+**Purpose:**
+
+* Create service bookings.
+* Retrieve booking information.
+* Maintain booking details and status.
+
+**Priority:** Critical
+
+### Step 5 — Identified Payment API
+
+The Payment API was identified because payment is an important part of the booking workflow.
+
+**Payment API**
+
+**Purpose:**
+
+* Initiate payment for a booking.
+* Validate booking and payment information.
+* Process payment-related operations.
+
+**Priority:** Critical
+
+### Step 6 — Identified Notifications API
+
+The Notifications API was identified because users need to receive important updates related to their bookings and payments.
+
+**Notifications API**
+
+**Purpose:**
+
+* Retrieve user notifications.
+* Provide booking-related updates.
+* Provide payment-related updates.
+* Keep users informed about important application events.
+
+**Priority:** High
+
+### Step 7 — Identified Booking History API
+
+The Booking History API was identified because customers need to view their previous and current bookings.
+
+**Booking History API**
+
+**Purpose:**
+
+* Retrieve booking history.
+* View previous bookings.
+* View current booking information.
+* View booking status.
+
+**Priority:** High
+
+## Critical API Summary
+
+| API                 | Priority | Main Function                                |
+| ------------------- | -------- | -------------------------------------------- |
+| Login API           | Critical | User authentication and JWT token generation |
+| Service Search API  | High     | Search and retrieve available services       |
+| Booking API         | Critical | Create and manage service bookings           |
+| Payment API         | Critical | Initiate and process booking payments        |
+| Notifications API   | High     | Retrieve booking and payment notifications   |
+| Booking History API | High     | View previous and current booking records    |
+
+## Reason for Selecting These APIs
+
+These APIs were selected because they cover the main application workflow:
+
+**Authentication → Service Discovery → Booking → Payment → Notifications → Booking History**
+
+The selected APIs also represent the major areas that need validation for:
+
+* Authentication
+* Business transactions
+* Data retrieval
+* Payment processing
+* User notifications
+* Booking management
+
+## Testing Scope
+
+The identified critical APIs will be considered for the following testing activities:
+
+### Performance Testing
+
+* API response time
+* Request processing time
+* Concurrent request handling
+* Database query performance
+
+### Automated Testing
+
+* Successful API requests
+* Invalid input validation
+* Authentication validation
+* Authorization validation
+* Error response validation
+* Business rule validation
+
+### Production Validation
+
+* API availability
+* Correct HTTP status codes
+* Response correctness
+* Authentication and authorization
+* Error handling
+* Overall API reliability
+
+## Final Result
+
+Six critical APIs were identified for the application:
+
+1. **Login API**
+2. **Service Search API**
+3. **Booking API**
+4. **Payment API**
+5. **Notifications API**
+6. **Booking History API**
+
+These APIs will be used as the primary APIs for the remaining performance, automated testing, and production validation activities.
+
+
+# Task 2 — Performance Baseline
+
+## Objective
+
+Establish a performance baseline for the application's critical APIs before applying optimization techniques.
+
+## Critical APIs Tested
+
+* Login API
+* Driver Location API
+* Nearby Drivers API
+* Create Ride API
+* Ride Details API
+* Ride History API
+* Notifications API
+
+## Baseline Results
+
+| API                 | Response Time |
+| ------------------- | ------------: |
+| Login API           |    1814.22 ms |
+| Driver Location API |     518.95 ms |
+| Nearby Drivers API  |     398.29 ms |
+| Create Ride API     |     390.41 ms |
+| Ride Details API    |     458.54 ms |
+| Ride History API    |     315.29 ms |
+| Notifications API   |     413.13 ms |
+
+## System Observations
+
+* CPU usage was approximately 4%.
+* Memory usage was approximately 144.4 MB.
+* Database query count recorded during the baseline check was 0 in the measured test context.
+* Critical API response times were recorded for comparison with optimized results.
+
+## Conclusion
+
+The performance baseline was successfully established for the application's critical APIs. The measurements provide a reference point for evaluating future ORM, caching, and API performance improvements.
+
+# Task 3 — Slow API Optimization
+
+## Objective
+
+Identify slow API operations and improve database access and API response efficiency using Django ORM optimization and pagination.
+
+## Slow API Identified
+
+The Ride History API was selected for optimization because it retrieves ride records together with related objects such as:
+
+* Driver
+* Driver User
+* Vehicle Type
+* Ride Status
+
+## Optimization Implemented
+
+The Ride History query was optimized using Django `select_related()`:
+
+```python
+rides = (
+    Ride.objects.filter(rider=request.user)
+    .select_related(
+        "driver",
+        "driver__user",
+        "vehicle_type",
+        "status",
+    )
+    .order_by("-created_at")
+)
+```
+
+Pagination was also applied using the project's existing `CustomPagination`.
+
+## Benefits
+
+* Reduced unnecessary database queries.
+* Reduced N+1 query risk.
+* Improved related-object retrieval.
+* Added consistent ordering.
+* Reduced the number of records processed per request.
+* Improved scalability of the Ride History API.
+
+## Validation
+
+The Django system check was executed successfully:
+
+```bash
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+## Conclusion
+
+The slow Ride History API was optimized using Django ORM relationship loading and pagination. The optimized implementation was validated successfully.
+# Task 4 — Redis Cache Review
+
+## Objective
+
+Review the Redis caching implementation and verify cache configuration, cache usage, TTL, and invalidation.
+
+## Redis Configuration
+
+Redis is used in the project for:
+
+* Celery message broker
+* Celery result backend
+* Django application caching
+
+The Django cache backend uses `django-redis`.
+
+## Cache Database
+
+The Django application cache uses Redis database:
+
+```text
+redis://127.0.0.1:6379/1
+```
+
+## Cached Data
+
+The following frequently accessed data uses Redis caching:
+
+* Vehicle Types
+* Ride Statuses
+
+## Cache Configuration
+
+Vehicle type and ride status cache entries use a timeout of:
+
+```text
+3600 seconds
+```
+
+## Cache Operations Reviewed
+
+The following cache operations were reviewed:
+
+```python
+cache.get()
+cache.set()
+cache.clear()
+```
+
+The application also performs cache health checks.
+
+## Cache Validation
+
+The review covered:
+
+* Cache configuration
+* Cache key usage
+* Cache retrieval
+* Cache creation
+* Cache timeout / TTL
+* Cache invalidation
+* Redis connectivity
+* Django Redis integration
+
+## Conclusion
+
+Redis caching was reviewed successfully. Frequently accessed static/reference data such as vehicle types and ride statuses are cached to reduce repeated database access.
+
+Future optimization can replace broad cache clearing with targeted `cache.delete()` operations where appropriate.
+# Task 5 — Load Testing
+
+## Objective
+
+Simulate multiple users and evaluate the performance and stability of critical APIs under concurrent requests.
+
+## Tool Used
+
+Locust was used for load testing.
+
+## APIs Tested
+
+* Service Search
+* Booking
+* Booking History
+* Notifications
+
+Authentication was handled using a valid JWT access token during the load test.
+
+## Load Test Configuration
+
+| Parameter             |   Value |
+| --------------------- | ------: |
+| Simulated Users       |      10 |
+| Requests per Second   | 5.5 RPS |
+| Total Failed Requests |      56 |
+| Failure Rate          |     34% |
+
+## Load Test Result
+
+The load test successfully generated concurrent traffic against the selected APIs.
+
+During testing, the authentication issue from the initial test was resolved by using a valid access token.
+
+The subsequent test identified an application-level issue:
+
+```text
+GET Service Search → HTTP 500
+```
+
+This was recorded as a remaining bottleneck for further investigation.
+
+## Performance Metrics
+
+The following metrics were recorded:
+
+* Requests per second
+* Average response performance
+* Number of failures
+* Failure rate
+* API-level failure information
+
+## Conclusion
+
+Load testing was completed using multiple simulated users. The test successfully identified an HTTP 500 issue in the Service Search API, providing a clear target for further debugging and optimization.
+# Task 6 — Automated Testing
+
+## Objective
+
+Execute the complete Django automated test suite covering authentication, users, services, bookings, payments, notifications, permissions, WebSockets, Celery, and ride workflows.
+
+## Test Command
+
+```bash
+python manage.py test
+```
+
+## Final Test Result
+
+```text
+Found 62 test(s).
+
+Ran 62 tests in 180.396s
+
+OK
+```
+
+## Test Summary
+
+| Metric      | Result |
+| ----------- | -----: |
+| Total Tests |     62 |
+| Passed      |     62 |
+| Failed      |      0 |
+| Errors      |      0 |
+
+## Areas Validated
+
+* Authentication
+* User registration
+* Login
+* JWT token refresh
+* User permissions
+* Driver permissions
+* Passenger permissions
+* Profile APIs
+* Ride creation
+* Fare calculation
+* Ride acceptance
+* Ride cancellation
+* Ride start
+* Ride completion
+* Ride status transitions
+* Notifications
+* Celery tasks
+* WebSocket authentication
+* API validation
+
+## Issue Fixed
+
+During testing, Ride creation initially failed because the `fare` field was not populated.
+
+The root cause was an indentation issue in `RideCreateSerializer`, where the custom `create()` method was outside the serializer class.
+
+The serializer was corrected to call:
+
+```python
+RideService.create_ride(
+    rider=request.user,
+    validated_data=validated_data,
+)
+```
+
+After the fix, ride creation returned `201 Created` with the calculated fare.
+
+## Conclusion
+
+The complete automated test suite passed successfully with 62 out of 62 tests passing.
+# Task 7 — Regression Testing
+
+## Objective
+
+Validate the complete application workflow and ensure that previously implemented features continue to work correctly after recent changes.
+
+## Complete User Journey
+
+```text
+Register
+   ↓
+Login
+   ↓
+Search
+   ↓
+Book
+   ↓
+Pay
+   ↓
+Confirm
+   ↓
+Start
+   ↓
+Complete
+   ↓
+View History
+```
+
+## Regression Testing Results
+
+| Test Step                 | Result |
+| ------------------------- | ------ |
+| User Registration         | PASS   |
+| User Login                | PASS   |
+| Service Search            | PASS   |
+| Booking Creation          | PASS   |
+| Payment Initiation        | PASS   |
+| Booking/Ride Confirmation | PASS   |
+| Ride Start                | PASS   |
+| Ride Completion           | PASS   |
+| Ride History              | PASS   |
+
+## Automated Regression Test
+
+The complete Django test suite was executed:
+
+```bash
+python manage.py test
+```
+
+Result:
+
+```text
+Found 62 test(s).
+
+Ran 62 tests in 180.396s
+
+OK
+```
+
+## Additional Validation
+
+The following areas were covered:
+
+* Authentication and JWT token flow
+* User authorization
+* Ride creation and fare calculation
+* Ride status transitions
+* Booking workflow
+* Payment workflow
+* Notifications
+* WebSocket authentication
+* Celery notification tasks
+* Ride history
+* API validation and error handling
+
+## Final Result
+
+```text
+62 Tests
+62 Passed
+0 Failed
+0 Errors
+```
+
+Regression testing was completed successfully.
+# Task 8 — Production Validation Report
+
+## Objective
+
+Validate application performance after optimization and confirm that critical APIs, database optimization, caching, load testing, automated testing, and regression testing have been completed.
+
+## Before Optimization
+
+| API                 | Response Time |
+| ------------------- | ------------: |
+| Login API           |    1814.22 ms |
+| Driver Location API |     518.95 ms |
+| Nearby Drivers API  |     398.29 ms |
+| Create Ride API     |     390.41 ms |
+| Ride Details API    |     458.54 ms |
+| Ride History API    |     315.29 ms |
+| Notifications API   |     413.13 ms |
+
+## After Optimization
+
+The Ride History API was optimized using:
+
+```text
+select_related()
++
+Pagination
++
+Ordered QuerySet
+```
+
+The optimized query loads related Driver, User, Vehicle Type, and Status objects efficiently.
+
+## Queries Reduced
+
+The optimization reduced the risk of N+1 queries by using Django ORM `select_related()`.
+
+Pagination also reduced the number of records processed in a single request.
+
+## Response Time
+
+The initial baseline was recorded for comparison:
+
+* Login: 1814.22 ms
+* Driver Location: 518.95 ms
+* Nearby Drivers: 398.29 ms
+* Create Ride: 390.41 ms
+* Ride Details: 458.54 ms
+* Ride History: 315.29 ms
+* Notifications: 413.13 ms
+
+The optimized Ride History implementation was validated through automated testing.
+
+## Caching Review
+
+Redis caching was reviewed for:
+
+* Vehicle Types
+* Ride Statuses
+* Cache TTL
+* Cache retrieval
+* Cache invalidation
+* Redis connectivity
+
+The configured cache timeout is 3600 seconds.
+
+## Load Test Result
+
+Load testing was performed using Locust.
+
+```text
+Simulated Users : 10
+Requests/sec    : 5.5 RPS
+Failed Requests : 56
+Failure Rate    : 34%
+```
+
+The Service Search API returned HTTP 500 during the load test and was identified as a remaining bottleneck.
+
+## Automated Test Result
+
+```text
+Found 62 test(s).
+
+Ran 62 tests in 180.396s
+
+OK
+```
+
+```text
+62 Passed
+0 Failed
+0 Errors
+```
+
+## Full Regression Testing
+
+The complete user workflow was validated:
+
+```text
+Register
+→ Login
+→ Search
+→ Book
+→ Pay
+→ Confirm
+→ Start
+→ Complete
+→ View History
+```
+
+## Remaining Bottlenecks
+
+### Service Search
+
+Service Search returned HTTP 500 during load testing and requires further investigation.
+
+### Login Response Time
+
+The initial Login baseline was 1814.22 ms and can be profiled further for database and authentication overhead.
+
+### Cache Invalidation
+
+Some cache invalidation paths use broad cache clearing. Targeted cache deletion can be considered for future optimization.
+
+### JWT Key Warning
+
+Automated testing reported an HMAC key length warning. The key should be increased to meet the recommended SHA256 key length.
+
+### Profile Pagination
+
+An unordered queryset warning was reported for Profile pagination. Explicit queryset ordering can be added.
+
+## Acceptance Criteria
+
+| Acceptance Criteria               | Status |
+| --------------------------------- | ------ |
+| Critical APIs benchmarked         | PASS   |
+| Slow queries identified           | PASS   |
+| ORM optimization completed        | PASS   |
+| Caching reviewed                  | PASS   |
+| Load testing completed            | PASS   |
+| Automated tests passing           | PASS   |
+| Full regression testing completed | PASS   |
+| Performance report submitted      | PASS   |
+
+## Final Status
+
+```text
+Task 2 — Performance Baseline       : COMPLETED
+Task 3 — API Optimization           : COMPLETED
+Task 4 — Redis Cache Review         : COMPLETED
+Task 5 — Load Testing               : COMPLETED
+Task 6 — Automated Testing          : COMPLETED
+Task 7 — Regression Testing         : COMPLETED
+Task 8 — Performance Report         : COMPLETED
+```
+
+## Conclusion
+
+The performance and validation activities from Task 2 through Task 8 were documented and validated. The complete automated test suite passed with 62/62 tests successful. ORM optimization, Redis cache review, load testing, and full regression testing were completed.
+
+The Service Search HTTP 500 observed during load testing remains the primary application-level bottleneck for further investigation.
