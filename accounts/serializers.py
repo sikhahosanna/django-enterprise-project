@@ -8,6 +8,7 @@ from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from django.db import transaction
+
 from .services.ride import RideService
 
 from .models import (
@@ -23,8 +24,8 @@ from .models import (
     Service,
     ServiceImage,
     Booking,
+    SavedService,
 )
-
 
 
 # REGISTER SERIALIZER
@@ -44,11 +45,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def validate_email(self, value):
+
         value = value.strip().lower()
 
         if User.objects.filter(
             email__iexact=value
         ).exists():
+
             raise serializers.ValidationError(
                 "Email already exists."
             )
@@ -56,6 +59,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+
         return User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
@@ -82,11 +86,13 @@ class LoginSerializer(serializers.Serializer):
         )
 
         if not user:
+
             raise serializers.ValidationError(
                 "Invalid email or password."
             )
 
         if not user.is_active:
+
             raise serializers.ValidationError(
                 "User account is inactive."
             )
@@ -116,6 +122,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(
             data["current_password"]
         ):
+
             raise serializers.ValidationError(
                 "Current password is incorrect."
             )
@@ -124,6 +131,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             data["current_password"]
             == data["new_password"]
         ):
+
             raise serializers.ValidationError(
                 {
                     "new_password":
@@ -175,6 +183,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             r"[0-9]{10}",
             value
         ):
+
             raise serializers.ValidationError(
                 "Phone number must be 10 digits."
             )
@@ -183,13 +192,12 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def validate_profile_image(self, image):
 
-        # Filename validation
         if not image.name:
+
             raise serializers.ValidationError(
                 "Filename is required."
             )
 
-        # File type validation
         allowed_types = [
             "image/jpeg",
             "image/png",
@@ -197,29 +205,32 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
 
         if image.content_type not in allowed_types:
+
             raise serializers.ValidationError(
                 "Only JPG, JPEG and PNG files are allowed."
             )
 
-        # File size validation - 5 MB
         if image.size > 5 * 1024 * 1024:
+
             raise serializers.ValidationError(
                 "Image size should be less than 5MB."
             )
 
-        # Actual image validation
         try:
+
             image.seek(0)
 
             img = Image.open(image)
             img.verify()
 
         except Exception:
+
             raise serializers.ValidationError(
                 "Invalid image file."
             )
 
         finally:
+
             image.seek(0)
 
         return image
@@ -280,6 +291,7 @@ class DriverSerializer(serializers.ModelSerializer):
         if User.objects.filter(
             email__iexact=value
         ).exists():
+
             raise serializers.ValidationError(
                 "Email already exists."
             )
@@ -294,6 +306,7 @@ class DriverSerializer(serializers.ModelSerializer):
             r"[0-9]{10}",
             value
         ):
+
             raise serializers.ValidationError(
                 "Phone number must be 10 digits."
             )
@@ -374,6 +387,7 @@ class VehicleSerializer(serializers.ModelSerializer):
             r"[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}",
             value
         ):
+
             raise serializers.ValidationError(
                 "Invalid vehicle registration number."
             )
@@ -383,11 +397,13 @@ class VehicleSerializer(serializers.ModelSerializer):
         )
 
         if self.instance:
+
             queryset = queryset.exclude(
                 pk=self.instance.pk
             )
 
         if queryset.exists():
+
             raise serializers.ValidationError(
                 "Vehicle with this registration number "
                 "already exists."
@@ -398,6 +414,7 @@ class VehicleSerializer(serializers.ModelSerializer):
     def validate_driver(self, value):
 
         if not value:
+
             raise serializers.ValidationError(
                 "Driver is required."
             )
@@ -407,6 +424,7 @@ class VehicleSerializer(serializers.ModelSerializer):
     def validate_vehicle_type(self, value):
 
         if not value:
+
             raise serializers.ValidationError(
                 "Vehicle type is required."
             )
@@ -452,6 +470,7 @@ class DriverNestedSerializer(serializers.ModelSerializer):
     def get_name(self, obj):
 
         try:
+
             profile = obj.user.profile
 
             return (
@@ -460,6 +479,7 @@ class DriverNestedSerializer(serializers.ModelSerializer):
             ).strip()
 
         except Profile.DoesNotExist:
+
             return ""
 
     def get_vehicle(self, obj):
@@ -472,6 +492,7 @@ class DriverNestedSerializer(serializers.ModelSerializer):
         )
 
         if not vehicle:
+
             return None
 
         return VehicleNestedSerializer(
@@ -524,6 +545,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
         value = value.strip()
 
         if not value:
+
             raise serializers.ValidationError(
                 "Pickup location is required."
             )
@@ -535,6 +557,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
         value = value.strip()
 
         if not value:
+
             raise serializers.ValidationError(
                 "Drop location is required."
             )
@@ -544,6 +567,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
     def validate_pickup_latitude(self, value):
 
         if not -90 <= float(value) <= 90:
+
             raise serializers.ValidationError(
                 "Pickup latitude must be between -90 and 90."
             )
@@ -553,6 +577,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
     def validate_dropoff_latitude(self, value):
 
         if not -90 <= float(value) <= 90:
+
             raise serializers.ValidationError(
                 "Dropoff latitude must be between -90 and 90."
             )
@@ -562,6 +587,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
     def validate_pickup_longitude(self, value):
 
         if not -180 <= float(value) <= 180:
+
             raise serializers.ValidationError(
                 "Pickup longitude must be between -180 and 180."
             )
@@ -571,6 +597,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
     def validate_dropoff_longitude(self, value):
 
         if not -180 <= float(value) <= 180:
+
             raise serializers.ValidationError(
                 "Dropoff longitude must be between -180 and 180."
             )
@@ -601,6 +628,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
             pickup_latitude == dropoff_latitude
             and pickup_longitude == dropoff_longitude
         ):
+
             raise serializers.ValidationError(
                 {
                     "location":
@@ -622,6 +650,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
         ).exists()
 
         if active_ride_exists:
+
             raise serializers.ValidationError(
                 {
                     "ride":
@@ -631,36 +660,40 @@ class RideCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
-   # Create ride
-def create(self, validated_data):
-    request = self.context["request"]
+    # CREATE RIDE
+    def create(self, validated_data):
 
-    try:
-        return RideService.create_ride(
-            rider=request.user,
-            validated_data=validated_data,
-        )
+        request = self.context["request"]
 
-    except ValueError as exc:
-        error_message = str(exc)
+        try:
 
-        if "Requested ride status" in error_message:
-            raise serializers.ValidationError(
-                {"status": error_message}
+            return RideService.create_ride(
+                rider=request.user,
+                validated_data=validated_data,
             )
 
-        raise serializers.ValidationError(
-            {"fare": error_message}
-        )
+        except ValueError as exc:
 
-    except KeyError as exc:
-        raise serializers.ValidationError(
-            {
-                "fare":
-                f"Fare configuration is incomplete: {exc}"
-            }
-        )
-       
+            error_message = str(exc)
+
+            if "Requested ride status" in error_message:
+
+                raise serializers.ValidationError(
+                    {"status": error_message}
+                )
+
+            raise serializers.ValidationError(
+                {"fare": error_message}
+            )
+
+        except KeyError as exc:
+
+            raise serializers.ValidationError(
+                {
+                    "fare":
+                    f"Fare configuration is incomplete: {exc}"
+                }
+            )
 
 
 # RIDE LIST SERIALIZER
@@ -763,6 +796,7 @@ class RideDetailSerializer(serializers.ModelSerializer):
     def get_passenger(self, obj):
 
         try:
+
             profile = obj.rider.profile
 
             return {
@@ -786,6 +820,7 @@ class RideDetailSerializer(serializers.ModelSerializer):
     def get_vehicle(self, obj):
 
         if not obj.driver:
+
             return None
 
         vehicle = (
@@ -796,6 +831,7 @@ class RideDetailSerializer(serializers.ModelSerializer):
         )
 
         if not vehicle:
+
             return None
 
         return {
@@ -832,6 +868,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
     def validate_latitude(self, value):
 
         if not -90 <= float(value) <= 90:
+
             raise serializers.ValidationError(
                 "Latitude must be between -90 and 90."
             )
@@ -841,6 +878,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
     def validate_longitude(self, value):
 
         if not -180 <= float(value) <= 180:
+
             raise serializers.ValidationError(
                 "Longitude must be between -180 and 180."
             )
@@ -892,6 +930,7 @@ class RideStatusUpdateSerializer(serializers.Serializer):
         )
 
         if new_status not in allowed_statuses:
+
             raise serializers.ValidationError(
                 {
                     "status":
@@ -948,7 +987,6 @@ class ServiceSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             "id",
-            
         ]
 
 
@@ -980,6 +1018,8 @@ class BookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
 # PAYMENT INITIATE SERIALIZER
 
 class PaymentInitiateSerializer(serializers.Serializer):
@@ -996,26 +1036,31 @@ class PaymentInitiateSerializer(serializers.Serializer):
         request = self.context["request"]
 
         try:
+
             booking = Booking.objects.get(
                 id=data["booking_id"]
             )
 
         except Booking.DoesNotExist:
+
             raise serializers.ValidationError(
                 "Booking does not exist."
             )
 
         if booking.customer != request.user:
+
             raise serializers.ValidationError(
                 "Booking does not belong to the user."
             )
 
         if data["amount"] != booking.amount:
+
             raise serializers.ValidationError(
                 "Incorrect payment amount."
             )
 
         if booking.status != "pending":
+
             raise serializers.ValidationError(
                 "Booking is not payable."
             )
@@ -1058,6 +1103,7 @@ class ServiceImageSerializer(serializers.ModelSerializer):
     def validate_image(self, image):
 
         if not image.name:
+
             raise serializers.ValidationError(
                 "Filename is required."
             )
@@ -1069,13 +1115,34 @@ class ServiceImageSerializer(serializers.ModelSerializer):
         ]
 
         if image.content_type not in allowed_types:
+
             raise serializers.ValidationError(
                 "Only JPG, JPEG and PNG files are allowed."
             )
 
         if image.size > 5 * 1024 * 1024:
+
             raise serializers.ValidationError(
                 "Image size should be less than 5MB."
             )
 
         return image
+# SAVED SERVICE SERIALIZER
+
+class SavedServiceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SavedService
+
+        fields = [
+            "id",
+            "customer",
+            "service",
+            "created_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "customer",
+            "created_at",
+        ]

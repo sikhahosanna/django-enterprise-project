@@ -12,6 +12,7 @@ from ..tasks import (
     provider_started_notification,
     booking_completed_notification,
     booking_cancelled_notification,
+    saved_service_unavailable_notification,
 )
 
 
@@ -99,4 +100,13 @@ class NotificationService:
         booking_cancelled_notification.delay(
             booking_id=str(booking.id),
             user_id=str(booking.customer.id),
+        )
+    @staticmethod
+    def saved_service_unavailable(service):
+        celery_logger.info(
+            "Saved service unavailable notification task triggered"
+        )
+
+        saved_service_unavailable_notification.delay(
+            service_id=str(service.id)
         )

@@ -562,3 +562,57 @@ def booking_cancelled_notification(booking_id, user_id):
             "message": "Your booking has been cancelled.",
         },
     )
+# Saved Service Availability Notifications
+
+@shared_task(
+    bind=True,
+    queue="notifications",
+    max_retries=3,
+    default_retry_delay=5,
+)
+def saved_service_unavailable_notification(self, service_id):
+    try:
+        from .models import Service, SavedService
+
+        service = Service.objects.get(id=service_id)
+
+        saved_services = SavedService.objects.filter(
+            service=service
+        ).select_related("customer")
+
+        notifications_created = 0
+
+        for saved_service in saved_services:
+            Notification.objects.create(
+                user=saved_service.customer,
+                title="Saved Service Unavailable",
+                notification_type=(
+                    Notification.NotificationType.SAVED_SERVICE_UNAVAILABLE
+                ),
+                message=(
+                    f"Saved service '{service.name}' "
+                    "is no longer available."
+                ),
+            )
+
+            notifications_created += 1
+
+        logger.info(
+            "Saved service unavailable notification processed "
+            "for service_id=%s, notifications_created=%s",
+            service_id,
+            notifications_created,
+        )
+
+        return {
+            "service_id": str(service.id),
+            "notifications_created": notifications_created,
+        }
+
+    except Exception as exc:
+        logger.error(
+            "Background task failed: saved service unavailable notification",
+            exc_info=True,
+        )
+
+        raise self.retry(exc=exc)

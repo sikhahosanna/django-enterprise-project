@@ -769,6 +769,11 @@ class Notification(models.Model):
         PROVIDER_STARTED = "provider_started", "Provider Started Service"
         BOOKING_COMPLETED = "booking_completed", "Booking Completed"
         BOOKING_CANCELLED = "booking_cancelled", "Booking Cancelled"
+        
+        SAVED_SERVICE_UNAVAILABLE = (
+    "saved_service_unavailable",
+    "Saved Service Unavailable",
+)
 
     id = models.UUIDField(
         primary_key=True,
@@ -878,3 +883,37 @@ class ServiceImage(models.Model):
 
     def __str__(self):
         return f"{self.service.name} - {self.id}"
+
+class SavedService(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="saved_services"
+    )
+
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name="saved_by_customers"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "service"],
+                name="unique_saved_service"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.customer.email} - {self.service.name}"

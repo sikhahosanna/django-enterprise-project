@@ -16,6 +16,9 @@ from .utils.helpers import calculate_distance_km
 from .models import Booking
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from .permissions import IsSavedServiceOwner
+from .services.saved_service import SavedServiceService
+from .services.saved_service import SavedServiceService
 
 
 
@@ -62,6 +65,7 @@ from .models import (
     Notification,
     Service,
     ServiceImage,
+    SavedService,
 )
 
 from .serializers import (
@@ -82,6 +86,7 @@ from .serializers import (
     ServiceImageSerializer,
     BookingSerializer,
     PaymentInitiateSerializer,
+    SavedServiceSerializer
 )
 
 from .services.fare_service import FareService
@@ -2035,14 +2040,15 @@ class OptimizedRideHistoryView(APIView):
             .order_by("-created_at")
         )
 
+        paginator = CustomPagination()
+        page = paginator.paginate_queryset(rides, request, view=self)
+
         data = []
 
-        for ride in rides:
+        for ride in page:
 
             driver = ride.driver
-
             driver_user = driver.user if driver else None
-
             vehicle_type = ride.vehicle_type if ride.vehicle_type else None
 
             data.append(
@@ -2050,13 +2056,13 @@ class OptimizedRideHistoryView(APIView):
                     "id": str(ride.id),
                     "pickup_address": ride.pickup_address,
                     "dropoff_address": ride.dropoff_address,
-                    "status": (ride.status.name if ride.status else None),
+                    "status": ride.status.name if ride.status else None,
                     "fare": str(ride.fare),
-                    "vehicle_type": (vehicle_type.name if vehicle_type else None),
+                    "vehicle_type": vehicle_type.name if vehicle_type else None,
                     "driver": (
                         {
                             "id": str(driver.id),
-                            "email": (driver_user.email if driver_user else None),
+                            "email": driver_user.email if driver_user else None,
                         }
                         if driver
                         else None
@@ -2066,17 +2072,13 @@ class OptimizedRideHistoryView(APIView):
 
         query_count = len(connection.queries)
 
-        return success_response(
-            message="Optimized ride history retrieved successfully.",
-            data={
+        return paginator.get_paginated_response(
+            {
                 "optimization": "optimized",
                 "query_count": query_count,
-                "count": len(data),
                 "results": data,
-            },
-            status_code=status.HTTP_200_OK,
+            }
         )
-
 # DRIVER LOCATION
 
 @extend_schema(
@@ -2944,13 +2946,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         )
 
         NotificationService.booking_created(booking)
-class ServiceViewSet(viewsets.ModelViewSet):
-    queryset = Service.objects.select_related(
-        "category",
-        "provider",
-        "provider__profile",
-    ).all()
 
+#service view set
+
+class ServiceViewSet(viewsets.ModelViewSet):
+    queryset = Service.objects.all()
     serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -2961,14 +2961,12 @@ class ServiceViewSet(viewsets.ModelViewSet):
     ]
 
     filterset_class = ServiceFilter
+
     pagination_class = ServicePagination
 
     search_fields = [
         "name",
         "description",
-        "category__name",
-        "provider__name",
-        "provider__profile__address",
     ]
 
     ordering_fields = [
@@ -2976,6 +2974,14 @@ class ServiceViewSet(viewsets.ModelViewSet):
         "created_at",
         "name",
     ]
+
+    def perform_update(self, serializer):
+        was_active = serializer.instance.is_active
+
+        service = serializer.save()
+
+        if was_active and not service.is_active:
+            NotificationService.saved_service_unavailable(service)
 # SERVICE IMAGE UPLOAD / LIST
 
 class ServiceImageView(APIView):
@@ -3094,5 +3100,46 @@ class ServiceImageDeleteView(APIView):
             status_code=status.HTTP_200_OK,
         )
 
+# SAVED SERVICES
+
+class SavedServiceViewSet(viewsets.ModelViewSet):
+
+    serializer_class = SavedServiceSerializer
+    permission_classes = [
+        IsSavedServiceOwner,
+    ]
+
+    http_method_names = [
+        "get",
+        "post",
+        "delete",
+    ]
+
+    def get_queryset(self):
+        return (
+            SavedServiceService
+            .get_saved_services(self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        service = serializer.validated_data["service"]
+
+        try:
+            saved_service = SavedServiceService.save_service(
+                customer=self.request.user,
+                service=service,
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({
+                "detail": str(exc)
+            })
+
+        serializer.instance = saved_service
+
+    def perform_destroy(self, instance):
+        SavedServiceService.delete_saved_service(
+            customer=self.request.user,
+            saved_service=instance,
+        )
 
 

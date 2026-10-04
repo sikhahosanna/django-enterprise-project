@@ -65,3 +65,19 @@ class IsAdminOrPassenger(BasePermission):
             return True
 
         return not DriverProfile.objects.filter(user=request.user).exists()
+class IsSavedServiceOwner(BasePermission):
+    """
+    Customer can access only their own saved services.
+    Admin can access all saved services.
+    """
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        # Admin can access all saved services
+        if request.user.is_staff:
+            return True
+
+        # Customer can access only their own saved service
+        return obj.customer == request.user

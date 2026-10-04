@@ -65,6 +65,7 @@ from .views import (
 
     # SERVICE IMAGE
     ServiceImageDeleteView,
+    SavedServiceViewSet,
 )
 
 
@@ -80,6 +81,11 @@ router.register(
     r"services",
     ServiceViewSet,
     basename="service",
+)
+router.register(
+    r"saved-services",
+    SavedServiceViewSet,
+    basename="saved-service",
 )
 router.register(r"bookings", BookingViewSet, basename="booking")
 
