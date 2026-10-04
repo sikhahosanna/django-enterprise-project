@@ -1,15 +1,19 @@
 import re
 
-from PIL import Image
-
 from rest_framework import serializers
 
 from django.core.validators import FileExtensionValidator
+from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from django.db import transaction
 
 from .services.ride import RideService
+
+from .validators import (
+    validate_image_file,
+    validate_image_upload,
+)
 
 from .models import (
     User,
@@ -192,48 +196,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def validate_profile_image(self, image):
 
-        if not image.name:
-
-            raise serializers.ValidationError(
-                "Filename is required."
-            )
-
-        allowed_types = [
-            "image/jpeg",
-            "image/png",
-            "image/jpg",
-        ]
-
-        if image.content_type not in allowed_types:
-
-            raise serializers.ValidationError(
-                "Only JPG, JPEG and PNG files are allowed."
-            )
-
-        if image.size > 5 * 1024 * 1024:
-
-            raise serializers.ValidationError(
-                "Image size should be less than 5MB."
-            )
-
         try:
+            return validate_image_file(image)
 
-            image.seek(0)
-
-            img = Image.open(image)
-            img.verify()
-
-        except Exception:
+        except ValidationError as exc:
 
             raise serializers.ValidationError(
-                "Invalid image file."
+                exc.messages
             )
-
-        finally:
-
-            image.seek(0)
-
-        return image
 
 
 # DRIVER SERIALIZER
@@ -661,6 +631,7 @@ class RideCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     # CREATE RIDE
+
     def create(self, validated_data):
 
         request = self.context["request"]
@@ -1102,31 +1073,16 @@ class ServiceImageSerializer(serializers.ModelSerializer):
 
     def validate_image(self, image):
 
-        if not image.name:
+        try:
+            return validate_image_upload(image)
+
+        except ValidationError as exc:
 
             raise serializers.ValidationError(
-                "Filename is required."
+                exc.messages
             )
 
-        allowed_types = [
-            "image/jpeg",
-            "image/jpg",
-            "image/png",
-        ]
 
-        if image.content_type not in allowed_types:
-
-            raise serializers.ValidationError(
-                "Only JPG, JPEG and PNG files are allowed."
-            )
-
-        if image.size > 5 * 1024 * 1024:
-
-            raise serializers.ValidationError(
-                "Image size should be less than 5MB."
-            )
-
-        return image
 # SAVED SERVICE SERIALIZER
 
 class SavedServiceSerializer(serializers.ModelSerializer):

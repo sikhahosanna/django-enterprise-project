@@ -1,5 +1,7 @@
 import logging
 
+from ..models import Notification
+
 from ..tasks import (
     ride_accepted_notification,
     driver_arriving_notification,
@@ -60,6 +62,7 @@ class NotificationService:
             ride_id=str(ride.id),
             passenger_id=str(ride.rider.id),
         )
+
     @staticmethod
     def booking_created(booking):
         booking_created_notification.delay(
@@ -101,6 +104,7 @@ class NotificationService:
             booking_id=str(booking.id),
             user_id=str(booking.customer.id),
         )
+
     @staticmethod
     def saved_service_unavailable(service):
         celery_logger.info(
@@ -109,4 +113,27 @@ class NotificationService:
 
         saved_service_unavailable_notification.delay(
             service_id=str(service.id)
+        )
+
+    @staticmethod
+    def mark_as_read(notification_id, user):
+        notification = Notification.objects.get(
+            id=notification_id,
+            user=user,
+        )
+
+        notification.is_read = True
+        notification.save(
+            update_fields=["is_read"]
+        )
+
+        return notification
+
+    @staticmethod
+    def mark_all_as_read(user):
+        return Notification.objects.filter(
+            user=user,
+            is_read=False,
+        ).update(
+            is_read=True
         )

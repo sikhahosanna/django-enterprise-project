@@ -18968,3 +18968,2639 @@ API Documentation
 
 The feature is ready for final technical demonstration and assessment.
 
+5/10/26
+
+# Task 2 — Business Logic Audit
+
+## Django Modular Architecture & Service Layer
+
+**Project:** Django Enterprise Backend
+**Task:** Task 2 — Identify Business Logic Currently Inside Views
+**Status:** Completed
+**Date:** 05-Oct-2026
+
+---
+
+## 1. Objective
+
+The objective of this task was to review the existing Django backend and identify business logic that is currently implemented directly inside API views.
+
+The purpose of the audit was to determine which responsibilities should remain in the API layer and which responsibilities should be moved into the service layer as part of the modular architecture refactoring.
+
+---
+
+## 2. Current Project Structure
+
+The project already contains an established service-layer structure under:
+
+```text
+accounts/
+└── services/
+    ├── driver_service.py
+    ├── fare_service.py
+    ├── notification_service.py
+    ├── profile_service.py
+    ├── ride.py
+    ├── saved_service.py
+    ├── user_service.py
+    └── vehicle_service.py
+```
+
+This existing structure provides a good foundation for further separation of business logic.
+
+However, the audit identified that several business operations are still implemented directly inside:
+
+```text
+accounts/views.py
+```
+
+The views file is large and contains API handling, database operations, validation, business rules, cache operations, and workflow processing.
+
+---
+
+# 3. Audit Approach
+
+The following areas were reviewed during the audit:
+
+* Django project structure
+* `accounts/views.py`
+* View methods and API endpoints
+* Database queries
+* Model creation and updates
+* Transaction handling
+* Cache operations
+* Existing service classes
+* Ride workflows
+* Driver workflows
+* Booking workflows
+* Payment workflows
+* Notification operations
+* Service and image operations
+
+Commands were used to identify methods and database/business operations inside the views.
+
+Example:
+
+```powershell
+Select-String -Path .\accounts\views.py -Pattern "def " | Select-Object LineNumber, Line
+```
+
+Database and persistence operations were also reviewed using:
+
+```powershell
+Select-String -Path .\accounts\views.py -Pattern "create\(", "update\(", "delete\(", "save\(", "filter\(", "get\(", "get_or_create\(" | Select-Object LineNumber, Line
+```
+
+---
+
+# 4. Main Findings
+
+The audit confirmed that `accounts/views.py` contains several types of business logic in addition to normal API responsibilities.
+
+The major areas identified are:
+
+1. Ride management
+2. Driver location and availability
+3. Ride statistics and history
+4. Authentication-related operations
+5. Notification management
+6. Payment processing
+7. Booking status management
+8. Service management
+9. Service image management
+10. Cache-related operations
+
+---
+
+# 5. Ride Business Logic
+
+## Identified Area
+
+Ride-related operations were identified in multiple sections of `accounts/views.py`.
+
+These include:
+
+* Ride creation
+* Ride validation
+* Fare-related processing
+* Ride retrieval
+* Ride acceptance
+* Ride cancellation
+* Ride start
+* Ride completion
+* Ride status transitions
+* Ride history
+* Ride filtering
+
+Important sections were identified around:
+
+```text
+946–1015
+1086–1541
+1596–1768
+```
+
+## Current Concern
+
+Some ride workflow rules are implemented directly inside API views.
+
+This creates a strong dependency between HTTP handling and business logic.
+
+## Recommended Refactoring
+
+Move reusable ride business operations into:
+
+```text
+accounts/services/ride.py
+```
+
+The existing `RideService` should be extended rather than creating duplicate ride service modules.
+
+## Target Responsibility
+
+`RideService` should handle:
+
+* Ride creation
+* Ride status changes
+* Ride acceptance
+* Ride cancellation
+* Ride start
+* Ride completion
+* Ride-related business validation
+* Ride database operations
+* Ride workflow rules
+
+The view should mainly receive the request, validate serializer data, call `RideService`, and return the API response.
+
+---
+
+# 6. Driver Business Logic
+
+## Identified Area
+
+Driver-related database operations were identified around:
+
+```text
+2118–2254
+2315–2415
+```
+
+These operations include:
+
+* Driver location updates
+* Driver availability updates
+* Driver location retrieval
+* Nearby driver queries
+* Driver-related database updates
+* Cache operations related to nearby drivers
+
+## Recommended Refactoring
+
+The existing:
+
+```text
+accounts/services/driver_service.py
+```
+
+should handle reusable driver business operations.
+
+## Target Responsibility
+
+`DriverService` should handle:
+
+* Updating driver location
+* Updating availability
+* Finding nearby drivers
+* Driver-related validation
+* Driver location database operations
+* Related cache operations
+
+The API view should only process the HTTP request and response.
+
+---
+
+# 7. Ride Statistics and History
+
+## Identified Area
+
+Ride statistics and history queries were identified around:
+
+```text
+1824–2033
+```
+
+These include:
+
+* Ride counts
+* Ride totals
+* Driver earnings
+* Ride history
+* Aggregation queries
+* Filtering based on ride status
+* Rider/driver-specific queries
+
+## Current Concern
+
+Complex ORM queries and business calculations directly inside views make the views difficult to maintain and test.
+
+## Recommended Refactoring
+
+Reusable statistics and calculation logic should be moved to the service layer.
+
+Possible responsibility:
+
+```text
+RideService
+```
+
+or a dedicated statistics service if the functionality becomes sufficiently large.
+
+---
+
+# 8. Authentication and User Operations
+
+Authentication-related operations were also reviewed.
+
+The audit identified direct user/model operations such as password updates.
+
+Example:
+
+```python
+request.user.save(
+    update_fields=["password"]
+)
+```
+
+## Recommended Refactoring
+
+User-related business operations should be handled through:
+
+```text
+accounts/services/user_service.py
+```
+
+The service should contain reusable operations such as:
+
+* Password changes
+* User updates
+* User-related business validation
+* Other reusable user operations
+
+The view should remain responsible for authentication/API handling.
+
+---
+
+# 9. Notification Operations
+
+## Identified Area
+
+Notification operations were identified around:
+
+```text
+2540–2572
+```
+
+These include:
+
+* Retrieving notifications
+* Marking individual notifications as read
+* Marking multiple notifications as read
+* Notification database updates
+
+The project already contains:
+
+```text
+accounts/services/notification_service.py
+```
+
+## Recommended Refactoring
+
+Reusable notification operations should be consolidated in `NotificationService`.
+
+The service layer should handle:
+
+* Creating notifications
+* Marking notifications as read
+* Bulk notification updates
+* Notification-related business rules
+* Triggering background notification tasks where required
+
+---
+
+# 10. Payment Business Logic
+
+## Identified Area
+
+Payment-related operations were identified around:
+
+```text
+2588–2893
+```
+
+The audit identified:
+
+* Idempotency handling
+* Existing payment lookup
+* Payment creation
+* Payment retrieval
+* Payment status updates
+* Transaction handling
+* Booking/payment synchronization
+* Payment event processing
+
+## Current Concern
+
+Payment processing contains important business rules and should not be tightly coupled to the HTTP view layer.
+
+Payment operations also require careful transaction handling.
+
+## Recommended Refactoring
+
+Create:
+
+```text
+accounts/services/payment_service.py
+```
+
+The service should handle:
+
+* Payment initiation
+* Idempotency checks
+* Payment status updates
+* Payment validation
+* Payment transaction handling
+* Payment/booking synchronization
+* Payment event processing
+
+The view should only handle request parsing, authentication, serializer validation, and response generation.
+
+---
+
+# 11. Booking Business Logic
+
+## Identified Area
+
+Booking-related operations were identified around:
+
+```text
+2696–2752
+2939–2978
+```
+
+The audit identified:
+
+* Booking creation
+* Booking status changes
+* Payment-related booking validation
+* Booking updates
+* Booking workflow rules
+
+## Recommended Refactoring
+
+Create:
+
+```text
+accounts/services/booking_service.py
+```
+
+The service should handle:
+
+* Booking creation
+* Booking status transitions
+* Booking validation
+* Payment-related booking rules
+* Booking updates
+* Booking business workflows
+
+---
+
+# 12. Service Business Logic
+
+## Identified Area
+
+Service management logic was identified around:
+
+```text
+2978–2996
+```
+
+The existing implementation includes service update handling and service availability notification triggering.
+
+For example, service deactivation can trigger:
+
+```text
+NotificationService.saved_service_unavailable(...)
+```
+
+## Current Concern
+
+The service availability business rule is currently connected to the API view.
+
+## Recommended Refactoring
+
+Create or extend:
+
+```text
+accounts/services/service_service.py
+```
+
+The service layer should handle:
+
+* Service creation
+* Service updates
+* Service activation/deactivation
+* Service availability rules
+* Related notification triggering
+
+---
+
+# 13. Service Image Operations
+
+## Identified Area
+
+Service image operations were identified around:
+
+```text
+2996–3095
+```
+
+These include:
+
+* Image creation
+* Image retrieval
+* Service image filtering
+* Image deletion
+* Service lookup
+* Image database operations
+
+## Recommended Refactoring
+
+Create:
+
+```text
+accounts/services/service_image_service.py
+```
+
+This service can handle:
+
+* Image upload operations
+* Image validation
+* Image retrieval
+* Image deletion
+* Service/image relationship validation
+
+---
+
+# 14. Cache Operations
+
+Cache operations were identified in multiple API areas.
+
+Examples include:
+
+```text
+639–684
+2388
+```
+
+The views currently contain direct cache access such as:
+
+```python
+cache.get(...)
+```
+
+## Recommended Refactoring
+
+Cache operations associated with business workflows should be moved into the relevant service.
+
+For example:
+
+```text
+DriverService
+    ↓
+Nearby Driver Cache
+```
+
+and:
+
+```text
+ServiceService
+    ↓
+Service-related Cache
+```
+
+The objective is to keep infrastructure-related operations away from API views where possible.
+
+---
+
+# 15. Database Operations Identified
+
+The audit identified several direct ORM operations inside views.
+
+Examples include:
+
+```python
+Model.objects.filter(...)
+Model.objects.get(...)
+Model.objects.create(...)
+Model.objects.update(...)
+Model.objects.update_or_create(...)
+serializer.save(...)
+instance.save(...)
+instance.delete(...)
+```
+
+These operations are not automatically required to move out of views.
+
+Simple read-only querysets can remain in views when they are purely related to API filtering.
+
+However, database operations that implement business rules or workflows should be moved into the service layer.
+
+---
+
+# 16. Transaction Handling
+
+The audit identified transaction-related operations in payment and booking workflows.
+
+Examples include:
+
+```python
+transaction.atomic(...)
+```
+
+and:
+
+```python
+select_for_update()
+```
+
+These operations are part of important business workflows.
+
+## Recommended Approach
+
+Transaction boundaries should be controlled by the appropriate service method.
+
+For example:
+
+```text
+PaymentService
+    ↓
+transaction.atomic()
+    ↓
+Payment + Booking update
+```
+
+This ensures that business transactions are reusable and testable independently of HTTP requests.
+
+---
+
+# 17. Responsibilities That Should Remain in Views
+
+Not every line of code needs to be moved to the service layer.
+
+Views should continue handling:
+
+* HTTP requests
+* HTTP responses
+* Authentication
+* Permissions
+* Serializer selection
+* Serializer validation
+* Query parameters
+* URL parameters
+* HTTP status codes
+* API-specific error responses
+* API documentation metadata
+
+Example target pattern:
+
+```python
+def create(self, request):
+    serializer = RideCreateSerializer(
+        data=request.data
+    )
+
+    serializer.is_valid(
+        raise_exception=True
+    )
+
+    ride = RideService.create_ride(
+        rider=request.user,
+        validated_data=serializer.validated_data,
+    )
+
+    return Response(
+        RideSerializer(ride).data,
+        status=201,
+    )
+```
+
+The view handles the API layer while the service handles the business operation.
+
+---
+
+# 18. Responsibilities That Should Move to Services
+
+The following responsibilities should primarily be handled by services:
+
+* Business rules
+* Workflow processing
+* Complex database operations
+* Transaction management
+* Status transitions
+* Fare calculations
+* Payment workflows
+* Booking workflows
+* Driver location workflows
+* Notification workflows
+* Cache operations associated with business logic
+* Background task triggering
+* Reusable validation logic
+
+---
+
+# 19. Target Architecture
+
+The target architecture after refactoring is:
+
+```text
+                    API Request
+                         |
+                         v
+                  +--------------+
+                  |  API View    |
+                  +--------------+
+                         |
+                         v
+                  +--------------+
+                  |  Serializer  |
+                  +--------------+
+                         |
+                         v
+                  +--------------+
+                  |Service Layer |
+                  +--------------+
+                         |
+              +----------+----------+
+              |                     |
+              v                     v
+        +-----------+         +-----------+
+        | Django ORM|         |  Celery   |
+        +-----------+         +-----------+
+              |                     |
+              v                     v
+        +-----------+          +----------+
+        |PostgreSQL |          |  Redis   |
+        +-----------+          +----------+
+```
+
+---
+
+# 20. Refactoring Priority
+
+| Priority | Component       | Recommended Service                | Status     |
+| -------- | --------------- | ---------------------------------- | ---------- |
+| High     | Ride            | `RideService`                      | Identified |
+| High     | Payment         | `PaymentService`                   | Identified |
+| High     | Booking         | `BookingService`                   | Identified |
+| High     | Driver          | `DriverService`                    | Identified |
+| Medium   | Notification    | `NotificationService`              | Identified |
+| Medium   | Service         | `ServiceService`                   | Identified |
+| Medium   | Ride Statistics | `RideService` / Statistics Service | Identified |
+| Medium   | Service Images  | `ServiceImageService`              | Identified |
+| Low      | User Operations | `UserService`                      | Identified |
+
+---
+
+# 21. Expected Benefits
+
+Moving business logic into services will provide the following benefits:
+
+### Maintainability
+
+Business rules will be located in dedicated modules instead of being distributed across large API views.
+
+### Reusability
+
+Services can be called from:
+
+* API views
+* Celery tasks
+* Management commands
+* Automated tests
+* Other backend workflows
+
+### Testability
+
+Business logic can be tested independently without requiring a complete HTTP request/response cycle.
+
+### Reduced View Complexity
+
+API views will become smaller and easier to understand.
+
+### Better Separation of Concerns
+
+Each layer will have a clear responsibility.
+
+### Easier Future Development
+
+New business requirements can be implemented in service modules without continuously increasing the size of `views.py`.
+
+---
+
+# 22. Final Audit Summary
+
+The current Django backend already has a partial service-layer architecture.
+
+The audit identified that several important business workflows are still implemented directly inside `accounts/views.py`.
+
+The main areas requiring refactoring are:
+
+* Ride management
+* Driver location and availability
+* Payment processing
+* Booking workflows
+* Notification operations
+* Service management
+* Service image operations
+* Ride statistics and history
+* User-related business operations
+
+The existing service modules will be extended wherever possible instead of creating duplicate services.
+
+New service modules will be introduced only where a separate business responsibility requires them.
+
+---
+
+# 23. Task 2 Completion Status
+
+| Requirement                           | Status        |
+| ------------------------------------- | ------------- |
+| Review current project structure      | **COMPLETED** |
+| Review `accounts/views.py`            | **COMPLETED** |
+| Identify business logic in views      | **COMPLETED** |
+| Identify database operations          | **COMPLETED** |
+| Identify transaction handling         | **COMPLETED** |
+| Identify cache operations             | **COMPLETED** |
+| Identify existing service classes     | **COMPLETED** |
+| Identify refactoring candidates       | **COMPLETED** |
+| Define service-layer responsibilities | **COMPLETED** |
+| Define refactoring priority           | **COMPLETED** |
+| Document audit findings               | **COMPLETED** |
+
+---
+
+# 24. Final Result
+
+**Task 2 — Identify Business Logic Currently Inside Views has been completed successfully.**
+
+The existing `accounts/views.py` was reviewed and the major business-logic areas requiring separation were identified.
+
+The audit provides a clear refactoring plan for the next stages of the Django Modular Architecture & Service Layer task.
+
+The next step is to refactor the identified business workflows into dedicated service-layer methods while maintaining existing API behavior and ensuring all automated tests continue to pass.
+
+# Task 3 — Serializer Business Logic Audit
+
+## Django Modular Architecture & Service Layer
+
+**Project:** Django Enterprise Backend
+**Task:** Task 3 — Identify Business Logic Inside Serializers
+**Status:** Completed
+**Date:** 12-Oct-2026
+
+---
+
+## 1. Objective
+
+The objective of this task was to review the Django serializers and identify business logic that is currently implemented inside serializer classes.
+
+The audit focused on distinguishing between:
+
+* Normal API/input validation
+* Field-level validation
+* Cross-field validation
+* Database operations
+* Business workflows
+* Transaction management
+* Service-layer responsibilities
+
+The goal is to ensure serializers remain focused mainly on data validation and serialization while business workflows are handled by the service layer.
+
+---
+
+# 2. Serializer Audit Scope
+
+The following areas were reviewed in `accounts/serializers.py`:
+
+* `validate_*()` methods
+* `validate()` methods
+* `create()` methods
+* `update()` methods
+* Database queries
+* Model creation
+* Transaction handling
+* Existing service-layer calls
+* Booking validation
+* Ride validation
+* Driver registration
+* File/image validation
+
+---
+
+# 3. Current Serializer Findings
+
+The audit identified several serializers containing business-related operations.
+
+The main areas are:
+
+1. User creation
+2. Driver registration
+3. Ride creation validation
+4. Ride creation
+5. Service validation
+6. Image validation
+7. Field-level validation
+
+Each area was classified according to whether the logic should remain inside the serializer or move into the service layer.
+
+---
+
+# 4. User Creation Logic
+
+## Identified Area
+
+The user serializer contains a `create()` method that calls:
+
+```python
+User.objects.create_user(...)
+```
+
+This directly creates a user from the serializer.
+
+## Assessment
+
+User creation is a business operation rather than simple data validation.
+
+The serializer should validate the input data, while the actual user creation workflow should be handled by the user service.
+
+## Recommended Refactoring
+
+Use the existing:
+
+```text
+accounts/services/user_service.py
+```
+
+The service should handle:
+
+* User creation
+* Password handling
+* User-related business rules
+* User profile-related workflows where applicable
+
+The serializer should remain responsible for:
+
+* Input validation
+* Field validation
+* Data serialization
+
+---
+
+# 5. Driver Registration Logic
+
+## Identified Area
+
+The driver registration serializer contains:
+
+```python
+@transaction.atomic
+def create(self, validated_data):
+```
+
+The method performs multiple database operations including:
+
+```python
+User.objects.create_user(...)
+Profile.objects.create(...)
+DriverProfile.objects.create(...)
+```
+
+## Assessment
+
+This is significant business logic.
+
+The operation creates multiple related records and uses a database transaction to ensure consistency.
+
+The complete workflow should not be owned by the serializer.
+
+## Recommended Refactoring
+
+Move the driver registration workflow into:
+
+```text
+accounts/services/driver_service.py
+```
+
+The service should handle:
+
+1. Creating the user
+2. Creating the profile
+3. Creating the driver profile
+4. Applying default driver values
+5. Maintaining transaction boundaries
+6. Handling related business rules
+
+The serializer should validate driver registration data and pass the validated data to the service.
+
+---
+
+# 6. Ride Create Serializer
+
+## Identified Area
+
+`RideCreateSerializer` contains several validation methods.
+
+Examples include:
+
+```text
+validate_pickup_address()
+validate_dropoff_address()
+validate_pickup_latitude()
+validate_dropoff_latitude()
+validate_pickup_longitude()
+validate_dropoff_longitude()
+validate()
+create()
+```
+
+## Field-Level Validation
+
+The following validations are appropriate inside the serializer:
+
+* Pickup address validation
+* Drop-off address validation
+* Latitude validation
+* Longitude validation
+* Required field validation
+* Field format validation
+
+These validations are directly related to validating API input.
+
+Therefore, they should remain inside the serializer.
+
+---
+
+# 7. Ride Business Validation
+
+The `RideCreateSerializer.validate()` method performs a database query to determine whether an active ride already exists.
+
+Example:
+
+```python
+Ride.objects.filter(...)
+```
+
+## Assessment
+
+The active-ride check represents a business rule.
+
+The rule is effectively:
+
+> A user should not create another ride when an active ride already exists.
+
+This rule should be reusable outside the serializer.
+
+## Recommended Refactoring
+
+Move the business rule into:
+
+```text
+accounts/services/ride.py
+```
+
+or the existing `RideService`.
+
+The serializer can continue handling basic input validation, while `RideService` performs the business-level ride validation.
+
+---
+
+# 8. Ride Creation
+
+The audit found that `RideCreateSerializer.create()` already delegates ride creation to:
+
+```python
+RideService.create_ride(...)
+```
+
+## Assessment
+
+This is already aligned with the target architecture.
+
+Instead of directly creating the `Ride` model inside the serializer, the serializer calls the service layer.
+
+This approach should be maintained.
+
+## Target Flow
+
+```text
+API View
+    ↓
+RideCreateSerializer
+    ↓
+RideService.create_ride()
+    ↓
+Django ORM
+    ↓
+PostgreSQL
+```
+
+This is a positive example of service-layer separation already present in the project.
+
+---
+
+# 9. Service Serializer Validation
+
+The `ServiceSerializer` contains a `validate()` method that performs a database lookup involving a booking.
+
+Example:
+
+```python
+Booking.objects.get(...)
+```
+
+## Assessment
+
+A database lookup that determines whether a service operation is allowed is business validation.
+
+It should not be tightly coupled to serializer validation.
+
+## Recommended Refactoring
+
+Move the business rule into a service-layer method such as:
+
+```text
+ServiceService
+```
+
+The serializer should validate the structure and basic correctness of incoming data.
+
+The service should determine whether the requested service operation is allowed based on existing bookings and business rules.
+
+---
+
+# 10. Image Validation
+
+The serializers contain image validation methods such as:
+
+```text
+validate_profile_image()
+validate_image()
+```
+
+## Assessment
+
+File-level validation should remain inside serializers when it only checks the uploaded data.
+
+Examples:
+
+* File type
+* File extension
+* File size
+* Required image
+* Basic image validity
+
+These validations are directly related to incoming API data.
+
+## Decision
+
+No service-layer migration is required for basic image validation.
+
+Complex image processing or storage workflows can be moved to a dedicated service if required later.
+
+---
+
+# 11. Field-Level Validation
+
+Several serializers contain field-level validation methods.
+
+Examples include:
+
+```text
+validate_email()
+validate_phone()
+validate_registration_number()
+validate_driver()
+validate_vehicle_type()
+validate_latitude()
+validate_longitude()
+```
+
+## Assessment
+
+These methods primarily validate API input.
+
+Examples:
+
+* Email format
+* Phone format
+* Required values
+* Numeric ranges
+* Invalid combinations
+* Field-level constraints
+
+## Decision
+
+These validations should remain inside serializers.
+
+Moving simple field validation into services would make the architecture unnecessarily complex.
+
+---
+
+# 12. Validation Responsibility Matrix
+
+| Validation / Operation    | Current Location | Target Location | Decision          |
+| ------------------------- | ---------------- | --------------- | ----------------- |
+| Email validation          | Serializer       | Serializer      | Keep              |
+| Phone validation          | Serializer       | Serializer      | Keep              |
+| Image type validation     | Serializer       | Serializer      | Keep              |
+| Image size validation     | Serializer       | Serializer      | Keep              |
+| Latitude validation       | Serializer       | Serializer      | Keep              |
+| Longitude validation      | Serializer       | Serializer      | Keep              |
+| Address validation        | Serializer       | Serializer      | Keep              |
+| Vehicle type validation   | Serializer       | Serializer      | Keep              |
+| Driver registration       | Serializer       | DriverService   | Move              |
+| User creation             | Serializer       | UserService     | Move              |
+| Profile creation          | Serializer       | DriverService   | Move              |
+| DriverProfile creation    | Serializer       | DriverService   | Move              |
+| Transaction handling      | Serializer       | Service Layer   | Move              |
+| Active ride business rule | Serializer       | RideService     | Move              |
+| Booking business rule     | Serializer       | Service Layer   | Move              |
+| Ride creation             | Serializer       | RideService     | Already separated |
+
+---
+
+# 13. Transaction Handling
+
+The driver registration serializer currently uses:
+
+```python
+@transaction.atomic
+```
+
+This indicates that the operation is a multi-step business workflow.
+
+The transaction boundary should be controlled by the service layer.
+
+Target structure:
+
+```text
+DriverService.register_driver()
+        |
+        v
+transaction.atomic()
+        |
+        +---- Create User
+        |
+        +---- Create Profile
+        |
+        +---- Create DriverProfile
+```
+
+This makes the complete registration workflow reusable and independently testable.
+
+---
+
+# 14. Serializer Responsibilities After Refactoring
+
+After refactoring, serializers should primarily handle:
+
+* Request data validation
+* Field validation
+* Cross-field input validation
+* Data serialization
+* Deserialization
+* Representation of model data
+
+They should avoid owning complex business workflows.
+
+---
+
+# 15. Service Layer Responsibilities
+
+Services should handle:
+
+* User creation workflows
+* Driver registration
+* Profile creation
+* Business rules
+* Complex database operations
+* Transactions
+* Ride creation rules
+* Booking rules
+* Payment rules
+* Status transitions
+* Related model creation
+* Background task triggering where required
+
+---
+
+# 16. Target Architecture
+
+The target serializer architecture is:
+
+```text
+API View
+    ↓
+Serializer
+    ↓
+Validation
+    ↓
+Service Layer
+    ↓
+Django ORM
+    ↓
+PostgreSQL
+```
+
+For a driver registration request:
+
+```text
+API View
+    ↓
+Driver Serializer
+    ↓
+Input Validation
+    ↓
+DriverService
+    ↓
+User + Profile + DriverProfile
+    ↓
+PostgreSQL
+```
+
+For ride creation:
+
+```text
+API View
+    ↓
+RideCreateSerializer
+    ↓
+Input Validation
+    ↓
+RideService
+    ↓
+Ride Creation
+    ↓
+PostgreSQL
+```
+
+---
+
+# 17. Benefits of the Refactoring
+
+## Better Separation of Concerns
+
+Serializers will focus on validation and serialization instead of business workflows.
+
+## Reusability
+
+Business operations can be called from:
+
+* API views
+* Celery tasks
+* Management commands
+* Automated tests
+* Other services
+
+## Improved Testability
+
+Business logic can be tested independently from serializer behavior.
+
+## Reduced Coupling
+
+The serializer will no longer depend heavily on database workflows.
+
+## Cleaner Architecture
+
+The overall request flow becomes easier to understand and maintain.
+
+---
+
+# 18. Existing Positive Architecture
+
+The project already demonstrates the desired approach in the ride creation workflow.
+
+`RideCreateSerializer` delegates actual ride creation to:
+
+```text
+RideService.create_ride()
+```
+
+This pattern should be extended to other business workflows.
+
+The existing service layer should be reused instead of creating duplicate implementations.
+
+---
+
+# 19. Refactoring Priority
+
+| Priority | Area                  | Target Service        | Status     |
+| -------- | --------------------- | --------------------- | ---------- |
+| High     | Driver Registration   | `DriverService`       | Identified |
+| High     | User Creation         | `UserService`         | Identified |
+| High     | Active Ride Rule      | `RideService`         | Identified |
+| High     | Booking Business Rule | Booking/Service Layer | Identified |
+| Medium   | Transaction Handling  | Relevant Service      | Identified |
+| Low      | Field Validation      | Serializer            | Keep       |
+| Low      | Image Validation      | Serializer            | Keep       |
+| Low      | Address Validation    | Serializer            | Keep       |
+| Low      | Coordinate Validation | Serializer            | Keep       |
+
+---
+
+# 20. Final Audit Summary
+
+The serializer audit confirmed that the project already follows the service-layer pattern in some areas, particularly ride creation.
+
+However, several business workflows are still implemented directly inside serializers.
+
+The primary business logic requiring refactoring is:
+
+* User creation
+* Driver registration
+* Profile creation
+* Driver profile creation
+* Transaction handling
+* Active ride business validation
+* Booking-related business validation
+
+Simple field-level and input validation should remain inside serializers.
+
+---
+
+# 21. Task 3 Completion Status
+
+| Requirement                             | Status        |
+| --------------------------------------- | ------------- |
+| Review serializers                      | **COMPLETED** |
+| Identify `create()` methods             | **COMPLETED** |
+| Identify `validate()` methods           | **COMPLETED** |
+| Identify database operations            | **COMPLETED** |
+| Identify transaction handling           | **COMPLETED** |
+| Separate validation from business logic | **COMPLETED** |
+| Identify service-layer candidates       | **COMPLETED** |
+| Define target responsibilities          | **COMPLETED** |
+| Document serializer findings            | **COMPLETED** |
+
+---
+
+# 22. Final Result
+
+**Task 3 — Identify Business Logic Inside Serializers has been completed successfully.**
+
+The serializer layer was reviewed and business workflows were separated conceptually from normal API validation.
+
+The audit identified the business operations that should be moved to the service layer while confirming that field-level and input validation should remain inside serializers.
+
+The findings provide the implementation plan for the next refactoring stage.
+# Task 4 — Repeated Database Operations Audit
+
+## Objective
+
+Identify repeated database operations across views, serializers, and the existing service layer, and determine which operations can be centralized or reused during the modular architecture refactoring.
+
+## Audit Scope
+
+The following components were reviewed:
+
+* `accounts/views.py`
+* `accounts/serializers.py`
+* `accounts/services/*.py`
+
+The audit focused on:
+
+* `objects.filter()`
+* `objects.get()`
+* `objects.create()`
+* `objects.get_or_create()`
+* `objects.update_or_create()`
+* `select_related()`
+* `prefetch_related()`
+
+---
+
+## 1. Ride Query Repetition
+
+Ride-related database operations are the most frequently repeated operations in `views.py`.
+
+Important locations include:
+
+* Ride queryset — line 874
+* Ride queryset — line 1059
+* Ride lookup — line 1149
+* Ride queryset — line 1356
+* Ride lists/history — lines 1606, 1656, 1706, 1757
+* Ride statistics — lines 1828, 1854, 1877
+* Rider history — lines 1904, 1974, 2033
+* Driver earnings — line 1925
+* Driver location/ride lookup — line 2131
+
+Several of these queries also use `select_related()`.
+
+### Finding
+
+Ride database access is distributed across multiple view methods. Although the queries serve different API operations, common filtering and relationship-loading patterns are repeated.
+
+### Recommendation
+
+Create/reuse service-layer methods for common ride operations such as:
+
+* Get rider rides
+* Get driver rides
+* Get ride history
+* Get ride details
+* Get ride statistics
+* Get driver earnings
+* Get active ride
+
+Existing `RideService` should be extended rather than creating another ride-related service.
+
+---
+
+## 2. Driver and Driver Location Operations
+
+Driver-related database operations were identified in both views and services.
+
+### Views
+
+Examples:
+
+* `DriverProfile.objects.select_related()` — lines 539 and 585
+* `DriverLocation.objects.update_or_create()` — line 2118
+* `DriverLocation.objects.get()` — line 2220
+* `DriverLocation.objects.filter().select_related()` — line 2415
+
+### Services
+
+`driver_service.py` contains:
+
+* `DriverProfile.objects.get(user=user)`
+* `Ride.objects.filter(...)`
+
+`ride.py` also contains driver profile lookups.
+
+### Finding
+
+Driver information and driver location access are repeated across API and service code.
+
+### Recommendation
+
+Centralize commonly used operations in the existing `DriverService` or related service methods.
+
+Examples:
+
+* Get driver profile
+* Get driver by user
+* Update driver location
+* Get driver location
+* Get nearby drivers
+
+This will reduce direct ORM usage in views.
+
+---
+
+## 3. Payment Database Operations
+
+Payment-related operations are present in `views.py`.
+
+Identified operations include:
+
+* Existing payment lookup — line 2612
+* Payment creation — line 2634
+* Payment retrieval — line 2645
+* Payment retrieval — line 2785
+* Payment with booking relationship — line 2852
+
+### Finding
+
+Payment creation and retrieval logic is currently handled directly by API views.
+
+There are multiple payment lookups associated with booking/payment workflows.
+
+### Recommendation
+
+Introduce or extend a payment service to centralize:
+
+* Find existing payment
+* Create payment
+* Retrieve payment
+* Validate payment state
+* Update payment status
+* Process booking payment workflow
+
+This is a high-priority refactoring area because payment operations contain business rules.
+
+---
+
+## 4. Booking Database Operations
+
+Booking operations are present in `views.py`.
+
+The main booking queryset was identified around:
+
+* Line 2928 — `Booking.objects.select_related(...)`
+
+The serializer also accesses booking data:
+
+* Line 1040 — `Booking.objects.get(...)`
+
+### Finding
+
+Booking access is split between the view and serializer layers.
+
+The serializer performs a direct database lookup during validation.
+
+### Recommendation
+
+Booking-related business validation and booking retrieval should eventually be moved into a booking service.
+
+The serializer should primarily validate input and delegate business rules to the service layer.
+
+---
+
+## 5. Service and Service Image Queries
+
+Repeated service-related database operations were found in `views.py`.
+
+### Service
+
+* `Service.objects.get()` — lines 3032 and 3069
+
+### Service Images
+
+* `ServiceImage.objects.filter()` — line 3044
+* `ServiceImage.objects.get()` — line 3082
+
+### Finding
+
+Service and service-image operations are directly handled by views.
+
+### Recommendation
+
+Create/reuse service-layer operations for:
+
+* Get service
+* Get active service
+* List service images
+* Get service image
+* Create/update/delete service images
+* Handle service availability changes
+
+The existing `ServiceViewSet` should become primarily responsible for HTTP/API handling.
+
+---
+
+## 6. Notification Queries
+
+Notification database access was identified in `views.py`.
+
+Examples include:
+
+* Notification queryset with `select_related("ride")`
+* `Notification.objects.get(...)`
+* `Notification.objects.filter(...)`
+
+### Finding
+
+Notification retrieval and update operations are directly present in the API layer.
+
+However, notification background processing is already partially separated through `NotificationService` and Celery.
+
+### Recommendation
+
+Extend the existing notification service for reusable notification operations where appropriate.
+
+---
+
+## 7. Serializer-Level Database Operations
+
+The following direct database operations were identified in `serializers.py`.
+
+### User
+
+```text
+User.objects.filter()
+User.objects.create_user()
+```
+
+These occur during user validation and creation.
+
+### Driver Registration
+
+```text
+User.objects.create_user()
+Profile.objects.create()
+DriverProfile.objects.create()
+```
+
+These operations are wrapped in:
+
+```python
+@transaction.atomic
+```
+
+### Ride Validation
+
+```text
+Ride.objects.filter()
+```
+
+This checks whether an active ride already exists.
+
+The actual ride creation is already delegated to:
+
+```python
+RideService.create_ride(...)
+```
+
+### Booking Validation
+
+```text
+Booking.objects.get()
+```
+
+The service serializer performs a direct booking lookup.
+
+### Finding
+
+Some serializer logic still performs business/database operations directly.
+
+The strongest example is driver registration, where user, profile, and driver profile creation are performed inside the serializer.
+
+### Recommendation
+
+Move multi-model driver registration into a dedicated service while keeping serializer responsibilities focused on input validation and serialization.
+
+---
+
+## 8. Existing Service Layer Database Operations
+
+The current service layer already contains reusable database operations.
+
+### Driver Service
+
+`driver_service.py` contains:
+
+* Driver profile lookup
+* Ride filtering
+
+### Fare Service
+
+`fare_service.py` contains:
+
+* Vehicle type lookup
+
+### Profile Service
+
+`profile_service.py` contains:
+
+* Profile lookup
+
+### Ride Service
+
+`ride.py` contains:
+
+* Ride status lookup
+* Ride creation
+* Driver selection
+* Driver profile lookup
+* Ride status updates
+* Related ride queries
+* Cancellation status lookup
+
+### Saved Service
+
+`saved_service.py` contains:
+
+* Saved service creation
+* Saved service filtering
+* `select_related("service")`
+
+### User Service
+
+`user_service.py` contains:
+
+* User lookup by ID
+* User creation
+* User lookup by email
+
+### Vehicle Service
+
+`vehicle_service.py` contains:
+
+* Vehicle queryset with `select_related()`
+
+### Finding
+
+The project already has a partially implemented service architecture.
+
+Therefore, the correct approach is to **extend the existing services** instead of introducing duplicate repository/service implementations.
+
+---
+
+## 9. Repeated Query Categories
+
+| Area            | Repetition Level | Recommended Action               |
+| --------------- | ---------------- | -------------------------------- |
+| Ride            | High             | Extend `RideService`             |
+| Driver          | Medium           | Extend `DriverService`           |
+| Driver Location | Medium           | Centralize location operations   |
+| Payment         | Medium/High      | Create payment service           |
+| Booking         | Medium           | Create/extend booking service    |
+| Service         | Medium           | Create/extend service operations |
+| Service Image   | Medium           | Centralize image operations      |
+| Notification    | Medium           | Extend `NotificationService`     |
+| User            | Low/Medium       | Reuse `UserService`              |
+| Profile         | Low              | Reuse `ProfileService`           |
+| Vehicle         | Low              | Reuse `VehicleService`           |
+| Saved Service   | Low              | Already centralized              |
+
+---
+
+## 10. Query Optimization Findings
+
+The audit also confirmed existing use of:
+
+* `select_related()`
+* Query filtering
+* Relationship-based filtering
+* Service-level query reuse
+
+These optimizations should be preserved during refactoring.
+
+Refactoring should not introduce unnecessary additional queries.
+
+For example:
+
+```python
+.select_related("vehicle_type")
+```
+
+and:
+
+```python
+.select_related("service")
+```
+
+should remain where they reduce additional database queries.
+
+---
+
+## 11. Important Refactoring Principle
+
+Not every repeated `objects.filter()` or `objects.get()` call needs to become a separate service method.
+
+Simple read-only querysets can remain in the appropriate layer when they are specific to one API operation.
+
+The main goal is to move **business rules and reusable database workflows** into services.
+
+The refactoring should avoid unnecessary abstraction.
+
+### Good candidate
+
+```text
+Payment creation + payment status validation
+```
+
+### Less important candidate
+
+```text
+One simple queryset used by only one endpoint
+```
+
+---
+
+## 12. Target Architecture
+
+The target architecture is:
+
+```text
+API View
+    ↓
+Serializer
+    ↓
+Service Layer
+    ↓
+ORM / Database Operations
+    ↓
+PostgreSQL
+```
+
+For reusable operations:
+
+```text
+Multiple Views
+      ↓
+Service Layer
+      ↓
+Reusable ORM Operations
+      ↓
+PostgreSQL
+```
+
+---
+
+## 13. Refactoring Priority
+
+### High Priority
+
+1. Ride operations
+2. Payment workflow
+3. Booking workflow
+4. Driver registration
+5. Driver location operations
+
+### Medium Priority
+
+6. Service operations
+7. Service image operations
+8. Notification queries
+
+### Low Priority
+
+9. User/Profile simple lookups
+10. Vehicle queries
+11. Saved service queries
+
+---
+
+## 14. Final Finding
+
+The audit identified repeated database operations across views and serializers, especially around rides, drivers, payments, bookings, services, and notifications.
+
+The project already contains a useful service-layer foundation including:
+
+* `RideService`
+* `DriverService`
+* `FareService`
+* `ProfileService`
+* `NotificationService`
+* `SavedServiceService`
+* `UserService`
+* `VehicleService`
+
+Therefore, the modular architecture refactoring should focus on **moving repeated business/database workflows into these existing services and adding only the missing services where necessary**.
+
+## Task 4 Completion Status
+
+**Status: COMPLETED**
+
+The repeated database operations have been identified and categorized. Refactoring priorities have been established for the next implementation tasks.
+# Django Modular Architecture & Service Layer
+
+## Project Objective
+
+The objective of this task is to improve the Django backend architecture by separating business logic from API views and serializers.
+
+The application follows this architecture:
+
+```text
+Client
+   ↓
+API View
+   ↓
+Serializer
+   ↓
+Service Layer
+   ↓
+Django ORM
+   ↓
+PostgreSQL
+```
+
+---
+
+# Task 5 — Create Services Structure
+
+The existing `accounts/services/` structure was reviewed and extended with additional service modules.
+
+### Service Structure
+
+```text
+accounts/
+│
+├── services/
+│   ├── __init__.py
+│   ├── booking_service.py
+│   ├── payment_service.py
+│   ├── service_service.py
+│   ├── driver_service.py
+│   ├── fare_service.py
+│   ├── notification_service.py
+│   ├── profile_service.py
+│   ├── ride.py
+│   ├── saved_service.py
+│   ├── user_service.py
+│   └── vehicle_service.py
+│
+├── validators.py
+├── serializers.py
+├── views.py
+└── models.py
+```
+
+### New Services Added
+
+```text
+booking_service.py
+payment_service.py
+service_service.py
+```
+
+The services contain reusable business and database operations instead of keeping them directly inside API views.
+
+---
+
+# Task 6 — Move Business Operations to Services
+
+Business operations related to booking and payment were moved from views into service classes.
+
+## BookingService
+
+File:
+
+```text
+accounts/services/booking_service.py
+```
+
+Example implementation:
+
+```python
+class BookingService:
+
+    @staticmethod
+    def get_booking(booking_id, customer=None):
+        queryset = Booking.objects.select_related(
+            "customer",
+            "provider",
+            "service",
+        )
+
+        if customer is not None:
+            queryset = queryset.filter(
+                customer=customer
+            )
+
+        return queryset.get(id=booking_id)
+
+    @staticmethod
+    def create_booking(
+        customer,
+        service,
+        provider,
+        booking_date=None,
+        booking_time=None,
+    ):
+        booking = Booking.objects.create(
+            customer=customer,
+            provider=provider,
+            service=service,
+            booking_date=booking_date or date.today(),
+            booking_time=booking_time or time(10, 0),
+            amount=service.price,
+        )
+
+        return booking
+```
+
+### Booking Status Update
+
+```python
+@classmethod
+def update_status(
+    cls,
+    booking_id,
+    customer,
+    new_status,
+):
+    with transaction.atomic():
+
+        booking = (
+            Booking.objects
+            .select_for_update()
+            .get(
+                id=booking_id,
+                customer=customer,
+            )
+        )
+
+        booking.status = new_status
+
+        booking.save(
+            update_fields=[
+                "status",
+                "updated_at",
+            ]
+        )
+
+    return booking
+```
+
+---
+
+## PaymentService
+
+File:
+
+```text
+accounts/services/payment_service.py
+```
+
+Payment creation is handled by the service layer.
+
+```python
+class PaymentService:
+
+    @staticmethod
+    def initiate_payment(
+        booking,
+        idempotency_key,
+    ):
+        existing_payment = Payment.objects.filter(
+            booking=booking,
+            idempotency_key=idempotency_key,
+        ).first()
+
+        if existing_payment:
+            return existing_payment, False
+
+        payment = Payment.objects.create(
+            booking=booking,
+            amount=booking.amount,
+            transaction_id=str(uuid.uuid4()),
+            payment_status=Payment.PaymentStatus.PENDING,
+            payment_method="upi",
+            idempotency_key=idempotency_key,
+        )
+
+        return payment, True
+```
+
+### Payment Processing
+
+```python
+@staticmethod
+def process_mock_payment(payment, result):
+
+    if payment.payment_status != (
+        Payment.PaymentStatus.PENDING
+    ):
+        raise ValueError(
+            "Payment is already processed."
+        )
+
+    payment.payment_status = (
+        Payment.PaymentStatus.SUCCESS
+        if result == "success"
+        else Payment.PaymentStatus.FAILED
+    )
+
+    payment.save(
+        update_fields=["payment_status"]
+    )
+
+    return payment
+```
+
+---
+
+# Task 7 — Create Reusable Validation Functions
+
+A reusable validation module was created:
+
+```text
+accounts/validators.py
+```
+
+The following validations were implemented:
+
+* Image file validation
+* File type validation
+* File size validation
+* Filename validation
+* Required field validation
+* Positive amount validation
+* Status validation
+
+### Image Validation
+
+```python
+def validate_image_file(image):
+
+    if not image.name:
+        raise ValidationError(
+            "Filename is required."
+        )
+
+    allowed_types = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+    ]
+
+    if image.content_type not in allowed_types:
+        raise ValidationError(
+            "Only JPG, JPEG and PNG files are allowed."
+        )
+
+    if image.size > 5 * 1024 * 1024:
+        raise ValidationError(
+            "Image size should be less than 5MB."
+        )
+
+    try:
+        image.seek(0)
+
+        img = Image.open(image)
+        img.verify()
+
+    except Exception:
+        raise ValidationError(
+            "Invalid image file."
+        )
+
+    finally:
+        image.seek(0)
+
+    return image
+```
+
+### Required Field Validation
+
+```python
+def validate_required(value, field_name):
+
+    if value is None or str(value).strip() == "":
+        raise ValidationError(
+            f"{field_name} is required."
+        )
+
+    return value
+```
+
+### Positive Amount Validation
+
+```python
+def validate_positive_amount(value):
+
+    if value is None or value <= 0:
+        raise ValidationError(
+            "Amount must be greater than zero."
+        )
+
+    return value
+```
+
+---
+
+# Task 8 — Keep Views Focused on API Handling
+
+Views were refactored so that they mainly handle:
+
+* HTTP requests
+* Authentication
+* Permissions
+* Serializer validation
+* HTTP responses
+* Calling service-layer methods
+
+Business logic is handled by services.
+
+### Example
+
+Before refactoring:
+
+```python
+def create(self, request):
+
+    booking = Booking.objects.create(
+        customer=request.user,
+        service=service,
+        amount=service.price,
+    )
+
+    return Response(
+        BookingSerializer(booking).data
+    )
+```
+
+After refactoring:
+
+```python
+def perform_create(self, serializer):
+
+    service = serializer.validated_data["service"]
+
+    booking = BookingService.create_booking(
+        customer=self.request.user,
+        service=service,
+    )
+
+    NotificationService.booking_created(
+        booking
+    )
+```
+
+This keeps the API layer clean and makes business operations reusable.
+
+---
+
+# Task 9 — Service Layer Unit Tests
+
+A dedicated service test module was created:
+
+```text
+accounts/tests/test_services.py
+```
+
+The tests cover:
+
+```text
+ServiceService
+BookingService
+PaymentService
+DriverService
+NotificationService
+ProfileService
+FareService
+UserService
+SavedService
+VehicleService
+RideService
+```
+
+### Example Service Test
+
+```python
+class PaymentServiceTests(TestCase):
+
+    def test_initiate_payment(self):
+
+        payment, created = (
+            PaymentService.initiate_payment(
+                booking=self.booking,
+                idempotency_key="TEST-001",
+            )
+        )
+
+        self.assertTrue(created)
+
+        self.assertEqual(
+            payment.payment_status,
+            Payment.PaymentStatus.PENDING,
+        )
+```
+
+### Service Test Result
+
+```text
+Found 62 test(s).
+
+Ran 62 tests in 101.369s
+
+OK
+```
+
+Result:
+
+```text
+62 Tests
+62 Passed
+0 Failed
+0 Errors
+```
+
+---
+
+# Task 10 — Test Existing APIs After Refactoring
+
+After completing the refactoring, the complete `accounts` test suite was executed.
+
+### Django System Check
+
+Command:
+
+```bash
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+### Full Test Suite
+
+Command:
+
+```bash
+python manage.py test accounts
+```
+
+Result:
+
+```text
+Found 132 test(s).
+
+Ran 132 tests in 286.326s
+
+OK
+```
+
+### Final Test Summary
+
+```text
+Total Tests : 132
+Passed      : 132
+Failed      : 0
+Errors      : 0
+```
+
+The following areas were validated:
+
+* Authentication
+* Authorization
+* JWT authentication
+* Driver operations
+* Ride operations
+* Booking workflow
+* Payment workflow
+* Notifications
+* WebSocket authentication
+* Celery tasks
+* Service layer
+* Database operations
+* Validation
+* Error handling
+
+---
+
+# Task 11 — Compare Old and New Architecture
+
+## Before Refactoring
+
+The application previously had business logic distributed across views, serializers and database operations.
+
+```text
+Client
+   ↓
+API View
+   ↓
+Business Logic
+   ↓
+Database
+```
+
+Problems included:
+
+* Large views
+* Repeated database operations
+* Business logic mixed with HTTP handling
+* Difficult unit testing
+* Less code reusability
+* Difficult maintenance
+
+---
+
+## After Refactoring
+
+The application now follows a service-oriented structure.
+
+```text
+Client
+   ↓
+API View
+   ↓
+Serializer
+   ↓
+Service Layer
+   ↓
+ORM / Repository Operations
+   ↓
+PostgreSQL
+```
+
+### Example
+
+```python
+booking = BookingService.create_booking(
+    customer=request.user,
+    service=service,
+)
+```
+
+Instead of putting the complete booking creation logic inside the API view, the view delegates the operation to `BookingService`.
+
+---
+
+# Service Responsibilities
+
+## BookingService
+
+Responsible for:
+
+```text
+Booking creation
+Booking retrieval
+Customer booking history
+Booking status transitions
+```
+
+## PaymentService
+
+Responsible for:
+
+```text
+Payment creation
+Idempotency handling
+Payment processing
+Payment webhook processing
+Booking confirmation
+```
+
+## DriverService
+
+Responsible for:
+
+```text
+Driver retrieval
+Driver validation
+Active ride validation
+Driver location
+Driver availability
+```
+
+## NotificationService
+
+Responsible for:
+
+```text
+Notification creation
+Notification retrieval
+Mark notification as read
+Mark all notifications as read
+```
+
+## RideService
+
+Responsible for:
+
+```text
+Ride creation
+Ride status handling
+Ride retrieval
+Ride workflow operations
+```
+
+---
+
+# Task 12 — Validation of New Architecture
+
+The new architecture was validated using Django system checks and automated tests.
+
+### System Check
+
+```bash
+python manage.py check
+```
+
+Result:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+### Service Tests
+
+```bash
+python manage.py test accounts.tests.test_services
+```
+
+Result:
+
+```text
+62 tests
+62 passed
+```
+
+### Full Application Tests
+
+```bash
+python manage.py test accounts
+```
+
+Result:
+
+```text
+132 tests
+132 passed
+0 failed
+0 errors
+```
+
+---
+
+# Final Architecture
+
+```text
+                    Client
+                      │
+                      ▼
+                API / View Layer
+                      │
+                      ▼
+                 Serializer
+                      │
+                      ▼
+                Service Layer
+        ┌─────────────┼─────────────┐
+        │             │             │
+        ▼             ▼             ▼
+   BookingService PaymentService DriverService
+        │             │             │
+        └─────────────┼─────────────┘
+                      ▼
+                  Django ORM
+                      │
+                      ▼
+                 PostgreSQL
+```
+
+Supporting components:
+
+```text
+Validation
+    │
+    ├── Image Validation
+    ├── Required Field Validation
+    ├── Amount Validation
+    └── Status Validation
+
+Infrastructure
+    │
+    ├── Redis
+    ├── Celery
+    ├── Channels
+    └── PostgreSQL
+```
+
+---
+
+# Benefits of the New Architecture
+
+The refactoring provides:
+
+1. Better separation of concerns.
+2. Smaller and cleaner API views.
+3. Reusable business logic.
+4. Easier unit testing.
+5. Reduced duplicate database operations.
+6. Better maintainability.
+7. Easier debugging.
+8. Better scalability.
+9. Clear service responsibilities.
+10. Cleaner overall project structure.
+
+---
+
+# Final Status
+
+| Task                                 | Status    |
+| ------------------------------------ | --------- |
+| Task 5 — Services Structure          | COMPLETED |
+| Task 6 — Business Operations         | COMPLETED |
+| Task 7 — Reusable Validators         | COMPLETED |
+| Task 8 — API View Refactoring        | COMPLETED |
+| Task 9 — Service Unit Tests          | COMPLETED |
+| Task 10 — API Regression Testing     | COMPLETED |
+| Task 11 — Architecture Comparison    | COMPLETED |
+| Task 12 — Architecture Documentation | COMPLETED |
+
+## Final Validation
+
+```text
+Django Check       : PASS
+Service Tests      : 62/62 PASS
+Full Test Suite    : 132/132 PASS
+Failures           : 0
+Errors             : 0
+```
+
+## Conclusion
+
+The Django backend was successfully refactored into a modular architecture with a dedicated service layer.
+
+Business logic is now separated from API views, reusable validation functions have been introduced, service-level unit tests have been added, and the existing application APIs continue to pass the complete automated test suite.
+
+The final architecture improves code organization, maintainability, testability and reusability while preserving existing application functionality.
