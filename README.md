@@ -21604,3 +21604,543 @@ The Django backend was successfully refactored into a modular architecture with 
 Business logic is now separated from API views, reusable validation functions have been introduced, service-level unit tests have been added, and the existing application APIs continue to pass the complete automated test suite.
 
 The final architecture improves code organization, maintainability, testability and reusability while preserving existing application functionality.
+
+6/10/26
+
+# Task 1 — Monolithic Architecture
+
+## What is Monolithic Architecture?
+
+Monolithic architecture is a software architecture where all major application functionalities are developed and deployed as a single application.
+
+## Example in Our Django Backend
+
+The current Django backend follows a monolithic architecture where multiple modules are part of the same Django project.
+
+```text
+Django Backend
+│
+├── Authentication
+├── User/Profile
+├── Driver
+├── Ride/Booking
+├── Vehicle
+├── Payment
+├── Notification
+└── Admin
+```
+
+## Advantages
+
+* Easy to develop initially.
+* Easy communication between modules.
+* Simple deployment.
+* Easy to manage for small and medium-sized applications.
+
+## Disadvantages
+
+* Large codebase becomes difficult to maintain.
+* A failure in one area can affect the application.
+* Independent scaling is difficult.
+* Changes may require deployment of the complete application.
+
+## Conclusion
+
+The current Django backend can remain as a monolith while the application is small or medium-sized. As the system grows, selected modules can be considered for separation into independent services.
+
+# Task 2 — Modular Monolith Architecture
+
+## What is Modular Monolith Architecture?
+
+A modular monolith is a single application that is divided into separate, well-defined modules. Each module has its own responsibility, but the complete application is deployed as one unit.
+
+## Example in Our Django Backend
+
+The current Django backend can be organized into separate modules:
+
+```text
+Django Backend
+│
+├── Authentication Module
+│   └── User Authentication
+│
+├── Profile Module
+│   └── User Profile Management
+│
+├── Booking Module
+│   └── Ride and Booking Management
+│
+├── Payment Module
+│   └── Payment Management
+│
+└── Notification Module
+    └── Notification Management
+```
+
+## Advantages
+
+* Better code organization.
+* Clear separation of responsibilities.
+* Easier maintenance and testing.
+* Easier to manage a large codebase.
+* Modules can later be separated into microservices.
+
+## Disadvantages
+
+* The entire application is still deployed as one unit.
+* Modules share the same application environment.
+* Independent scaling is limited.
+* Module boundaries must be maintained properly.
+
+## Conclusion
+
+A modular monolith provides better organization and separation than a traditional monolith while keeping deployment simple. It is a good approach for the current Django backend and can also make future migration to microservices easier.
+# Task 3 — Microservices Architecture
+
+## What is Microservices Architecture?
+
+Microservices architecture is a software architecture where an application is divided into small, independent services. Each service handles a specific business functionality and can be developed, deployed, and scaled independently.
+
+## Example
+
+The current Django backend can be divided into the following independent services:
+
+```text id="9k2pqa"
+Microservices
+│
+├── Authentication Service
+├── Booking Service
+├── Payment Service
+└── Notification Service
+```
+
+Each service is responsible for a specific business function.
+
+## Characteristics
+
+* Each service has a specific responsibility.
+* Services can be deployed independently.
+* Services communicate through APIs or message brokers.
+* Services can be scaled independently.
+* Each service can own its own database.
+
+## Advantages
+
+* Independent deployment.
+* Independent scaling.
+* Better separation of responsibilities.
+* Failure can be isolated to individual services.
+* Teams can develop services independently.
+
+## Disadvantages
+
+* More complex deployment.
+* Network communication can introduce failures.
+* Monitoring and debugging are more difficult.
+* Requires proper service-to-service security.
+* Managing multiple databases is more complex.
+
+## Conclusion
+
+Microservices architecture is useful when an application becomes large and different business functionalities need independent deployment, scaling, and ownership. For the current Django backend, selected modules such as Authentication, Booking, Payment, and Notification can potentially be separated into independent services in the future.
+
+# Task 4 — Current Backend Modules
+
+The current Django backend contains multiple functional modules responsible for different business operations.
+
+| Module         | Responsibility                     |
+| -------------- | ---------------------------------- |
+| Accounts       | Authentication and user management |
+| Profile        | User profile management            |
+| Driver         | Driver management and location     |
+| Ride / Booking | Ride creation, status and history  |
+| Vehicle        | Vehicle management                 |
+| Payment        | Payment processing                 |
+| Notification   | User notifications                 |
+| Admin          | Administrative operations          |
+
+## Current Architecture
+
+```text id="x8q4tm"
+Django Backend
+│
+├── Accounts
+├── Profile
+├── Driver
+├── Ride / Booking
+├── Vehicle
+├── Payment
+├── Notification
+└── Admin
+```
+
+These modules currently operate within the same Django backend. They can be considered as candidates for future service separation based on business requirements.
+# Task 5 — Possible Independent Services
+
+Based on the current backend modules, the following functionalities can potentially be separated into independent microservices.
+
+| Proposed Service       | Responsibility                                 |
+| ---------------------- | ---------------------------------------------- |
+| Authentication Service | User registration, login and authentication    |
+| Booking Service        | Ride/booking creation, status and history      |
+| Payment Service        | Payment processing, payment status and refunds |
+| Notification Service   | User and system notifications                  |
+
+## Proposed Service Boundaries
+
+```text id="7z9x2a"
+Authentication
+      ↓
+Authentication Service
+
+Ride / Booking
+      ↓
+Booking Service
+
+Payment
+      ↓
+Payment Service
+
+Notification
+      ↓
+Notification Service
+```
+
+## Services Kept Within the Booking Domain
+
+Driver, Vehicle and Profile functionality can initially remain within the main domain because they are closely related to ride/booking operations. They can be separated later if the system requires independent scaling or deployment.
+
+## Conclusion
+
+Authentication, Booking, Payment and Notification are the most suitable candidates for independent services because each has a clear business responsibility and can potentially be developed, deployed and scaled independently.
+# Task 6 — Communication Architecture
+
+## Proposed Communication Architecture
+
+The mobile application communicates with the backend through an API Gateway. The API Gateway routes requests to the appropriate microservice.
+
+```text
+                    Mobile App
+                        │
+                        ▼
+                  API Gateway
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+     Auth Service   Booking Service  Payment Service
+                         │             │
+                         └──────┬──────┘
+                                ▼
+                       Notification Service
+```
+
+## Communication Flow
+
+1. The Mobile App sends requests to the API Gateway.
+2. The API Gateway routes authentication requests to the Authentication Service.
+3. Booking requests are routed to the Booking Service.
+4. The Booking Service communicates with the Payment Service when payment is required.
+5. Booking and Payment events can trigger the Notification Service.
+6. Services communicate using REST APIs for synchronous operations and messaging for asynchronous operations.
+
+## Communication Methods
+
+* REST API for synchronous service-to-service communication.
+* Message broker for asynchronous communication.
+* Secure authentication should be used for service-to-service communication.
+
+## Conclusion
+
+The proposed communication architecture separates business responsibilities while allowing the services to communicate through well-defined APIs and asynchronous messages.
+# Task 7 — Database Ownership
+
+In the proposed microservices architecture, each service owns and manages its own data. Other services should not directly access another service's database.
+
+## Database Ownership
+
+| Service                | Database              | Main Data                             |
+| ---------------------- | --------------------- | ------------------------------------- |
+| Authentication Service | Auth Database         | Users and authentication data         |
+| Booking Service        | Booking Database      | Rides, bookings, drivers and vehicles |
+| Payment Service        | Payment Database      | Payments, transactions and refunds    |
+| Notification Service   | Notification Database | Notifications and notification status |
+
+## Database Access Rule
+
+Each service should access only its own database.
+
+```text id="j4z8uv"
+Booking Service
+      │
+      │ REST API
+      ▼
+Payment Service
+      │
+      ▼
+Payment Database
+```
+
+The Booking Service should not directly access the Payment Database.
+
+## Benefits
+
+* Clear ownership of data.
+* Better security.
+* Independent service development.
+* Independent database scaling.
+* Reduced coupling between services.
+
+## Conclusion
+
+Database ownership provides clear boundaries between services and prevents direct database-level dependencies between microservices.
+# Task 8 — API Communication Between Services
+
+The proposed microservices communicate through well-defined REST APIs.
+
+## Service API Examples
+
+### Authentication Service
+
+```text
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/token/refresh/
+```
+
+### Booking Service
+
+```text
+POST /api/bookings/
+GET /api/bookings/{id}/
+PATCH /api/bookings/{id}/status/
+```
+
+### Payment Service
+
+```text
+POST /api/payments/
+GET /api/payments/{id}/
+POST /api/payments/{id}/refund/
+```
+
+### Notification Service
+
+```text
+POST /api/notifications/
+GET /api/notifications/
+```
+
+## Example: Booking to Payment Communication
+
+```text
+Booking Service
+      │
+      │ POST /api/payments/
+      ▼
+Payment Service
+      │
+      ▼
+Payment Database
+      │
+      │ Payment Status
+      ▼
+Booking Service
+```
+
+The Booking Service communicates with the Payment Service through its API instead of directly accessing the Payment Database.
+
+## Security
+
+Service-to-service APIs should use secure authentication and authorization mechanisms. HTTPS should be used for communication between services.
+
+## Conclusion
+
+Well-defined APIs provide loose coupling between services and allow each service to evolve independently.
+
+# Task 9 — Synchronous and Asynchronous Communication
+
+## Synchronous Communication
+
+In synchronous communication, the calling service waits for a response from the other service before continuing.
+
+Example:
+
+```text
+Booking Service
+      │
+      │ REST API Request
+      ▼
+Payment Service
+      │
+      │ Response
+      ▼
+Booking Service
+```
+
+### Use Cases
+
+* Booking to Payment
+* Authentication requests
+* Operations that require an immediate response
+
+## Asynchronous Communication
+
+In asynchronous communication, the calling service sends an event or message and does not need to wait for an immediate response.
+
+Example:
+
+```text
+Booking Service
+      │
+      ▼
+Message Broker
+      │
+      ▼
+Notification Service
+```
+
+### Use Cases
+
+* Sending notifications
+* Booking status events
+* Payment completion notifications
+* Background processing
+
+## Comparison
+
+| Synchronous          | Asynchronous          |
+| -------------------- | --------------------- |
+| Waits for response   | Does not wait         |
+| Usually REST API     | Message broker/event  |
+| Immediate response   | Background processing |
+| More tightly coupled | More loosely coupled  |
+
+## Conclusion
+
+REST APIs can be used for operations that require an immediate response, while asynchronous messaging can be used for background tasks and notifications.
+# Task 10 — Failure Scenarios
+
+Microservices can experience failures because services communicate over networks and use independent databases. The following failure scenarios should be considered.
+
+## 1. Payment Service Failure
+
+If the Payment Service is unavailable, the Booking Service should not confirm the booking as paid.
+
+```text id="4l1nq3"
+Booking Service
+      │
+      ▼
+Payment Service ❌
+      │
+      ▼
+Booking remains Pending
+```
+
+The request can be retried after the Payment Service becomes available.
+
+## 2. Notification Service Failure
+
+If the Notification Service is unavailable, booking or payment processing should not fail unnecessarily.
+
+The notification event can be stored and retried later.
+
+## 3. Network Timeout
+
+If communication between two services times out, the calling service should use timeout handling and controlled retries.
+
+```text id="7k2q3r"
+Service A
+   │
+   ▼
+Service B
+   │
+ Timeout
+   ↓
+Retry / Error Handling
+```
+
+## 4. Database Failure
+
+If a service database becomes unavailable, the service should return an appropriate error and recover when the database becomes available.
+
+## 5. Duplicate Payment Request
+
+Duplicate payment requests can cause duplicate transactions. Idempotency mechanisms should be used to prevent duplicate payment processing.
+
+## 6. Service Authentication Failure
+
+If service-to-service authentication fails, the request should be rejected and logged for security monitoring.
+
+## Failure Handling
+
+The architecture should use:
+
+* Timeouts
+* Controlled retries
+* Error handling
+* Logging and monitoring
+* Idempotency for critical operations
+* Message retry mechanisms for asynchronous events
+
+## Conclusion
+
+Failure handling is important in microservices because individual services can fail independently. Proper timeout, retry, logging and recovery mechanisms help maintain system reliability.
+# Task 11 — Final Proposed Architecture
+
+The proposed architecture separates the major business functionalities of the current Django monolith into independent services.
+
+```text id="p8j4rm"
+                         Mobile App
+                             │
+                             ▼
+                       ┌─────────────┐
+                       │ API Gateway │
+                       └──────┬──────┘
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+             ▼                ▼                ▼
+      ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+      │    Auth     │  │   Booking   │  │   Payment   │
+      │   Service   │  │   Service   │  │   Service   │
+      └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+             │                │                │
+             ▼                ▼                ▼
+          Auth DB         Booking DB       Payment DB
+                              │                │
+                              └───────┬────────┘
+                                      ▼
+                              ┌───────────────┐
+                              │ Notification  │
+                              │    Service    │
+                              └───────┬───────┘
+                                      │
+                                      ▼
+                               Notification DB
+```
+
+## Service Responsibilities
+
+* **Authentication Service** — Handles registration, login and authentication.
+* **Booking Service** — Handles rides, bookings and booking status.
+* **Payment Service** — Handles payments, transactions and refunds.
+* **Notification Service** — Handles user notifications.
+
+## Communication
+
+* REST APIs are used for synchronous communication.
+* Message broker/event-based communication is used for asynchronous operations.
+* Each service owns its database.
+* Services communicate through APIs instead of directly accessing another service's database.
+
+## Benefits
+
+* Independent deployment.
+* Independent scaling.
+* Clear service ownership.
+* Better separation of business responsibilities.
+* Easier future maintenance and expansion.
+
+## Conclusion
+
+The proposed architecture provides a path to gradually evolve the existing Django monolith into a microservices-based system. The migration should be done incrementally based on business and scalability requirements.
