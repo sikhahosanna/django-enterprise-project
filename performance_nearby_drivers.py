@@ -14,7 +14,16 @@ from django.db import connection, reset_queries
 client = Client(HTTP_HOST="127.0.0.1")
 
 # Passenger access token
-access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4Mzc0Mzc3LCJpYXQiOjE3ODgzNzI1NzcsImp0aSI6IjI1NTUyY2JiYTczYzQ5ZDM5MzAyYjFjOTg3OGQ0OGNmIiwidXNlcl9pZCI6IjkzMWVlYTdlLTdjMGYtNGUwNy1iNWI3LTIwNzI3NzZiOWFmNCJ9.D_byjVqfzNEOzi-BQ_Ns8zP84QLFBgBiEvS7qRauI5M"
+login_response = client.post(
+    "/api/v1/auth/login/",
+    data={
+        "email": "passenger@test.com",
+        "password": "Test@123456",
+    },
+    content_type="application/json",
+)
+
+access_token = login_response.json()["data"]["access"]
 
 # Previous queries 
 reset_queries()

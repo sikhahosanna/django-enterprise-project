@@ -244,13 +244,11 @@ class DriverSerializer(serializers.ModelSerializer):
             "license_number",
             "status",
             "created_at",
-            "updated_at",
         ]
 
         read_only_fields = [
             "id",
             "created_at",
-            "updated_at",
             "status",
         ]
 
@@ -1102,3 +1100,4 @@ class SavedServiceSerializer(serializers.ModelSerializer):
             "customer",
             "created_at",
         ]
+

@@ -2698,7 +2698,7 @@ class DriverLocationView(APIView):
                 },
             )
 
-        cache.clear()
+        cache.delete_pattern("nearby_drivers:*")
 
         return success_response(
             message=(
@@ -2816,7 +2816,7 @@ class DriverAvailabilityView(APIView):
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        cache.clear()
+        cache.delete_pattern("nearby_drivers:*")
 
         return success_response(
             message=(

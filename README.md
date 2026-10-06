@@ -22144,3 +22144,669 @@ The proposed architecture separates the major business functionalities of the cu
 ## Conclusion
 
 The proposed architecture provides a path to gradually evolve the existing Django monolith into a microservices-based system. The migration should be done incrementally based on business and scalability requirements.
+
+7/10/26
+
+# Redis Cache Implementation & Performance
+
+## 1. Overview
+
+Redis caching was implemented in the Django ride-booking backend to improve API performance and reduce unnecessary database queries.
+
+The main purpose of caching is to store frequently requested data temporarily in Redis. When the same data is requested again, the application can retrieve it from Redis instead of querying PostgreSQL.
+
+### Architecture
+
+```text
+Client
+   ↓
+Django REST API
+   ↓
+Cache Layer (django-redis)
+   ↓
+Redis / Memurai
+   ↓
+PostgreSQL
+```
+
+### Request Flow
+
+```text
+API Request
+    ↓
+Check Redis Cache
+    ↓
+ ┌───────────────┐
+ │ Cache Exists? │
+ └───────────────┘
+      ↓       ↓
+     YES      NO
+      ↓        ↓
+    HIT      MISS
+      ↓        ↓
+ Return     Query PostgreSQL
+ Data          ↓
+            Store in Redis
+                ↓
+            Return Data
+```
+
+---
+
+## 2. What is Redis?
+
+Redis is an in-memory data store used for caching, temporary data storage, message brokering, and other high-performance use cases.
+
+Redis stores data primarily in memory, which makes data retrieval much faster than repeatedly querying a relational database.
+
+### Why Redis is used
+
+Without caching:
+
+```text
+API → PostgreSQL → Response
+```
+
+With caching:
+
+```text
+API → Redis → Response
+```
+
+If the requested data is already available in Redis, the database does not need to be queried.
+
+---
+
+## 3. What is django-redis?
+
+`django-redis` is a Redis cache backend for Django.
+
+It allows Django's standard cache framework to communicate with Redis.
+
+The application uses:
+
+```python
+django_redis.cache.RedisCache
+```
+
+as the Django cache backend.
+
+---
+
+## 4. Redis Configuration
+
+The Django cache configuration uses Redis DB 1:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv(
+            "REDIS_CACHE_URL",
+            "redis://127.0.0.1:6379/1"
+        ),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+```
+
+### Redis Database Usage
+
+| Redis DB | Purpose                  |
+| -------- | ------------------------ |
+| DB 0     | Celery broker            |
+| DB 1     | Django application cache |
+
+This separation prevents Celery broker data and Django cache data from being mixed together.
+
+---
+
+## 5. Cache Strategy
+
+The application follows a **Cache-Aside** strategy.
+
+### Cache-Aside Flow
+
+1. API receives a request.
+2. Application checks Redis.
+3. If data exists, return cached data.
+4. If data does not exist, query PostgreSQL.
+5. Store the result in Redis.
+6. Return the result to the client.
+
+Example:
+
+```python
+cached_data = cache.get(cache_key)
+
+if cached_data:
+    return cached_data
+
+data = get_data_from_database()
+
+cache.set(cache_key, data, timeout)
+
+return data
+```
+
+---
+
+# 6. Cached APIs
+
+## 6.1 Vehicle Types
+
+Vehicle Types are cached because they are frequently requested and change less frequently.
+
+### Cache Key
+
+```text
+vehicle_types
+```
+
+### Timeout
+
+```text
+3600 seconds
+```
+
+That means the cached data remains available for one hour unless it is explicitly invalidated.
+
+### Behaviour
+
+```text
+First Request
+     ↓
+Redis MISS
+     ↓
+PostgreSQL Query
+     ↓
+Store Vehicle Types in Redis
+     ↓
+Response
+```
+
+Next request:
+
+```text
+Request
+   ↓
+Redis HIT
+   ↓
+Return Vehicle Types
+```
+
+This reduces repeated database queries.
+
+---
+
+## 6.2 Ride Statuses
+
+Ride Statuses are also cached because they are commonly requested reference data.
+
+### Cache Key
+
+```text
+ride_statuses
+```
+
+### Timeout
+
+```text
+3600 seconds
+```
+
+The same Cache-Aside pattern is used:
+
+```text
+Redis HIT → Return cached data
+
+Redis MISS → Query database
+           → Store in Redis
+           → Return data
+```
+
+---
+
+# 7. Nearby Drivers Cache
+
+Nearby Drivers is a performance-sensitive API because it can be requested frequently by passengers.
+
+The API searches for available drivers within a specified geographical radius.
+
+### Cache Key
+
+The cache key is generated using:
+
+```text
+nearby_drivers:{latitude}:{longitude}:{radius}
+```
+
+Example:
+
+```text
+nearby_drivers:17.3850:78.4867:5.00
+```
+
+The key contains the request location and radius so that different searches have separate cache entries.
+
+### Timeout
+
+```text
+60 seconds
+```
+
+A short timeout is used because driver locations and availability can change frequently.
+
+---
+
+## 8. Nearby Drivers Cache Flow
+
+### Cache MISS
+
+When the requested key is not present:
+
+```text
+API Request
+    ↓
+Redis GET
+    ↓
+MISS
+    ↓
+Query DriverLocation
+    ↓
+Find Nearby Drivers
+    ↓
+Prepare Response
+    ↓
+Store Response in Redis
+    ↓
+Return Response
+```
+
+### Cache HIT
+
+When the key already exists:
+
+```text
+API Request
+    ↓
+Redis GET
+    ↓
+HIT
+    ↓
+Return Cached Response
+```
+
+The database query for finding nearby drivers is avoided.
+
+---
+
+# 9. Cache HIT and MISS
+
+## Cache HIT
+
+A **cache HIT** occurs when requested data already exists in Redis.
+
+Example:
+
+```text
+Request → Redis → Data Found → Response
+```
+
+Benefits:
+
+* Faster response
+* No database query for cached data
+* Lower database load
+
+---
+
+## Cache MISS
+
+A **cache MISS** occurs when requested data is not available in Redis.
+
+Example:
+
+```text
+Request → Redis → Data Not Found
+                    ↓
+               PostgreSQL
+                    ↓
+              Store in Redis
+```
+
+The first request normally results in a MISS.
+
+---
+
+# 10. Cache Invalidation
+
+Cache invalidation means removing outdated data from the cache when the underlying data changes.
+
+This is important because cached data should not remain stale.
+
+For Nearby Drivers, driver location and availability can change frequently.
+
+Therefore, when relevant driver information changes, the Nearby Drivers cache is invalidated.
+
+### Targeted Invalidation
+
+The implementation uses:
+
+```python
+cache.delete_pattern("nearby_drivers:*")
+```
+
+This removes only Nearby Drivers cache entries.
+
+### Why targeted invalidation?
+
+Previously, a broad cache clear could remove unrelated cached data.
+
+For example:
+
+```text
+cache.clear()
+```
+
+could remove:
+
+```text
+vehicle_types
+ride_statuses
+nearby_drivers
+```
+
+Targeted invalidation removes only:
+
+```text
+nearby_drivers:*
+```
+
+while preserving:
+
+```text
+vehicle_types
+ride_statuses
+```
+
+This is safer and more efficient.
+
+---
+
+# 11. Cache Invalidation Verification
+
+The targeted invalidation was tested by creating cache entries for:
+
+```text
+vehicle_types
+ride_statuses
+nearby_drivers:*
+```
+
+After driver location/availability changes:
+
+```python
+cache.delete_pattern("nearby_drivers:*")
+```
+
+was executed.
+
+### Result
+
+```text
+Nearby Drivers cache → Deleted
+Vehicle Types cache → Preserved
+Ride Statuses cache → Preserved
+```
+
+This confirms that targeted invalidation works correctly.
+
+---
+
+# 12. API HIT/MISS Testing
+
+The Nearby Drivers API was tested using the performance script:
+
+```text
+performance_nearby_drivers.py
+```
+
+The test performs authenticated API requests and measures:
+
+* HTTP status
+* Response time
+* Database query count
+* Cache status
+
+### MISS Test
+
+The Nearby Drivers cache was cleared before the first request.
+
+Result:
+
+```text
+Status Code: 200
+Cache Status: MISS
+DB Queries: 1
+Response Time: 143.66 ms
+```
+
+This confirms that the MISS path queried the database and then populated Redis.
+
+### HIT Test
+
+The same API request was executed again.
+
+Result:
+
+```text
+Status Code: 200
+Cache Status: HIT
+DB Queries: 0
+Response Time: 3.82 ms
+```
+
+This confirms that the second request was served directly from Redis.
+
+---
+
+# 13. Performance Comparison
+
+| Metric        | Cache MISS | Cache HIT |
+| ------------- | ---------: | --------: |
+| Cache Status  |       MISS |       HIT |
+| DB Queries    |          1 |         0 |
+| Response Time |  143.66 ms |   3.82 ms |
+
+### Performance Improvement
+
+The response time decreased from:
+
+```text
+143.66 ms
+```
+
+to:
+
+```text
+3.82 ms
+```
+
+Approximate improvement:
+
+```text
+97.3%
+```
+
+### Calculation
+
+```text
+((143.66 - 3.82) / 143.66) × 100
+≈ 97.3%
+```
+
+Therefore, the Redis cache significantly improved the Nearby Drivers API response time.
+
+---
+
+# 14. Database Load Reduction
+
+Without caching:
+
+```text
+Request 1 → PostgreSQL
+Request 2 → PostgreSQL
+Request 3 → PostgreSQL
+Request 4 → PostgreSQL
+```
+
+With caching:
+
+```text
+Request 1 → PostgreSQL → Redis
+Request 2 → Redis
+Request 3 → Redis
+Request 4 → Redis
+```
+
+This reduces repeated database operations and allows PostgreSQL to handle other application workloads more efficiently.
+
+---
+
+# 15. Testing and Validation
+
+The following validations were completed:
+
+### Redis
+
+* Redis/Memurai service verified.
+* Redis connection verified.
+* Redis `PING` verified.
+* Django cache set/get verified.
+* Cross-process cache access verified.
+
+### Application Cache
+
+* Vehicle Types caching verified.
+* Ride Statuses caching verified.
+* Nearby Drivers caching verified.
+* Nearby Drivers 60-second timeout configured.
+* Targeted cache invalidation verified.
+
+### API Testing
+
+* Nearby Drivers cache MISS verified.
+* Nearby Drivers cache HIT verified.
+* Database query reduction verified.
+* Response-time improvement measured.
+
+### Django Tests
+
+Full Accounts test suite:
+
+```text
+132 tests
+0 failures
+0 errors
+```
+
+Django system check:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+---
+
+# 16. Files Modified
+
+The Redis implementation and performance testing involved:
+
+```text
+accounts/views.py
+accounts/serializers.py
+performance_nearby_drivers.py
+REDIS_CACHE_PERFORMANCE.md
+```
+
+### `accounts/views.py`
+
+Contains:
+
+* Redis cache logic
+* Vehicle Types caching
+* Ride Statuses caching
+* Nearby Drivers caching
+* Targeted Nearby Drivers invalidation
+
+### `accounts/serializers.py`
+
+Updated `DriverSerializer` to match the actual `DriverProfile` model fields.
+
+### `performance_nearby_drivers.py`
+
+Used to measure:
+
+* Cache MISS
+* Cache HIT
+* Database query count
+* Response time
+
+---
+
+# 17. Advantages of the Implementation
+
+### Performance
+
+Redis provides fast access to frequently requested data.
+
+### Reduced Database Load
+
+Cached requests do not need to execute the same database query repeatedly.
+
+### Better API Response Time
+
+The Nearby Drivers API improved from approximately:
+
+```text
+143.66 ms → 3.82 ms
+```
+
+### Controlled Cache Lifetime
+
+Different data uses different timeout values:
+
+```text
+Vehicle Types → 3600 seconds
+Ride Statuses → 3600 seconds
+Nearby Drivers → 60 seconds
+```
+
+### Targeted Invalidation
+
+Only affected cache entries are removed instead of clearing the entire cache.
+
+---
+
+# 18. Conclusion
+
+Redis caching has been successfully integrated into the Django ride-booking backend using django-redis.
+
+The implementation covers:
+
+* Redis configuration
+* Django cache integration
+* Vehicle Types caching
+* Ride Statuses caching
+* Nearby Drivers caching
+* Cache timeout management
+* Targeted cache invalidation
+* API HIT/MISS testing
+* Performance measurement
+
+The Nearby Drivers API demonstrated a significant performance improvement, with response time decreasing from **143.66 ms on a cache MISS to 3.82 ms on a cache HIT**, while database queries decreased from **1 to 0**.
+
+The implementation therefore successfully reduces database load and improves API response performance.
