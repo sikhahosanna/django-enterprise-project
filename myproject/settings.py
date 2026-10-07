@@ -113,9 +113,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
 
-    "django.middleware.security.SecurityMiddleware",
 
-    # CORS should be placed before CommonMiddleware
+    "django.middleware.security.SecurityMiddleware",
+    "accounts.middleware.RequestIDMiddleware",
+
     "corsheaders.middleware.CorsMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -129,8 +130,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
 
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-   
+
 
 ]
 

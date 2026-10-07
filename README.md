@@ -22810,3 +22810,683 @@ The implementation covers:
 The Nearby Drivers API demonstrated a significant performance improvement, with response time decreasing from **143.66 ms on a cache MISS to 3.82 ms on a cache HIT**, while database queries decreased from **1 to 0**.
 
 The implementation therefore successfully reduces database load and improves API response performance.
+
+8/10/26
+
+task1 
+# External Dependencies
+
+## 1. PostgreSQL
+
+* **Purpose:** Stores application data.
+* **Used By:** Django ORM and backend services.
+* **Failure Impact:** Database operations may fail and APIs may become unavailable.
+* **Expected Handling:** Return a safe error response and log the database failure.
+
+## 2. Redis / Memurai
+
+* **Purpose:** Provides caching and message brokering.
+* **Used By:** Django caching and Celery.
+* **Failure Impact:** Cache operations or task communication may fail.
+* **Expected Handling:** Handle Redis failure gracefully and use fallback logic where applicable.
+
+## 3. Celery
+
+* **Purpose:** Executes background tasks asynchronously.
+* **Used By:** Background processing and notifications.
+* **Failure Impact:** Background tasks may be delayed, pending, or fail.
+* **Expected Handling:** Log the failure and retry only safe operations.
+
+## 4. External APIs
+
+* **Purpose:** Communicate with third-party services.
+* **Used By:** Features that depend on external services.
+* **Failure Impact:** API timeout, connection failure, or service unavailability.
+* **Expected Handling:** Configure timeouts, retry only safe requests, and return graceful errors.
+
+## 5. Django Channels / WebSocket
+
+* **Purpose:** Provides real-time communication.
+* **Used By:** Ride and driver real-time updates.
+* **Failure Impact:** Real-time updates may stop or connections may fail.
+* **Expected Handling:** Log connection failures and ensure normal HTTP APIs continue safely.
+
+## Dependency Summary
+
+| Dependency         | Purpose                   | Main Failure Impact              |
+| ------------------ | ------------------------- | -------------------------------- |
+| PostgreSQL         | Database                  | Database/API failures            |
+| Redis / Memurai    | Cache & broker            | Cache/task communication failure |
+| Celery             | Background tasks          | Tasks delayed or failed          |
+| External APIs      | Third-party communication | Timeout/service unavailable      |
+| Channels/WebSocket | Real-time communication   | Real-time updates unavailable    |
+
+## Conclusion
+
+All major external dependencies of the Django backend have been identified. Their purpose, failure impact, and expected handling have been documented as preparation for resilience and failure-handling testing.
+task 2
+# Failure Points
+
+## 1. PostgreSQL Failure
+
+**Failure Point:** Database connection
+
+**Possible Failures:**
+
+* PostgreSQL server unavailable
+* Connection timeout
+* Connection refused
+* Database connection lost
+
+**Impact:**
+
+* API requests requiring database access may fail.
+* User and ride data cannot be read or saved.
+
+**Expected Handling:**
+
+* Return a graceful error response.
+* Log the database failure.
+* Avoid exposing database details to the client.
+
+---
+
+## 2. Redis Failure
+
+**Failure Point:** Cache and Redis connection
+
+**Possible Failures:**
+
+* Redis server unavailable
+* Connection timeout
+* Cache read/write failure
+
+**Impact:**
+
+* Cached data cannot be accessed.
+* Celery broker communication may be affected.
+
+**Expected Handling:**
+
+* Log Redis failures.
+* Use database fallback where applicable.
+* Application should continue operating when cache is unavailable.
+
+---
+
+## 3. Celery Failure
+
+**Failure Point:** Background task execution
+
+**Possible Failures:**
+
+* Celery worker stopped
+* Worker connection failure
+* Task execution failure
+
+**Impact:**
+
+* Background tasks may remain pending or fail.
+* Notifications or asynchronous operations may be delayed.
+
+**Expected Handling:**
+
+* Log task failures.
+* Retry only safe and retryable tasks.
+* Avoid duplicate processing.
+
+---
+
+## 4. External API Failure
+
+**Failure Point:** Third-party API communication
+
+**Possible Failures:**
+
+* API timeout
+* Connection failure
+* HTTP 5xx response
+* Third-party service unavailable
+
+**Impact:**
+
+* Dependent application functionality may fail or become slow.
+
+**Expected Handling:**
+
+* Configure request timeout.
+* Retry only safe operations.
+* Return a graceful error response.
+* Log the external API failure.
+
+---
+
+## 5. WebSocket / Channels Failure
+
+**Failure Point:** WebSocket connection
+
+**Possible Failures:**
+
+* Connection dropped
+* Channel layer unavailable
+* Redis connection failure
+
+**Impact:**
+
+* Real-time ride or driver updates may stop.
+
+**Expected Handling:**
+
+* Log connection failures.
+* Allow clients to reconnect.
+* Ensure normal REST APIs continue working.
+
+---
+
+## Failure Point Summary
+
+| Dependency   | Failure Point           | Impact                     | Handling             |
+| ------------ | ----------------------- | -------------------------- | -------------------- |
+| PostgreSQL   | Database connection     | API/data operations fail   | Safe error + logging |
+| Redis        | Cache/broker connection | Cache/tasks affected       | Fallback + logging   |
+| Celery       | Worker/task execution   | Background tasks delayed   | Safe retry + logging |
+| External API | Network/API request     | Timeout/service failure    | Timeout + safe retry |
+| Channels     | WebSocket connection    | Real-time updates affected | Reconnect + logging  |
+
+## Conclusion
+
+The major failure points in the backend have been identified for PostgreSQL, Redis, Celery, external APIs, and WebSocket/Channels. These failure points will be tested and handled in the following resilience tasks.
+task 3
+### PostgreSQL Failure Test Result
+
+- PostgreSQL service was stopped successfully.
+- Django server was started while PostgreSQL was unavailable.
+- Django failed to establish a database connection.
+- Error observed: `psycopg2.OperationalError`
+- Connection to `127.0.0.1:5432` was refused.
+- The failure was logged with a full traceback.
+- This identified a resilience gap: database unavailability currently prevents application startup.
+- Graceful database failure handling should be implemented to provide safe error responses and useful logs.
+
+### Task 4 — Simulate Redis Failure
+
+````md
+## Task 4 — Simulate Redis Failure
+
+### Objective
+
+Test the application behavior when the Redis service is unavailable.
+
+### Failure Simulation
+
+The project uses **Memurai**, which is Redis-compatible, as the Redis service.
+
+The Memurai service was stopped using:
+
+```cmd
+net stop Memurai
+````
+
+The service status was verified as:
+
+```text
+Status   Name      DisplayName
+Stopped  Memurai   Memurai
+```
+
+### Application Test
+
+After stopping Memurai, the Django development server was started:
+
+```powershell
+python manage.py runserver
+```
+
+The Django server started successfully:
+
+```text
+Starting ASGI/Daphne version 4.2.3 development server
+at http://127.0.0.1:8000/
+```
+
+A vehicle API was then tested:
+
+```text
+GET /api/v1/vehicles/
+```
+
+The API returned:
+
+```json
+{
+    "detail": "Authentication credentials were not provided."
+}
+```
+
+### Result
+
+* Memurai/Redis was unavailable.
+* Django server continued running successfully.
+* The API request reached the application.
+* No Redis connection error or application crash was observed.
+* The API returned a normal authentication error because the request did not contain credentials.
+* This confirms that Redis failure does not prevent the Django application from starting.
+* Redis-dependent features should still handle Redis unavailability gracefully.
+
+### Conclusion
+
+The Redis failure scenario was successfully simulated and tested. The application remained available even when Redis was unavailable.
+
+```
+
+```
+task 5
+
+
+````md
+## Task 5 — Simulate Celery Failure
+
+### Definition
+
+**Celery** is a background task processing system used to execute tasks asynchronously without blocking the main Django application.
+
+**Celery Failure** means the Celery worker is unavailable, so background tasks cannot be processed.
+
+### Failure Simulation
+
+Started the Celery worker:
+
+```powershell
+celery -A myproject worker --loglevel=info --pool=solo
+````
+
+Verified the worker:
+
+```powershell
+celery -A myproject inspect ping
+```
+
+Result:
+
+```text
+-> celery@DESKTOP-S3UDJJC: OK
+        pong
+```
+
+The worker was then stopped using `Ctrl + C`.
+
+After stopping the worker, the worker was checked again:
+
+```powershell
+celery -A myproject inspect ping
+```
+
+Result:
+
+```text
+Error: No nodes replied within time constraint
+```
+
+### Result
+
+* Celery worker failure was successfully simulated.
+* Worker became unavailable after shutdown.
+* Background tasks cannot be processed while the worker is unavailable.
+* Worker health can be monitored using `celery inspect ping`.
+
+### Conclusion
+
+Celery failure handling was tested successfully.
+
+```
+
+✅ **Task 5 — Completed**
+```
+
+```text
+requests.exceptions.ReadTimeout
+read timeout=2
+```
+
+### Task 6 Documentation — README
+
+````md
+## Task 6 — Simulate External API Timeout
+
+### Definition
+
+An **API timeout** occurs when an external API does not respond within the configured time limit.
+
+### Failure Simulation
+
+A delayed external API was tested using Python `requests` with a **2-second timeout**:
+
+```powershell
+python -c "import requests; print(requests.get('https://httpbin.org/delay/10', timeout=2).status_code)"
+````
+
+### Result
+
+The request exceeded the configured 2-second timeout and failed with:
+
+```text
+requests.exceptions.ReadTimeout
+```
+
+The error confirmed:
+
+```text
+read timeout=2
+```
+
+### Conclusion
+
+The external API timeout scenario was successfully simulated.
+
+The test confirms that configuring a request timeout prevents the application from waiting indefinitely for an external service.
+
+```
+
+✅ **Task 6 — Completed**
+
+
+```
+
+### README Documentation — Task 7
+
+````md id="3kq0j5"
+## Task 7 — Implement Appropriate Timeouts
+
+### Definition
+
+A **timeout** defines the maximum time an application waits for an external API response.
+
+### Implementation
+
+A reusable external API helper was created in:
+
+```text
+accounts/external_api.py
+````
+
+The API request uses a configurable timeout:
+
+```python
+response = requests.get(url, timeout=timeout)
+```
+
+Timeout errors are handled safely without crashing the application.
+
+### Testing
+
+The timeout handling was tested with a delayed external API:
+
+```powershell
+python -c "from accounts.external_api import call_external_api; print(call_external_api('https://httpbin.org/delay/10', timeout=2))"
+```
+
+Result:
+
+```text
+None
+```
+
+### Result
+
+* A configurable timeout was implemented.
+* Timeout exceptions are handled safely.
+* The application does not wait indefinitely for an external API.
+* The timeout behavior was successfully verified.
+
+### Conclusion
+
+Appropriate timeout handling was implemented and tested successfully.
+
+```
+
+✅ **Task 7 — Completed**
+
+
+```
+
+`None` means the `503 Service Unavailable` response was retried according to our retry policy and finally handled safely without crashing the application.
+
+### README Documentation — Task 8
+
+````md
+## Task 8 — Implement Retries Only Where Safe
+
+### Definition
+
+A **retry** means trying a failed request again when the failure may be temporary.
+
+Retries should be used only for safe and repeatable operations such as `GET` requests. Operations such as payments or booking creation should not be automatically retried because they may create duplicate actions.
+
+### Implementation
+
+A retry strategy was added to:
+
+```text
+accounts/external_api.py
+````
+
+The configuration allows:
+
+* Maximum 2 retries
+* Retry for `502`, `503`, and `504` server errors
+* Retry only for `GET` requests
+* Timeout errors are handled safely
+
+### Testing
+
+A `503 Service Unavailable` response was tested:
+
+```powershell
+python -c "from accounts.external_api import call_external_api; r=call_external_api('https://httpbin.org/status/503', timeout=2); print(r)"
+```
+
+Result:
+
+```text
+None
+```
+
+### Result
+
+* Safe retry logic was implemented.
+* Temporary server errors can be retried.
+* Only `GET` requests are automatically retried.
+* Unsafe operations are not automatically retried.
+* Failed requests are handled without crashing the application.
+
+### Conclusion
+
+Safe retry handling was implemented and successfully tested.
+
+```
+
+✅ **Task 8 — Completed**
+```
+
+Your test returned:
+
+```text
+{'success': False, 'data': None, 'error': 'External service is temporarily unavailable.'}
+```
+
+So instead of a traceback/crash, the failure is converted into a **safe response**.
+
+### README Documentation — Task 9
+
+````md
+## Task 9 — Implement Graceful Failure Responses
+
+### Definition
+
+A **graceful failure response** means handling dependency failures safely and returning a clear error message instead of exposing a traceback or crashing the application.
+
+### Implementation
+
+External API errors are handled in:
+
+```text
+accounts/external_api.py
+````
+
+The helper returns a safe response when the external service fails:
+
+```python
+{
+    "success": False,
+    "data": None,
+    "error": "External service is temporarily unavailable."
+}
+```
+
+### Testing
+
+The timeout scenario was tested using:
+
+```powershell
+python -c "from accounts.external_api import call_external_api; print(call_external_api('https://httpbin.org/delay/10', timeout=2))"
+```
+
+Result:
+
+```text
+{'success': False, 'data': None, 'error': 'External service is temporarily unavailable.'}
+```
+
+### Result
+
+* External API failure was handled safely.
+* No traceback was exposed to the caller.
+* A clear error message was returned.
+* The application did not crash.
+
+### Conclusion
+
+Graceful failure handling was implemented and successfully tested.
+
+```
+
+✅ **Task 9 — Completed**
+
+
+```
+
+````markdown
+# Resilience, Failure Handling & Observability
+
+## Task 10 — Verify Idempotency of Retried Operations
+
+### Definition
+Idempotency means repeating the same request should not create duplicate results.
+
+### Work Done
+- Verified payment idempotency using `Idempotency-Key`.
+- Tested duplicate payment requests.
+- Confirmed duplicate requests do not create duplicate payment records.
+- Automated idempotency test passed successfully.
+
+### Result
+Idempotency for retried payment operations was verified successfully.
+
+---
+
+## Task 11 — Add Structured Logs
+
+### Definition
+Structured logging means recording application events in an organized and useful format so failures can be easily traced and analyzed.
+
+### Work Done
+- Reviewed existing application logging.
+- Verified application, authentication, API, database, Celery, WebSocket, and security loggers.
+- Verified console and file-based logging.
+- Reviewed `django.log` and `error.log`.
+
+### Result
+Logging infrastructure was reviewed and verified successfully.
+
+---
+
+## Task 12 — Add Correlation / Request IDs
+
+### Definition
+A correlation or request ID is a unique ID assigned to a request so that the same request can be traced across logs and services.
+
+### Work Done
+- Created `accounts/middleware.py`.
+- Implemented `X-Request-ID`.
+- Generated a unique request ID when one is not provided.
+- Reused an existing `X-Request-ID` when available.
+- Added the middleware to `MIDDLEWARE` in `base.py`.
+- Verified the configuration using Django system check.
+
+### Verification
+
+```text
+python manage.py check
+System check identified no issues (0 silenced).
+````
+
+### Result
+
+Request ID tracing was implemented and verified successfully.
+
+---
+
+## Task 13 — Review Health Checks
+
+### Definition
+
+Health checks are endpoints or checks used to verify whether the application and its dependencies are working correctly.
+
+### Work Done
+
+Reviewed the existing health-check implementation in:
+
+```text
+accounts/health.py
+```
+
+Verified:
+
+* Application health check
+* PostgreSQL database health check
+* Redis/Memurai health check
+* Healthy response handling
+* Unhealthy response handling
+
+### Result
+
+Application and dependency health checks were reviewed successfully.
+
+---
+
+## Task 14 — Create an Incident Troubleshooting Document
+
+### Definition
+
+An incident troubleshooting document provides step-by-step guidance for identifying, diagnosing, and recovering from system failures.
+
+### Work Done
+
+Documented troubleshooting procedures for:
+
+* PostgreSQL failure
+* Redis/Memurai failure
+* Celery worker failure
+* External API timeout
+* WebSocket/Channels failure
+* Timeout and retry handling
+* Graceful failure responses
+* Logging and request tracing
+* Health-check verification
+
+### Result
+
+Incident troubleshooting documentation was completed successfully.
+
+```
+
