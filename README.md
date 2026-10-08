@@ -23489,4 +23489,726 @@ Documented troubleshooting procedures for:
 Incident troubleshooting documentation was completed successfully.
 
 ```
+9/10/26
+task 1
 
+# Scalable Mobile Backend Architecture — Final Assessment
+
+## 1. Objective
+
+Design a scalable, reliable, and secure backend architecture for a mobile application supporting 1 million users.
+
+The application allows customers to search services, create bookings, make payments, receive real-time updates, and communicate with service providers.
+
+## 2. Architecture Design
+
+```text
+              Mobile Application
+                      |
+                      v
+                Load Balancer
+                      |
+                      v
+                 API Gateway
+                      |
+                      v
+              Django API Instances
+                      |
+          +-----------+-----------+
+          |           |           |
+          v           v           v
+        Auth       Booking      Payment
+       Service     Service      Service
+                      |
+                      v
+              Notification Service
+                      |
+                      v
+               Message Queue
+                      |
+          +-----------+-----------+
+          |                       |
+          v                       v
+      PostgreSQL                Redis
+     Persistent Data            Cache
+```
+
+## 3. Component Responsibilities
+
+* Mobile Application: Allows customers and providers to use the application.
+* Load Balancer: Distributes incoming traffic across multiple backend instances.
+* API Gateway: Routes requests and supports rate limiting and access control.
+* Django API: Handles business logic, request validation, and REST APIs.
+* Auth Service: Manages registration, login, JWT authentication, and permissions.
+* Booking Service: Manages bookings, provider assignment, and booking status.
+* Payment Service: Processes payments, tracks payment status, and handles refunds.
+* Notification Service: Sends booking and payment notifications.
+* PostgreSQL: Stores persistent application and transaction data.
+* Redis: Caches frequently accessed data to reduce database load.
+* Message Queue: Processes background jobs and asynchronous notifications.
+
+## 4. Scalability
+
+* Run multiple Django API instances behind a load balancer.
+* Scale application instances horizontally when traffic increases.
+* Use Redis caching for frequently accessed data.
+* Optimize database queries and add appropriate indexes.
+* Use background workers for notifications and time-consuming tasks.
+* Monitor traffic, response times, errors, CPU, and memory usage.
+
+## 5. Data Consistency
+
+* Use database transactions for critical booking and payment updates.
+* Use unique transaction references and idempotency keys to prevent duplicate payments.
+* Validate booking availability before confirming a booking.
+* Update booking status only after verifying the payment result.
+* Use reliable asynchronous event processing for notifications.
+* Use retries and reconciliation for failed or uncertain payment operations.
+
+## 6. Reliability and Failure Handling
+
+* Apply timeouts and controlled retries for temporary failures.
+* Use circuit breakers for repeatedly failing external services.
+* Keep payment operations idempotent.
+* Use durable message queues and retry failed background jobs.
+* Monitor application health and configure alerts.
+* Maintain database backups and a recovery plan.
+
+## 7. Security
+
+* Use JWT authentication and role-based permissions.
+* Enforce HTTPS for communication.
+* Validate all incoming requests.
+* Apply rate limiting to prevent abuse.
+* Store credentials and payment secrets securely.
+* Never store raw card details unnecessarily; use a trusted payment provider.
+
+## 8. Communication
+
+* Use synchronous REST APIs when an immediate response is required.
+* Use asynchronous messages for notifications and background processing.
+* Use WebSockets when real-time communication is required.
+* Use authenticated and authorized communication between services.
+
+## 9. Database Ownership
+
+Each independently deployed service should own its data.
+
+* Auth: Users and authentication data.
+* Booking: Booking records and booking status.
+* Payment: Payment transactions and payment status.
+* Notification: Notification records and delivery status.
+
+Services should access other services through defined APIs or events rather than directly modifying another service's database.
+
+## 10. Conclusion
+
+The architecture supports horizontal scaling, caching, asynchronous processing, data consistency, and failure handling.
+
+For an initial implementation, a modular Django monolith can be a practical choice. As traffic and operational needs grow, independently deployable services can be introduced where they provide clear benefits.
+
+One million registered users does not automatically determine infrastructure capacity. Final capacity depends on concurrent users, request rates, workload, database performance, and load-testing results.
+
+task 2 ## 11. Database Design
+
+### 11.1 PostgreSQL
+
+PostgreSQL is a relational database used to store structured application data.
+
+In our mobile application, PostgreSQL stores:
+
+* User and provider details
+* Service and booking records
+* Payment transactions
+* Notification records
+
+It supports reliable data storage, relationships, and transactions.
+
+### 11.2 Indexes
+
+Indexes help the database find records faster without scanning the entire table.
+
+Examples:
+
+* Add an index on frequently searched service categories.
+* Index booking status when bookings are frequently filtered by status.
+* Use indexes on frequently queried foreign keys where appropriate.
+
+Indexes can improve read performance, but too many indexes can slow down inserts and updates.
+
+### 11.3 Transactions
+
+A database transaction groups multiple database operations into one logical unit.
+
+Transactions follow ACID properties:
+
+* Atomicity: All operations succeed together or are rolled back.
+* Consistency: Data remains valid according to database rules.
+* Isolation: Concurrent transactions are controlled to prevent conflicting changes.
+* Durability: Committed changes persist.
+
+Example:
+When confirming a booking, the system must validate availability and update the booking record safely. Payment processing may involve an external payment provider, so database transactions alone cannot guarantee that the external payment succeeds.
+
+### 11.4 Read/Write Patterns
+
+Read operations retrieve data, such as searching services or viewing booking history.
+
+Write operations create or modify data, such as creating bookings or updating payment status.
+
+Design considerations:
+
+* Optimize frequent read queries.
+* Use pagination for large result sets.
+* Use caching for suitable frequently accessed data.
+* Keep critical booking and payment writes consistent.
+* Use read replicas for suitable read-heavy workloads when needed.
+
+### 11.5 Connection Pooling
+
+Connection pooling reuses database connections instead of creating a new connection for every request.
+
+Benefits:
+
+* Reduces connection setup overhead.
+* Helps manage database connections under high traffic.
+* Improves resource utilization.
+
+Connection pooling can be implemented using an appropriate Django database configuration or a tool such as PgBouncer.
+
+The pool size and database connection limits must be configured carefully.
+
+### 11.6 Backup
+
+Database backups help recover data after accidental deletion, corruption, or infrastructure failure.
+
+Recommended practices:
+
+* Schedule regular database backups.
+* Store backups securely and separately from the main database.
+* Encrypt backups where appropriate.
+* Test restoring backups regularly.
+* Define recovery time and recovery point objectives.
+
+### 11.7 Replication Concepts
+
+Replication copies data from a primary PostgreSQL server to one or more replica servers.
+
+* Primary: Handles database writes and may also serve reads.
+* Read Replica: Can serve suitable read queries to reduce primary database load.
+* Replication Lag: The delay before changes on the primary become available on a replica.
+* Failover: Promotes or switches to a healthy server when the primary fails, using a suitable high-availability setup.
+
+Important considerations:
+
+* Replicas may return slightly outdated data.
+* Critical booking and payment operations should use a consistency strategy that avoids relying on stale replica data.
+* Replication is not a replacement for backups.
+
+### 11.8 Conclusion
+
+PostgreSQL provides reliable relational data storage. Indexes improve query performance, transactions protect database consistency, connection pooling manages connections efficiently, and backups and replication support recovery and availability.
+
+The final database configuration should be selected based on measured traffic, query patterns, data volume, and load-testing results.
+task 4 
+## 13. Async Architecture
+
+### 13.1 Architecture Design
+
+```text
+          Django API
+              |
+              v
+         Redis Broker
+              |
+              v
+         Celery Worker
+              |
+      +-------+--------+
+      |       |        |
+      v       v        v
+ Notification Email  Background
+                       Processing
+```
+
+### 13.2 Django
+
+Django receives API requests, validates input, performs business logic, and sends time-consuming tasks to Celery when appropriate.
+
+The API can return a response without waiting for non-critical background work to finish.
+
+### 13.3 Redis
+
+Redis can act as a message broker that temporarily holds tasks until Celery workers process them.
+
+The broker should be configured appropriately for the required reliability. For tasks that must not be lost, use a durable queue and suitable delivery, retry, and monitoring settings.
+
+### 13.4 Celery
+
+Celery is a task queue used to execute background jobs outside the main API request.
+
+Celery workers process queued tasks, such as sending emails, delivering notifications, and performing time-consuming processing.
+
+### 13.5 Operations That Should Be Asynchronous
+
+* Sending booking confirmation emails.
+* Sending push notifications.
+* Sending non-critical status updates.
+* Generating reports and processing large files.
+* Retrying temporary failures in background jobs.
+
+Benefits:
+
+* Faster API responses.
+* Reduced waiting time for customers.
+* Better separation of background work.
+* Ability to scale workers independently.
+
+### 13.6 Operations That Should Remain Synchronous
+
+* Login and authentication responses.
+* Request validation and immediate error responses.
+* Checking whether required booking information is valid.
+* Returning search results to the customer.
+* Operations where the user needs an immediate result.
+
+Payment processing requires special care. An external payment provider may process the payment asynchronously, but the application must verify the payment result before marking a booking as paid or confirmed. It should never assume that sending a payment request means the payment succeeded.
+
+### 13.7 Failure Handling
+
+* Configure retries for temporary failures.
+* Use retry limits and delays to avoid excessive repeated requests.
+* Make tasks idempotent to prevent duplicate effects.
+* Monitor queue length, worker health, and failed tasks.
+* Use appropriate failure queues and recovery procedures for repeatedly failing tasks.
+* Keep critical task delivery and payment status reconciliation reliable.
+
+### 13.8 Conclusion
+
+Asynchronous processing helps Django respond quickly while Celery handles background work. Redis can serve as the broker, and Celery workers can scale independently as demand increases.
+
+Synchronous processing should be used when an immediate result or decision is required. Asynchronous processing should be used for suitable background operations that do not need to finish before the API responds.
+
+task 5 
+## 14. Failure Scenarios and Handling
+
+### 14.1 Database Goes Down
+
+**Problem:** Django cannot read or write application data because PostgreSQL is unavailable.
+
+**Impact:**
+
+* Booking and payment-related database operations may fail.
+* Users may receive server errors.
+* Requests may time out.
+
+**Solution:**
+
+* Configure database connection timeouts.
+* Return a controlled error response.
+* Do not confirm bookings or payments when required database operations fail.
+* Monitor database health and restore service.
+* Maintain backups and a recovery plan.
+
+### 14.2 Redis Goes Down
+
+**Problem:** The application cannot access Redis for caching or message brokering.
+
+**Impact:**
+
+* Cached requests may become slower because the database receives more queries.
+* Celery tasks may be delayed or fail to enter the queue if Redis is the configured broker.
+
+**Solution:**
+
+* For non-critical caching, fall back to PostgreSQL when safe and practical.
+* Apply timeouts and monitor Redis health.
+* Protect the database from excessive traffic during cache failures.
+* Recover queued tasks according to the broker's delivery and recovery configuration.
+* Never depend on cache availability for critical booking or payment correctness.
+
+### 14.3 Celery Worker Crashes
+
+**Problem:** A worker stops before completing a background task.
+
+**Impact:**
+
+* Emails, notifications, or background processing may be delayed.
+* Tasks may need to be retried.
+
+**Solution:**
+
+* Monitor worker health and queue length.
+* Restart unhealthy workers automatically where appropriate.
+* Configure task acknowledgements, retries, and delivery guarantees carefully.
+* Make tasks idempotent to avoid duplicate notifications or processing.
+* Monitor and recover tasks that repeatedly fail.
+
+### 14.4 Payment Service Times Out
+
+**Problem:** The application does not receive a response from the payment provider within the expected time.
+
+**Impact:**
+
+* The actual payment result may be unknown.
+* Retrying the payment without protection may cause duplicate charges.
+
+**Solution:**
+
+* Mark the payment as pending or unknown until the outcome is verified.
+* Use an idempotency key when supported by the payment provider.
+* Check payment status through a provider API or verified webhook.
+* Retry safely using the same idempotency key where appropriate.
+* Confirm the booking only after payment success is verified.
+* Reconcile uncertain payments to identify missing or duplicate status updates.
+
+### 14.5 Mobile User Sends the Same Booking Request Twice
+
+**Problem:** A user taps the booking button twice or retries after a slow response.
+
+**Impact:**
+
+* Duplicate booking records may be created.
+* The same customer may accidentally reserve multiple slots.
+
+**Solution:**
+
+* Require an idempotency key for booking creation where appropriate.
+* Store the key and the result of the first successful operation.
+* Enforce database constraints for business rules that prevent duplicate bookings.
+* Return the original result when the same request is safely repeated.
+
+### 14.6 Two Providers Attempt the Same Booking
+
+**Problem:** Two providers try to accept the same booking at nearly the same time.
+
+**Impact:**
+
+* Both providers might appear to accept the booking if updates are not protected.
+
+**Solution:**
+
+* Use a database transaction and an atomic conditional update or row-level lock.
+* Allow acceptance only if the booking is still available.
+* Ensure only one provider can successfully claim the booking.
+* Return a conflict response to the provider whose request loses the race.
+* Add appropriate database constraints where applicable.
+
+### 14.7 Conclusion
+
+Failure handling protects the application from outages, duplicate operations, and inconsistent data.
+
+The system should use timeouts, controlled retries, idempotency, database transactions, monitoring, and recovery procedures. Critical booking and payment operations must preserve correctness even when dependencies fail.
+
+task 6
+## 15. Security Architecture
+
+### 15.1 JWT (JSON Web Token)
+
+JWT is used to authenticate users after successful login.
+
+* The user logs in with valid credentials.
+* The server issues an access token.
+* The client sends the token in the Authorization header.
+* Django validates the token before allowing access to protected APIs.
+* Expired or invalid tokens are rejected.
+
+Example:
+
+`Authorization: Bearer <access_token>`
+
+Access tokens should have a limited lifetime. Refresh tokens must be stored and handled securely.
+
+### 15.2 RBAC (Role-Based Access Control)
+
+RBAC controls access based on a user's role.
+
+Example roles:
+
+* Customer: Search services, create bookings, and view their own bookings.
+* Service Provider: Manage their services and bookings assigned to them.
+* Admin: Access authorized administrative functions.
+
+Django should enforce permissions on the server. Hiding a button in the mobile application is not sufficient security.
+
+### 15.3 Object Permissions
+
+Object permissions determine whether a user can access or modify a particular record.
+
+Examples:
+
+* A customer can view only their own bookings.
+* A provider can update only bookings assigned to them.
+* A user cannot access another user's profile by changing an ID in the URL.
+
+Django should verify ownership and authorization on every relevant request. UUIDs alone do not prevent unauthorized access.
+
+### 15.4 API Throttling
+
+API throttling limits how frequently a client can make requests.
+
+Benefits:
+
+* Reduces abuse and excessive requests.
+* Helps protect the backend from traffic spikes.
+* Limits repeated login attempts and other sensitive operations.
+
+Django REST Framework throttling can be configured with appropriate limits. Distributed deployments should use a suitable shared mechanism where necessary.
+
+Throttling is not a replacement for authentication, authorization, or infrastructure-level denial-of-service protection.
+
+### 15.5 HTTPS
+
+HTTPS encrypts communication between the mobile application and backend.
+
+Benefits:
+
+* Protects credentials and access tokens during transmission.
+* Reduces the risk of data interception.
+* Helps protect sensitive booking and payment information.
+
+Production APIs should enforce HTTPS and use valid TLS certificates.
+
+### 15.6 Secret Management
+
+Secrets include database passwords, Django secret keys, payment provider credentials, and API keys.
+
+Security practices:
+
+* Store secrets in environment variables or a dedicated secrets manager.
+* Never commit secrets to Git.
+* Restrict access according to the principle of least privilege.
+* Rotate exposed or compromised credentials.
+* Avoid printing secrets in logs.
+
+### 15.7 Input Validation
+
+All incoming data must be validated before processing.
+
+Examples:
+
+* Validate required fields and data types.
+* Check booking dates and allowed status values.
+* Validate numeric amounts and permitted ranges.
+* Use Django REST Framework serializers for request validation.
+* Use parameterized ORM queries and avoid unsafe raw SQL.
+
+Validation helps prevent invalid data, injection vulnerabilities, and unexpected application errors.
+
+### 15.8 File Upload Security
+
+Uploaded files may contain malicious content or oversized data.
+
+Security practices:
+
+* Allow only required file types.
+* Validate file size limits.
+* Do not trust the filename or client-provided MIME type alone.
+* Generate safe server-side filenames.
+* Store uploads in a controlled location with appropriate permissions.
+* Prevent executable uploads from being run.
+* Scan files for malware where appropriate.
+* Require authorization before accessing private files.
+
+### 15.9 Conclusion
+
+The security architecture combines JWT authentication, role-based access control, object-level authorization, throttling, HTTPS, secure secret management, input validation, and file upload controls.
+
+Security must be enforced on the backend and verified through automated tests, including unauthorized access and cross-user data access tests.
+
+task 7
+
+## 16. Performance and Scaling Plan
+
+### Objective
+
+Plan how the mobile backend can scale from 1,000 users to 1,000,000 users while maintaining performance, reliability, and data consistency.
+
+The exact infrastructure requirements depend on concurrent users, request rates, workload, database performance, and load-testing results. User count alone does not determine server capacity.
+
+### Stage 1: 1,000 Users
+
+**Architecture:** Single Django application with PostgreSQL and optional Redis caching.
+
+**Required actions:**
+
+* Keep the Django application modular and maintainable.
+* Optimize database queries.
+* Add indexes for frequently queried fields.
+* Use pagination for list APIs.
+* Implement authentication and permissions.
+* Monitor response times and errors.
+* Configure regular database backups.
+
+**Goal:** Establish a reliable baseline with simple infrastructure.
+
+### Stage 2: 10,000 Users
+
+**Architecture:** Multiple Django instances can be introduced behind a load balancer when traffic requires them.
+
+**Required actions:**
+
+* Add Redis caching for popular services and categories.
+* Configure database connection management.
+* Optimize slow queries using query analysis.
+* Add API throttling and request timeouts.
+* Move suitable background tasks to Celery workers.
+* Introduce automated performance testing.
+
+**Goal:** Handle increased traffic without unnecessary database load.
+
+### Stage 3: 100,000 Users
+
+**Architecture:** Horizontally scaled Django instances, centralized caching, and dedicated background workers.
+
+**Required actions:**
+
+* Scale Django instances based on measured traffic.
+* Use Redis caching with appropriate TTL and invalidation.
+* Optimize PostgreSQL indexes and connection pooling.
+* Consider PostgreSQL read replicas for suitable read-heavy workloads.
+* Scale Celery workers independently.
+* Add monitoring, alerts, and centralized logs.
+* Test dependency failures and recovery procedures.
+
+**Goal:** Improve throughput, reduce response times, and increase availability.
+
+### Stage 4: 1,000,000 Users
+
+**Architecture:** A highly available, horizontally scalable backend with carefully managed database capacity and background processing.
+
+**Required actions:**
+
+* Use multiple application instances across appropriate failure zones.
+* Configure load balancing and health checks.
+* Scale database resources based on query and storage requirements.
+* Use read replicas for suitable queries while protecting consistency.
+* Use reliable message queues and independently scalable workers.
+* Introduce service separation only where independent scaling or ownership justifies it.
+* Configure database backup, replication, and disaster recovery.
+* Add rate limiting, security monitoring, and alerting.
+* Perform load, stress, endurance, and recovery testing.
+* Define service-level objectives for availability and response times.
+
+**Goal:** Support high traffic while protecting critical booking and payment operations.
+
+### Performance Metrics
+
+Monitor the following at every stage:
+
+* API response time, including p95 and p99 latency.
+* Requests per second and concurrent requests.
+* Error rate and timeout rate.
+* Database query latency and connection usage.
+* Redis cache hit and miss rates.
+* Celery queue length and task processing time.
+* CPU, memory, and storage utilization.
+
+### Conclusion
+
+The backend should scale incrementally based on measured performance rather than registered user count alone. Query optimization and caching should come first, followed by horizontal scaling, connection management, background processing, and database scaling as required.
+
+Critical booking and payment operations must remain consistent and secure at every scale.
+task 8
+
+## 17. Final Technical Presentation
+
+### 17.1 Django Architecture
+
+Django handles the application's business logic and API requests. The project is organized into modules such as authentication, booking, payment, and notifications.
+
+A modular Django monolith is a practical starting point. Modules can become independent services when scaling or operational requirements justify it.
+
+### 17.2 API Architecture
+
+The mobile application sends HTTPS requests to the backend through the load balancer and API Gateway.
+
+Django REST Framework handles request validation, authentication, permissions, and responses. Pagination and throttling help manage API usage.
+
+### 17.3 Database Architecture
+
+PostgreSQL stores users, services, bookings, and payment records.
+
+Indexes improve query performance. Transactions protect data consistency. Connection pooling manages database connections. Backups support recovery, and replicas can improve read capacity and availability.
+
+### 17.4 Redis Architecture
+
+Redis caches frequently accessed data such as popular services and categories.
+
+TTL controls cache lifetime. Invalidation refreshes stale data. Cache stampede prevention reduces simultaneous database requests.
+
+PostgreSQL remains the source of truth for critical business data.
+
+### 17.5 Celery Architecture
+
+Django submits background jobs to a configured message broker, such as Redis. Celery workers process notifications, emails, and time-consuming tasks.
+
+Retries, task monitoring, and idempotency help manage failures and duplicate processing.
+
+### 17.6 WebSocket Architecture
+
+WebSockets provide persistent, two-way communication between the mobile application and backend.
+
+They are useful for real-time booking updates, provider location updates, and chat.
+
+The backend must authenticate connections, authorize access to each conversation or booking, and manage connection scaling appropriately.
+
+### 17.7 Security Architecture
+
+JWT supports authentication. Role-based and object-level permissions control access to APIs and individual records.
+
+HTTPS protects data in transit. Throttling, input validation, secure secret management, and file upload controls reduce security risks.
+
+### 17.8 Scaling Strategy
+
+Start by measuring performance and optimizing database queries.
+
+Add Redis caching, multiple Django instances behind a load balancer, connection pooling, and background workers as demand increases.
+
+At larger scales, consider read replicas, high availability, and independently deployed services when justified by measured requirements.
+
+### 17.9 Failure Handling
+
+Use timeouts, controlled retries, monitoring, and recovery procedures for failed dependencies.
+
+Use idempotency for booking and payment operations. Verify uncertain payment results before confirming bookings. Protect booking acceptance with atomic database operations.
+
+### 17.10 Monitoring Strategy
+
+Monitor:
+
+* API response times and error rates.
+* Request throughput and concurrent requests.
+* Database latency and connection usage.
+* Redis hit/miss rates.
+* Celery queue length and failed tasks.
+* CPU, memory, and storage.
+* WebSocket connections and disconnects.
+
+Configure alerts for service failures and abnormal performance.
+
+### 17.11 Deployment Strategy
+
+* Use separate development, testing, and production environments.
+* Store configuration and secrets securely.
+* Run automated tests before deployment.
+* Apply database migrations carefully.
+* Use health checks and structured logging.
+* Deploy with a rollback plan.
+* Configure HTTPS, backups, and production monitoring.
+
+### 17.12 Cost and Performance Trade-offs
+
+* More Django instances improve capacity but increase infrastructure costs.
+* Redis improves response times but requires memory and operational management.
+* Read replicas can increase read capacity but introduce replication lag.
+* More Celery workers improve background processing throughput but consume additional resources.
+* Microservices allow independent deployment and scaling but add network, monitoring, and operational complexity.
+
+Choose the simplest architecture that meets measured performance, reliability, security, and business requirements.
+
+### Final Conclusion
+
+The proposed architecture combines Django, PostgreSQL, Redis, Celery, WebSockets, security controls, and horizontal scaling to support a growing mobile application.
+
+The architecture should be validated through testing and monitoring. Infrastructure capacity must be based on measured traffic, workload, and service-level objectives rather than registered user count alone.
