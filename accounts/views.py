@@ -1489,21 +1489,6 @@ class RideStatusUpdateView(APIView):
                     updated_ride
                 )
 
-            channel_layer = get_channel_layer()
-
-            async_to_sync(
-                channel_layer.group_send
-            )(
-                f"ride_{updated_ride.id}",
-                {
-                    "type": "ride_status_update",
-                    "status": updated_ride.status.name,
-                    "ride_id": str(
-                        updated_ride.id
-                    ),
-                },
-            )
-
         except Ride.DoesNotExist:
 
             logger.warning(

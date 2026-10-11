@@ -245,6 +245,54 @@ class WebSocketTest(TransactionTestCase):
 
         await communicator.disconnect()
 
+    # API TO WEBSOCKET END-TO-END VALIDATION
+
+    async def test_api_status_update_broadcasts_websocket_event(self):
+        from rest_framework.test import APIClient
+
+        token = await self.get_token(self.rider)
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"/ws/ride/{self.ride.id}/?token={token}",
+        )
+
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+        await communicator.receive_json_from()
+
+        @sync_to_async
+        def update_status_via_api():
+            accepted_status, _ = RideStatus.objects.get_or_create(
+                name=RideStatus.Status.ACCEPTED
+            )
+            self.ride.status = accepted_status
+            self.ride.save(update_fields=["status"])
+
+            RideStatus.objects.get_or_create(
+                name=RideStatus.Status.STARTED
+            )
+
+            client = APIClient()
+            client.force_authenticate(user=self.driver)
+            return client.patch(
+                f"/api/v1/rides/{self.ride.id}/status/",
+                {"status": RideStatus.Status.STARTED},
+                format="json",
+            )
+
+        response = await update_status_via_api()
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["data"]["status"], RideStatus.Status.STARTED)
+
+        event = await communicator.receive_json_from(timeout=3)
+        self.assertTrue(event["success"])
+        self.assertEqual(event["ride_id"], str(self.ride.id))
+        self.assertEqual(event["status"], RideStatus.Status.STARTED)
+
+        await communicator.disconnect()
+
     # 6. DRIVER LOCATION EVENT
 
     async def test_driver_location_event(self):

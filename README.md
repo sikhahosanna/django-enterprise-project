@@ -24212,3 +24212,292 @@ Choose the simplest architecture that meets measured performance, reliability, s
 The proposed architecture combines Django, PostgreSQL, Redis, Celery, WebSockets, security controls, and horizontal scaling to support a growing mobile application.
 
 The architecture should be validated through testing and monitoring. Infrastructure capacity must be based on measured traffic, workload, and service-level objectives rather than registered user count alone.
+12/10/26
+task 1 
+# Day 1 — Event-Flow Review and Contracts
+
+## 1. Objective
+
+The objective of this task is to understand and document the complete mobile event lifecycle, from the initial client request through backend processing to notification delivery. It also defines event schemas, validation rules, error contracts, correlation IDs, and failure recovery strategies.
+
+## 2. Mobile Event Lifecycle
+
+### Event Flow Diagram
+
+```text
+Mobile Application
+        |
+        v
+Django REST API
+        |
+        v
+Authentication and Request Validation
+        |
+        v
+Service Layer — Business Logic
+        |
+        v
+PostgreSQL — Save Ride and Status
+        |
+        v
+Celery — Background Processing
+        |
+        v
+Notification Service
+        |
+        +------------------+
+        |                  |
+        v                  v
+WebSocket Update    Database Notification
+        |                  |
+        +--------+---------+
+                 |
+                 v
+        Mobile Application
+```
+
+### Event Flow Explanation
+
+1. The mobile application sends a request to the Django REST API.
+2. The backend authenticates the user and validates the request data.
+3. The service layer executes the required business logic.
+4. PostgreSQL stores important ride details and status changes.
+5. Celery processes suitable background tasks, such as sending notifications.
+6. Django Channels and WebSockets deliver real-time updates to connected clients.
+7. The mobile application receives the response or notification and updates its interface.
+
+**Important:** PostgreSQL is the source of truth for ride and payment status. A notification alone does not confirm that a booking or payment succeeded.
+
+## 3. Event Schema and Contracts
+
+An event contract defines the standard structure and expected behavior of an event exchanged between application components.
+
+### Example: Ride Status Updated Event
+
+```json
+{
+  "event_id": "evt-12345",
+  "event_type": "ride.status_updated",
+  "version": "1.0",
+  "correlation_id": "req-12345",
+  "ride_id": "ride-98765",
+  "status": "ACCEPTED",
+  "occurred_at": "2026-10-12T10:00:00Z"
+}
+```
+
+### Event Fields
+
+| Field          | Purpose                                       |
+| -------------- | --------------------------------------------- |
+| event_id       | Uniquely identifies the event                 |
+| event_type     | Identifies the type of event                  |
+| version        | Identifies the event schema version           |
+| correlation_id | Connects related operations across components |
+| ride_id        | Identifies the related ride                   |
+| status         | Represents the updated ride status            |
+| occurred_at    | Records when the event occurred               |
+
+This is an example contract for documentation. The field names and event format should be aligned with the actual project implementation before being adopted in production.
+
+## 4. Validation Rules
+
+* Required fields must be present.
+* Event IDs and correlation IDs must follow the agreed format.
+* Event types must be recognized by the receiving component.
+* Ride IDs must refer to valid rides.
+* Ride status values must belong to the allowed status list.
+* Status transitions must follow the ride workflow.
+* Timestamps must use a consistent format, preferably UTC.
+* Unauthorized users must not access another user's ride information.
+* Invalid requests must return a consistent error response.
+
+## 5. Standard Error Contract
+
+API errors should follow a consistent structure so that the mobile application can handle failures predictably.
+
+### Example Error Response
+
+```json
+{
+  "success": false,
+  "message": "Invalid ride status.",
+  "error_code": "INVALID_RIDE_STATUS",
+  "correlation_id": "req-12345"
+}
+```
+
+### Common Error Scenarios
+
+| Scenario                               | Expected Behavior                  |
+| -------------------------------------- | ---------------------------------- |
+| Invalid request data                   | Return HTTP 400                    |
+| Missing or invalid authentication      | Return HTTP 401                    |
+| Insufficient permissions               | Return HTTP 403                    |
+| Resource not found                     | Return HTTP 404                    |
+| Rate limit exceeded                    | Return HTTP 429                    |
+| Temporary server or dependency failure | Return an appropriate 5xx response |
+
+Error responses should avoid exposing passwords, tokens, database credentials, stack traces, or other sensitive information.
+
+## 6. Correlation IDs
+
+A correlation ID is a unique identifier used to trace a request across different backend components.
+
+### Example Flow
+
+```text
+Mobile Request
+      |
+      v
+Django API — req-12345
+      |
+      v
+Service Layer — req-12345
+      |
+      v
+Celery Task — req-12345
+      |
+      v
+Notification/WebSocket — req-12345
+```
+
+### Benefits
+
+* Helps trace a request across multiple services.
+* Makes debugging easier.
+* Connects related log entries.
+* Helps investigate delayed or failed notifications.
+* Improves monitoring and troubleshooting.
+
+Correlation IDs should be validated or safely generated by the server. They must not contain sensitive user information.
+
+## 7. Failure Scenarios and Recovery
+
+| Failure Scenario            | Expected Recovery Behavior                                              |
+| --------------------------- | ----------------------------------------------------------------------- |
+| Invalid client request      | Reject the request with a clear validation error                        |
+| PostgreSQL unavailable      | Return an appropriate error and log the failure                         |
+| Redis unavailable           | Apply the configured fallback or fail safely according to the operation |
+| Celery task fails           | Retry eligible temporary failures with bounded retries and backoff      |
+| WebSocket disconnects       | Allow reconnection and retrieve the latest state through the API        |
+| Duplicate event received    | Use event IDs or idempotency controls where appropriate                 |
+| Notification delivery fails | Retry safely or record the failure for later processing                 |
+| Payment request times out   | Verify the payment provider's status before retrying the operation      |
+
+### Recovery Principles
+
+* Do not silently lose important business events.
+* Use bounded retries for temporary failures.
+* Avoid duplicate bookings, payments, and notifications.
+* Keep PostgreSQL as the source of truth for important business state.
+* Log failures with correlation IDs.
+* Monitor repeated failures and alert when necessary.
+* Use durable event delivery mechanisms when guaranteed delivery is required.
+
+## 8. Testing and Verification Plan
+
+The following checks will be performed during code review and testing:
+
+* Verify the ride request and status update API flow.
+* Verify request validation and error responses.
+* Check whether correlation IDs are generated and included in logs.
+* Verify Celery task execution and retry behavior.
+* Check WebSocket authentication and ride-group permissions.
+* Test disconnected clients and notification failures.
+* Verify duplicate requests and repeated events are handled safely.
+* Confirm that failed operations do not incorrectly update booking or payment status.
+
+Implementation changes will be made only where the existing code or tests reveal a gap.
+
+## 9. Expected Outcome
+
+The mobile event lifecycle, event contracts, validation rules, standard error responses, correlation ID strategy, and failure recovery behavior are documented. The next step is to compare these expectations with the existing Django, Celery, Redis, and WebSocket implementation and record any required improvements.
+
+---
+12/10/26
+
+# Event Flow Review and Resilience Validation
+
+# JWT Secret Key Security Fix & Regression Testing
+
+**Date:** 12 October 2026
+**Project:** Django Ride Booking Backend
+**Task:** Secret Key Length Warning Fix and Regression Validation
+
+## 1. Objective
+
+To fix the JWT `InsecureKeyLengthWarning` by updating the Django secret key to a secure length and verifying that the existing application functionality continues to work.
+
+## 2. Work Completed
+
+✅ **Secret Key Update**
+
+* Identified that the existing `SECRET_KEY` in `.env` was 24 bytes long.
+* Generated a new secure random secret key.
+* Updated the `.env` configuration with a 64-byte secret key.
+
+✅ **Django System Check**
+
+* Executed `python manage.py check`.
+* Confirmed that Django reported no system-check issues.
+
+✅ **JWT Warning Verification**
+
+* Generated an access token using Simple JWT to verify the signing key.
+* No `InsecureKeyLengthWarning` appeared during verification.
+
+✅ **Regression Testing**
+
+* Executed the service, WebSocket/Celery, and ride API regression test suites.
+* Verified existing API functionality and asynchronous task behavior.
+
+## 3. Test Results
+
+| Validation               | Result              |
+| ------------------------ | ------------------- |
+| Secret key length        | 64 bytes            |
+| Django system check      | Passed              |
+| JWT warning verification | No warning observed |
+| Regression tests         | 78 passed           |
+| Failed tests             | 0                   |
+
+## 4. Security Considerations
+
+* The secret key is stored in the `.env` file instead of being hardcoded in source code.
+* The `.env` file should be excluded from Git commits.
+* Secret key values must not be shared or exposed in logs.
+* Changing the Django secret key may invalidate existing sessions or tokens; fresh authentication may be required.
+* Production key rotation should be coordinated carefully.
+
+## 5. Conclusion
+
+The Django secret key length warning was addressed by updating the key to 64 bytes. Django system checks completed successfully, JWT verification produced no key-length warning, and all 78 regression tests passed.
+
+**Status: Completed**
+
+
+## Request ID Middleware
+- Configured RequestIDMiddleware in Django settings.
+- Verified automatic Request ID generation.
+- Verified client-provided X-Request-ID preservation.
+- Confirmed the X-Request-Id response header using curl.
+
+## Celery Notification and Retry Validation
+- Reviewed ride notification task execution and error handling.
+- Verified duplicate notification prevention through existing tests.
+- Reviewed retry configuration and simulated failure recovery.
+- Confirmed retry test succeeded after two simulated failures.
+
+## Test Results
+- Test module: accounts.tests.test_websocket_celery
+- Tests executed: 9
+- Result: PASS
+- Duration: 22.682 seconds
+- Django system check: No issues identified.
+
+## Notes
+- The unauthenticated vehicle API returned 401 Unauthorized, as expected without an access token.
+- JWT signing-key length warnings appeared during testing and require separate security review.
+- Further regression and end-to-end validation should be confirmed separately.
+
