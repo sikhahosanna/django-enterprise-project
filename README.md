@@ -24501,3 +24501,100 @@ The Django secret key length warning was addressed by updating the key to 64 byt
 - JWT signing-key length warnings appeared during testing and require separate security review.
 - Further regression and end-to-end validation should be confirmed separately.
 
+13/10/26
+
+# Reliable Event Processing
+
+## 1. Objective
+
+The objective of this task is to improve reliable event processing in the Django application by implementing safe retries, exponential backoff with jitter, idempotent event consumption, and a documented failed-event recovery process.
+
+## 2. Retry Mechanism
+
+The `retry_test_task` in `accounts/tasks.py` was updated to support controlled retries.
+
+### Implementation
+
+* Maximum retries: 3
+* Exponential backoff: Enabled
+* Random jitter: Enabled
+* Maximum retry delay: 30 seconds
+* Retry delay is calculated using an exponential formula with a random delay added.
+
+### Retry Flow
+
+1. The task starts processing an event.
+2. If a temporary failure occurs, the task schedules a retry.
+3. The delay increases with each retry attempt.
+4. If processing succeeds, the task returns a success result.
+5. If all retries are exhausted, the failure must be investigated and recovered using the documented recovery procedure.
+
+## 3. Idempotent Event Processing
+
+Idempotency ensures that processing the same event multiple times does not create duplicate records.
+
+The existing ride notification task uses Django's `get_or_create()` method.
+
+The database also has unique constraints for ride and booking notifications.
+
+### Benefits
+
+* Prevents duplicate notification records.
+* Makes repeated event delivery safer.
+* Maintains data consistency.
+* Supports reliable retry processing.
+
+### Validation
+
+The existing duplicate notification test was executed successfully. The first execution created a notification, while the second execution returned the existing notification with `created=False`.
+
+## 4. Failed-Event Recovery
+
+When a task continues to fail after retries, the following recovery process should be followed:
+
+1. Identify the failed task using its Celery task ID and application logs.
+2. Review the exception message and traceback.
+3. Identify the related ride, booking, user, or event.
+4. Check the database to determine whether the operation was partially or fully completed.
+5. Correct the underlying issue before replaying the event.
+6. Retry the task with its original arguments using an approved recovery procedure.
+7. Verify that the event completed successfully and no duplicate records were created.
+
+Payment and booking events require additional care. Their current status must be checked before replaying them to avoid duplicate transactions or incorrect state changes.
+
+## 5. Dead-Letter Handling
+
+A dedicated dead-letter queue or persistent dead-letter table has not been implemented as part of this prototype.
+
+For the current implementation, application logs and Celery task failure records can help investigate failures, depending on the configured logging and result-backend settings.
+
+### Recommended Production Enhancement
+
+For production deployment:
+
+* Configure a dedicated dead-letter queue or persistent failed-event store.
+* Record the task ID, event identifier, failure reason, retry count, and timestamp.
+* Monitor repeated failures and alert the support team.
+* Provide a controlled process for reviewing and replaying failed events.
+* Ensure that replayed events remain idempotent.
+
+This provides a documented recovery path without claiming that a dedicated dead-letter queue is already implemented.
+
+## 6. Testing and Validation
+
+The following checks were completed:
+
+* Python syntax check for `accounts/tasks.py` passed.
+* WebSocket/Celery test suite completed successfully.
+* Total tests executed: 10.
+* Test result: All 10 tests passed.
+* Retry test succeeded after two simulated failures.
+* Retry logs showed increasing delays of approximately 1.79 seconds and 3.71 seconds.
+* Duplicate notification test confirmed that a repeated execution did not create another notification.
+* Django system checks reported no issues during the test run.
+
+## 7. Conclusion
+
+The prototype demonstrates bounded retries with exponential backoff and jitter, idempotent notification processing, and a documented failed-event recovery procedure.
+
+A dedicated dead-letter mechanism remains a recommended production enhancement. The implementation and recovery process should be reviewed and tested further before being treated as production-ready.

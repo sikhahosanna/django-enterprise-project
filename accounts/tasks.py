@@ -1,4 +1,5 @@
-import logging
+﻿import logging
+import random
 import time
 from datetime import timedelta
 
@@ -265,34 +266,45 @@ def ride_cancelled_notification(ride_id, passenger_id):
 
 
 # Retry
-
-@shared_task(bind=True, max_retries=2)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=30,
+    retry_jitter=True,
+)
 def retry_test_task(self):
+    attempt = self.request.retries + 1
+
     logger.info(
         "Retry test started. Attempt: %s",
-        self.request.retries + 1,
+        attempt,
     )
 
     try:
         if self.request.retries < 2:
-            raise Exception("Simulated task failure")
+            raise RuntimeError("Simulated task failure")
 
         logger.info("Retry test completed successfully")
-
         return "Retry test successful"
 
     except Exception as exc:
         logger.error(
             "Task failed on attempt %s: %s",
-            self.request.retries + 1,
+            attempt,
             exc,
         )
+        
+        base_delay = 2 ** self.request.retries
+        jitter = random.uniform(0, base_delay)
+        countdown = min(30, base_delay + jitter)
 
-        raise self.retry(
-            exc=exc,
-            countdown=2,
+        logger.warning(
+            "Retrying task in %.2f seconds; attempt=%s",
+            countdown,
+            attempt,
         )
-
+        raise self.retry(exc=exc, countdown=countdown)
 
 # Ride Report
 
