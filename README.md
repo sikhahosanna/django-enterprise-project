@@ -24598,3 +24598,82 @@ The following checks were completed:
 The prototype demonstrates bounded retries with exponential backoff and jitter, idempotent notification processing, and a documented failed-event recovery procedure.
 
 A dedicated dead-letter mechanism remains a recommended production enhancement. The implementation and recovery process should be reviewed and tested further before being treated as production-ready.
+
+14/10/26
+
+# API Rate Limiting & Throttling Documentation
+
+## 1. Objective
+
+The objective of this task is to control the number of API requests a user can make within a specific time period. Rate limiting helps protect the Django application from excessive requests and repeated login attempts.
+
+## 2. Rate Limiting Configuration
+
+The following rate limits are configured in Django REST Framework.
+
+| Request Type | Configured Limit |
+|---|---|
+| Anonymous users | 20 requests/minute |
+| Authenticated users | 100 requests/minute |
+| Login API | 5 requests/minute |
+| Ride creation | 10 requests/minute |
+| Sensitive operations | 5 requests/minute |
+
+## 3. Implemented Throttling
+
+### Login API Throttling
+- Applied `LoginRateThrottle` to the login API.
+- Restricts repeated login requests.
+- Helps reduce excessive login attempts.
+
+### Ride Creation Throttling
+- Applied `RideCreationRateThrottle` to the ride list/create endpoint.
+- Uses the authenticated user's ID to identify requests.
+- Controls requests according to the configured rate.
+
+### Sensitive Operation Throttling
+- Applied `SensitiveOperationThrottle` to the change-password API.
+- Limits repeated requests for sensitive operations.
+
+## 4. HTTP 429 Response
+
+HTTP status code `429 Too Many Requests` indicates that a client has exceeded the permitted request limit.
+
+When the configured limit is exceeded, Django REST Framework can reject further requests with this response.
+
+## 5. Testing and Verification
+
+Created the focused test file:
+
+`accounts/test_rate_limiting.py`
+
+The tests cover:
+1. Login throttle behavior.
+2. Ride creation throttle behavior.
+3. Sensitive operation throttle behavior.
+4. Login API HTTP 429 response.
+
+### Test Results
+- Total focused tests: 4
+- Passed: 4
+- Failed: 0
+- Django system check: Passed
+
+Command executed:
+
+`python manage.py test accounts.test_rate_limiting`
+
+Result: All 4 tests passed successfully.
+
+## 6. Conclusion
+
+The rate-limiting configuration and throttle classes were tested successfully. The login API was also verified to return HTTP 429 when the test request limit was exceeded.
+
+Further end-to-end HTTP 429 verification is still required for the ride creation and sensitive-operation APIs.
+
+## 7. Benefits
+- Helps prevent excessive API requests.
+- Adds protection against repeated login attempts.
+- Controls request frequency for important endpoints.
+- Improves API reliability and resource management.
+- Supports safer API usage as the application grows.
