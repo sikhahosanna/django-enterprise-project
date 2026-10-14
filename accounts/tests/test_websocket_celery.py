@@ -1,6 +1,7 @@
 
 from django.test import TestCase, TransactionTestCase, override_settings
 from asgiref.sync import sync_to_async
+from unittest.mock import patch
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.testing import WebsocketCommunicator
@@ -14,6 +15,7 @@ from accounts.models import (
     VehicleType,
     RideStatus,
     Ride,
+    Notification,
 )
 
 from accounts.routing import websocket_urlpatterns
@@ -33,26 +35,17 @@ from accounts.tasks import (
 )
 class WebSocketTest(TransactionTestCase):
 
-    # CHANNELS APPLICATION
-
     application = ProtocolTypeRouter(
         {
             "websocket": URLRouter(websocket_urlpatterns),
         }
     )
 
-    # SETUP
-
     def setUp(self):
-
-        # Rider
-
         self.rider = User.objects.create_user(
             email="rider@test.com",
             password="Test@12345",
         )
-
-        # Driver
 
         self.driver = User.objects.create_user(
             email="driver@test.com",
@@ -65,8 +58,6 @@ class WebSocketTest(TransactionTestCase):
             status=DriverProfile.DriverStatus.ACTIVE,
         )
 
-        # Driver Location
-
         self.driver_location = DriverLocation.objects.create(
             driver=self.driver_profile,
             latitude=17.3850,
@@ -76,19 +67,13 @@ class WebSocketTest(TransactionTestCase):
             ),
         )
 
-        # Vehicle Type
-
         self.vehicle_type, _ = VehicleType.objects.get_or_create(
             name="CAR"
         )
 
-        # Ride Status
-
         self.ride_status, _ = RideStatus.objects.get_or_create(
             name=RideStatus.Status.REQUESTED
         )
-
-        # Ride
 
         self.ride = Ride.objects.create(
             rider=self.rider,
@@ -104,19 +89,12 @@ class WebSocketTest(TransactionTestCase):
             fare=100,
         )
 
-    # JWT TOKEN HELPER
-
     @sync_to_async
     def get_token(self, user):
-
         refresh = RefreshToken.for_user(user)
-
         return str(refresh.access_token)
 
-    # 1. DRIVER WEBSOCKET - VALID TOKEN
-
     async def test_driver_websocket_valid_token(self):
-
         token = await self.get_token(self.driver)
 
         communicator = WebsocketCommunicator(
@@ -125,28 +103,19 @@ class WebSocketTest(TransactionTestCase):
         )
 
         connected, _ = await communicator.connect()
-
         self.assertTrue(connected)
-
         await communicator.disconnect()
 
-    # 2. DRIVER WEBSOCKET - WITHOUT TOKEN
-
     async def test_driver_websocket_without_token(self):
-
         communicator = WebsocketCommunicator(
             self.application,
             "/ws/driver/location/",
         )
 
         connected, _ = await communicator.connect()
-
         self.assertFalse(connected)
 
-    # 3. RIDE WEBSOCKET - RIDER CONNECTION
-
     async def test_ride_websocket_rider_connection(self):
-
         token = await self.get_token(self.rider)
 
         communicator = WebsocketCommunicator(
@@ -155,24 +124,15 @@ class WebSocketTest(TransactionTestCase):
         )
 
         connected, _ = await communicator.connect()
-
         self.assertTrue(connected)
 
         response = await communicator.receive_json_from()
-
         self.assertTrue(response["success"])
-
-        self.assertEqual(
-            response["ride_id"],
-            str(self.ride.id),
-        )
+        self.assertEqual(response["ride_id"], str(self.ride.id))
 
         await communicator.disconnect()
 
-    # 4. RIDE WEBSOCKET - UNAUTHORIZED USER
-
     async def test_ride_websocket_unauthorized_user(self):
-
         unauthorized_user = await sync_to_async(
             User.objects.create_user
         )(
@@ -188,15 +148,10 @@ class WebSocketTest(TransactionTestCase):
         )
 
         connected, _ = await communicator.connect()
-
         self.assertFalse(connected)
-
         await communicator.disconnect()
 
-    # 5. RIDE STATUS EVENT
-
     async def test_ride_status_event(self):
-
         token = await self.get_token(self.rider)
 
         communicator = WebsocketCommunicator(
@@ -205,11 +160,7 @@ class WebSocketTest(TransactionTestCase):
         )
 
         connected, _ = await communicator.connect()
-
         self.assertTrue(connected)
-
-        # First message = connection success
-
         await communicator.receive_json_from()
 
         from channels.layers import get_channel_layer
@@ -227,25 +178,11 @@ class WebSocketTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertTrue(response["success"])
-
-        self.assertEqual(
-            response["message"],
-            "Ride status updated.",
-        )
-
-        self.assertEqual(
-            response["ride_id"],
-            str(self.ride.id),
-        )
-
-        self.assertEqual(
-            response["status"],
-            "ACCEPTED",
-        )
+        self.assertEqual(response["message"], "Ride status updated.")
+        self.assertEqual(response["ride_id"], str(self.ride.id))
+        self.assertEqual(response["status"], "ACCEPTED")
 
         await communicator.disconnect()
-
-    # API TO WEBSOCKET END-TO-END VALIDATION
 
     async def test_api_status_update_broadcasts_websocket_event(self):
         from rest_framework.test import APIClient
@@ -275,6 +212,7 @@ class WebSocketTest(TransactionTestCase):
 
             client = APIClient()
             client.force_authenticate(user=self.driver)
+
             return client.patch(
                 f"/api/v1/rides/{self.ride.id}/status/",
                 {"status": RideStatus.Status.STARTED},
@@ -284,19 +222,20 @@ class WebSocketTest(TransactionTestCase):
         response = await update_status_via_api()
 
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data["data"]["status"], RideStatus.Status.STARTED)
+        self.assertEqual(
+            response.data["data"]["status"],
+            RideStatus.Status.STARTED,
+        )
 
         event = await communicator.receive_json_from(timeout=3)
+
         self.assertTrue(event["success"])
         self.assertEqual(event["ride_id"], str(self.ride.id))
         self.assertEqual(event["status"], RideStatus.Status.STARTED)
 
         await communicator.disconnect()
 
-    # 6. DRIVER LOCATION EVENT
-
     async def test_driver_location_event(self):
-
         token = await self.get_token(self.rider)
 
         communicator = WebsocketCommunicator(
@@ -305,11 +244,7 @@ class WebSocketTest(TransactionTestCase):
         )
 
         connected, _ = await communicator.connect()
-
         self.assertTrue(connected)
-
-        # First message = connection success
-
         await communicator.receive_json_from()
 
         from channels.layers import get_channel_layer
@@ -330,46 +265,23 @@ class WebSocketTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertTrue(response["success"])
-
-        self.assertEqual(
-            response["type"],
-            "driver_location",
-        )
-
-        self.assertEqual(
-            response["ride_id"],
-            str(self.ride.id),
-        )
-
+        self.assertEqual(response["type"], "driver_location")
+        self.assertEqual(response["ride_id"], str(self.ride.id))
         self.assertEqual(
             response["driver_id"],
             str(self.driver_profile.id),
         )
-
-        self.assertEqual(
-            response["latitude"],
-            17.3850,
-        )
-
-        self.assertEqual(
-            response["longitude"],
-            78.4867,
-        )
+        self.assertEqual(response["latitude"], 17.3850)
+        self.assertEqual(response["longitude"], 78.4867)
 
         await communicator.disconnect()
 
 
-# CELERY TESTS
-
-
 class CeleryTest(TestCase):
 
-    # CELERY TASK EXECUTION
-
-    def test_celery_task_execution(self):
-
+    def create_ride_and_user(self, email):
         user = User.objects.create_user(
-            email="celery@test.com",
+            email=email,
             password="Test@12345",
         )
 
@@ -393,96 +305,103 @@ class CeleryTest(TestCase):
             dropoff_longitude=78.4983,
             fare=100,
         )
+
+        return user, ride
+
+    def test_celery_task_execution(self):
+        user, ride = self.create_ride_and_user("celery@test.com")
+
+        result = ride_notification.apply(
+            args=[str(ride.id), str(user.id), "Test notification"]
+        )
+
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertTrue(result.result["notification_id"])
+
+    def test_celery_duplicate_notification(self):
+        user, ride = self.create_ride_and_user("duplicate@test.com")
+
+        args = [str(ride.id), str(user.id), "Test notification"]
+
+        first_result = ride_notification.apply(args=args)
+        second_result = ride_notification.apply(args=args)
+
+        self.assertEqual(first_result.status, "SUCCESS")
+        self.assertEqual(second_result.status, "SUCCESS")
+        self.assertTrue(first_result.result["created"])
+        self.assertFalse(second_result.result["created"])
+
+        self.assertEqual(
+            Notification.objects.filter(
+                user=user,
+                ride=ride,
+                notification_type=Notification.NotificationType.RIDE_ACCEPTED,
+            ).count(),
+            1,
+        )
+
+    @patch("accounts.tasks.Notification.objects.get_or_create")
+    def test_notification_recovers_after_transient_failure(
+        self, mock_get_or_create
+    ):
+        user, ride = self.create_ride_and_user("recovery@test.com")
+
+        notification = Notification(
+            user=user,
+            ride=ride,
+            notification_type=Notification.NotificationType.RIDE_ACCEPTED,
+            message="Recovery notification",
+        )
+
+        mock_get_or_create.side_effect = [
+            Exception("Temporary database failure"),
+            (notification, True),
+        ]
 
         result = ride_notification.apply(
             args=[
                 str(ride.id),
                 str(user.id),
-                "Test notification",
-            ]
+                "Recovery notification",
+            ],
+            throw=False,
         )
 
-        self.assertEqual(
-            result.status,
-            "SUCCESS",
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertTrue(result.result["created"])
+        self.assertEqual(mock_get_or_create.call_count, 2)
+
+    @patch("accounts.tasks.Notification.objects.get_or_create")
+    def test_notification_recovers_after_timeout(self, mock_get_or_create):
+        user, ride = self.create_ride_and_user("timeout@test.com")
+
+        notification = Notification(
+            user=user,
+            ride=ride,
+            notification_type=Notification.NotificationType.RIDE_ACCEPTED,
+            message="Timeout recovery notification",
         )
 
-        self.assertTrue(
-            result.result["notification_id"]
-        )
+        mock_get_or_create.side_effect = [
+            TimeoutError("Notification database timed out"),
+            (notification, True),
+        ]
 
-    # CELERY DUPLICATE NOTIFICATION
-
-    def test_celery_duplicate_notification(self):
-
-        user = User.objects.create_user(
-            email="duplicate@test.com",
-            password="Test@12345",
-        )
-
-        vehicle_type, _ = VehicleType.objects.get_or_create(
-            name="CAR"
-        )
-
-        ride_status, _ = RideStatus.objects.get_or_create(
-            name=RideStatus.Status.REQUESTED
-        )
-
-        ride = Ride.objects.create(
-            rider=user,
-            vehicle_type=vehicle_type,
-            status=ride_status,
-            pickup_address="Hyderabad",
-            pickup_latitude=17.3850,
-            pickup_longitude=78.4867,
-            dropoff_address="Secunderabad",
-            dropoff_latitude=17.4399,
-            dropoff_longitude=78.4983,
-            fare=100,
-        )
-
-        first_result = ride_notification.apply(
+        result = ride_notification.apply(
             args=[
                 str(ride.id),
                 str(user.id),
-                "Test notification",
-            ]
+                "Timeout recovery notification",
+            ],
+            throw=False,
         )
 
-        second_result = ride_notification.apply(
-            args=[
-                str(ride.id),
-                str(user.id),
-                "Test notification",
-            ]
-        )
-
-        self.assertEqual(
-            first_result.status,
-            "SUCCESS",
-        )
-
-        self.assertEqual(
-            second_result.status,
-            "SUCCESS",
-        )
-
-        self.assertFalse(
-            second_result.result["created"]
-        )
-
-    # CELERY RETRY
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertTrue(result.result["created"])
+        self.assertEqual(mock_get_or_create.call_count, 2)
 
     def test_celery_retry(self):
-
         result = retry_test_task.apply()
 
-        self.assertEqual(
-            result.status,
-            "SUCCESS",
-        )
-
-        self.assertEqual(
-            result.result,
-            "Retry test successful",
-        )
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertEqual(result.result, "Retry test successful")

@@ -24677,3 +24677,92 @@ Further end-to-end HTTP 429 verification is still required for the ride creation
 - Controls request frequency for important endpoints.
 - Improves API reliability and resource management.
 - Supports safer API usage as the application grows.
+
+15/10/26
+
+# Observability and Automated Tests
+
+**Task Date:** 15 October 2026  
+**Project:** Django Ride Booking Backend
+
+## 1. Objective
+
+Implement observability features and automated tests to monitor API requests and verify reliable notification and WebSocket event processing.
+
+## 2. Implementation
+
+### Structured Logging
+- Configured application logging for API requests and background tasks.
+- Logged request completion details and exceptions.
+- Configured console and file-based logging.
+
+### Request Correlation IDs
+- Implemented `RequestIDMiddleware` in `accounts/middleware.py`.
+- Reads the `X-Request-ID` header when provided.
+- Generates a UUID when the request ID is missing.
+- Returns the request ID in the API response header.
+
+### API Request Metrics
+Logged the following details for API requests:
+- HTTP method
+- Request path
+- HTTP response status code
+- Request processing time in milliseconds
+
+### Reliable Notification Processing
+- Tested duplicate notification handling.
+- Added automated tests for transient failures and recovery.
+- Added timeout failure and recovery testing.
+- Verified Celery retry behavior.
+
+### WebSocket Event Delivery
+- Tested WebSocket authentication.
+- Verified ride-status event delivery.
+- Verified driver-location event delivery.
+- Tested API-triggered WebSocket event broadcasting.
+
+## 3. Files and Components
+
+| File | Purpose |
+|---|---|
+| `accounts/middleware.py` | Request IDs and API metrics logging |
+| `myproject/settings/base.py` | Middleware registration and logging configuration |
+| `accounts/tasks.py` | Celery notification processing and retry behavior |
+| `accounts/tests/test_websocket_celery.py` | Celery and WebSocket automated tests |
+
+## 4. Testing and Validation
+
+### Django System Check
+
+```powershell
+python manage.py check
+```
+
+**Result:** No issues identified.
+
+### Automated Tests
+
+```powershell
+python manage.py test accounts.tests.test_websocket_celery -v 2
+```
+
+**Result:** 12 tests passed, 0 failed.
+
+### Test Scenarios
+- Duplicate notification prevention
+- Transient failure recovery
+- Timeout recovery
+- Celery retry behavior
+- WebSocket authentication
+- Ride-status and driver-location event delivery
+- API-triggered WebSocket broadcasting
+
+## 5. Outcome
+
+Request correlation, API request logging, and basic request metrics were verified. Automated tests confirmed the expected duplicate-notification behavior, retry and recovery paths, and WebSocket event delivery.
+
+**Final Status:** Completed and verified for the tested scope.
+
+## 6. Notes
+
+The transient-failure and timeout-recovery tests use mocked failures to validate retry behavior. They do not represent a live database outage or production load test. A dedicated monitoring dashboard or external metrics backend was not part of this task.
