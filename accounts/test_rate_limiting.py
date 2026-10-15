@@ -18,6 +18,10 @@ class RateLimitTests(TestCase):
         cache.clear()
         self.factory = APIRequestFactory()
 
+        self.original_login_rates = LoginRateThrottle.THROTTLE_RATES
+        self.original_ride_rates = RideCreationRateThrottle.THROTTLE_RATES
+        self.original_sensitive_rates = SensitiveOperationThrottle.THROTTLE_RATES
+
         rates = {
             "login": "2/minute",
             "ride_creation": "2/minute",
@@ -27,6 +31,12 @@ class RateLimitTests(TestCase):
         LoginRateThrottle.THROTTLE_RATES = rates
         RideCreationRateThrottle.THROTTLE_RATES = rates
         SensitiveOperationThrottle.THROTTLE_RATES = rates
+
+    def tearDown(self):
+        LoginRateThrottle.THROTTLE_RATES = self.original_login_rates
+        RideCreationRateThrottle.THROTTLE_RATES = self.original_ride_rates
+        SensitiveOperationThrottle.THROTTLE_RATES = self.original_sensitive_rates
+        super().tearDown()
 
     def test_login_throttle(self):
         throttle = LoginRateThrottle()

@@ -24766,3 +24766,110 @@ Request correlation, API request logging, and basic request metrics were verifie
 ## 6. Notes
 
 The transient-failure and timeout-recovery tests use mocked failures to validate retry behavior. They do not represent a live database outage or production load test. A dedicated monitoring dashboard or external metrics backend was not part of this task.
+
+16/10/26
+
+# End-to-End Validation and Handover
+
+## 1. Overview
+
+This task focused on validating the Django ride-booking backend through end-to-end testing, regression testing, and failure-handling verification. The objective was to ensure that the major application workflows work correctly and that existing functionality remains stable after recent changes.
+
+## 2. Testing Summary
+
+Executed the complete Django test suite using:
+
+```bash
+python manage.py test
+```
+
+**Test results:**
+- Total tests executed: 139
+- Passed: 139
+- Failed: 0
+- Django system check: No issues identified
+
+## 3. Functional Areas Validated
+
+### Authentication and Security
+- User login and registration
+- JWT access and refresh token flow
+- Invalid login handling
+- API rate limiting and throttling
+- Authentication and permission checks
+
+### Ride Management
+- Ride creation
+- Ride acceptance by drivers
+- Ride cancellation and completion
+- Ride status transitions
+- Invalid status transition handling
+- Concurrent ride acceptance behavior
+
+### Notifications and Background Tasks
+- Ride notification creation
+- Duplicate notification handling
+- Celery task execution
+- Retry behavior for temporary failures
+- Notification processing and failure logging
+
+### WebSocket Functionality
+- WebSocket authentication
+- Missing or invalid token handling
+- Unauthorized connection handling
+- Ride-related WebSocket access validation
+
+### API Validation and Permissions
+- Successful API requests
+- Invalid request handling
+- Unauthorized access prevention
+- Admin and normal-user permission checks
+- Error response validation
+
+## 4. Defect Identified and Fixed
+
+During full-suite testing, the token-refresh test initially failed because the login response did not contain the expected `data` field. The login request was being affected by rate limiting.
+
+Investigation identified that the rate-limiting test modified class-level throttle configuration without restoring the original values. This could affect other tests executed afterward.
+
+**Resolution:** Updated `accounts/test_rate_limiting.py` to restore the original throttle configuration after each test using `tearDown()`.
+
+**Verification:**
+- Rate-limiting tests: 4 passed
+- Token-refresh test: Passed
+- Complete regression suite: 139 passed, 0 failed
+
+## 5. Known Limitations and Observations
+
+- The test suite validates application behavior in the configured test environment; it does not establish production-scale performance.
+- Production deployment, live infrastructure failure recovery, and large-scale load behavior require separate verification.
+- Some negative tests intentionally generate warning and error logs to validate failure handling.
+- The pagination test output included an `UnorderedObjectListWarning` for the `Profile` queryset. Review queryset ordering to ensure consistent pagination.
+- External service availability and real-world WebSocket behavior should be monitored during deployment.
+
+## 6. Validation Commands
+
+Run the following commands to verify the application:
+
+```bash
+python manage.py check
+python manage.py test accounts.test_rate_limiting -v 2
+python manage.py test accounts.tests.test_authentication.AuthenticationTests.test_token_refresh -v 2
+python manage.py test
+```
+
+## 7. Demo Plan
+
+The short demo can cover:
+
+1. Start the Django application.
+2. Demonstrate user login and JWT token refresh.
+3. Create a ride and demonstrate its status lifecycle.
+4. Show role-based permission enforcement.
+5. Demonstrate notification processing and retry behavior.
+6. Show rate-limiting behavior.
+7. Present the full test-suite result.
+
+## 8. Conclusion
+
+End-to-end validation and regression testing completed successfully. All 139 tests passed, including authentication, ride management, permissions, notification processing, retry behavior, and WebSocket-related tests. The throttle configuration test-isolation issue was corrected and verified. Remaining work includes the final demo, review of changes, and handover completion.
