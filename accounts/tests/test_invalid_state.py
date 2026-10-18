@@ -1,4 +1,4 @@
-from django.test import TestCase
+﻿from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import (
@@ -52,8 +52,6 @@ class InvalidStateChangeTest(TestCase):
             format="json",
         )
 
-        print("STATUS:", response.status_code)
-        print("RESPONSE:", response.data)
 
         self.assertNotEqual(
             response.status_code,

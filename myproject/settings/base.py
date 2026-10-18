@@ -444,9 +444,13 @@ LOGGING = {
 
     "formatters": {
         "verbose": {
-            "format": "{asctime} {levelname} {name} {message}",
+            "format": "{asctime} {levelname} request_id={request_id} {name} {message}",
             "style": "{",
         },
+    },
+
+    "filters": {
+        "request_id": {"()": "accounts.middleware.RequestIDFilter"},
     },
 
     "handlers": {
@@ -454,6 +458,7 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
 
         "file": {
@@ -461,6 +466,7 @@ LOGGING = {
             "class": "logging.FileHandler",
             "filename": str(LOG_DIR / "django.log"),
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
 
         "error_file": {
@@ -468,6 +474,7 @@ LOGGING = {
             "class": "logging.FileHandler",
             "filename": str(LOG_DIR / "error.log"),
             "formatter": "verbose",
+            "filters": ["request_id"],
         },
     },
 

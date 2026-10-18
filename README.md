@@ -24872,4 +24872,41 @@ The short demo can cover:
 
 ## 8. Conclusion
 
-End-to-end validation and regression testing completed successfully. All 139 tests passed, including authentication, ride management, permissions, notification processing, retry behavior, and WebSocket-related tests. The throttle configuration test-isolation issue was corrected and verified. Remaining work includes the final demo, review of changes, and handover completion.
+End-to-end validation and regression testing completed successfully. All 139 tests passed, including authentication, ride management, permissions, notification processing, retry behavior, and WebSocket-related tests. The throttle configuration test-isolation issue was corrected and verified. Remaining work includes the final demo, review of changes, and handover completion.Get-Content .\accounts\tests\test_ride_cancellation.py
+
+19/10/26
+
+# Day 1 — End-to-End Flow and State Model
+
+**Date:** 19 October 2026  
+**Story:** End-to-End Flow and State Model
+
+## 1. Objective
+To define the end-to-end upload event flow, establish valid lifecycle states, and handle duplicate events, processing failures, and bounded retries.
+
+## 2. Work Completed
+- Implemented a versioned event envelope with schema version, event ID, event type, correlation ID, upload ID, timestamp, status, attempt number, and optional error details.
+- Defined upload lifecycle states: SELECTED, STAGED, UPLOADING, UPLOADED, PROCESSING, RETRY_PENDING, COMPLETED, and FAILED.
+- Implemented a reference state processor to validate legal state transitions.
+- Added duplicate-event detection using event IDs.
+- Implemented basic retry-limit handling for processing failures, with a maximum of three attempts.
+- Added unit tests for successful processing, duplicate events, invalid transitions, unknown uploads, unsupported schema versions, and invalid attempt numbers.
+- Prepared documentation describing the event flow, state transitions, execution steps, and current limitations.
+
+## 3. Testing and Validation
+- Python compilation check completed successfully.
+- Django system check completed with no issues.
+- Executed the event-processing test suite: **7 tests passed, 0 failures**.
+
+## 4. Design Decisions
+- Used a versioned event contract to support future changes.
+- Used correlation IDs to help trace related events.
+- Restricted lifecycle changes to explicitly allowed transitions.
+- Applied a bounded retry policy to avoid unlimited processing attempts.
+- Used an in-memory reference implementation for the initial state-model validation.
+
+## 5. Limitations
+The current implementation does not yet include persistent event storage, actual file upload and staging integration, or real Celery retry scheduling. These require further integration and validation.
+
+## 6. Outcome
+The initial event contract and lifecycle state model were implemented and validated with focused unit tests. Documentation was prepared to support review and further development.
