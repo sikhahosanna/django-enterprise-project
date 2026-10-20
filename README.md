@@ -24910,3 +24910,47 @@ The current implementation does not yet include persistent event storage, actual
 
 ## 6. Outcome
 The initial event contract and lifecycle state model were implemented and validated with focused unit tests. Documentation was prepared to support review and further development.
+
+21/10/26
+
+# Day 3 — Idempotent Event/API Processing
+
+## Objective
+Ensure duplicate or out-of-order events are handled safely without creating duplicate results.
+
+## Implementation
+- Implemented event processing with duplicate-event detection.
+- Added validation for upload lifecycle transitions.
+- Rejected invalid and out-of-order events.
+- Added retry handling for processing failures with a retry limit.
+- Validated supported schema versions and upload IDs.
+
+## Testing
+Executed the following command:
+
+`python manage.py test accounts.tests.test_event_processing -v 2`
+
+**Result:** All 8 tests passed successfully.
+
+Test coverage includes:
+- Duplicate event handling
+- Invalid attempt and transition validation
+- Out-of-order event rejection
+- Retry handling and retry limit
+- Successful upload lifecycle
+- Unknown upload rejection
+- Unsupported schema version rejection
+
+## Acceptance Criteria
+- Duplicate events are not processed more than once.
+- Invalid and out-of-order events are rejected.
+- Processing failures follow the configured retry behavior.
+- Targeted tests pass successfully.
+
+## Remaining Verification
+- Run the full regression test suite.
+- Verify all required changes are included in Git.
+- Commit the completed changes according to the team workflow.
+
+## Known Limitations
+The current test results confirm the event-processing logic covered by these eight tests. Full regression testing and any additional integration or concurrency checks are still to be verified.

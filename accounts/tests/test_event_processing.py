@@ -115,3 +115,14 @@ class EventProcessorTests(SimpleTestCase):
 
         with self.assertRaises(ValueError):
             self.processor.handle(payload)
+
+    def test_out_of_order_event_is_rejected(self):
+        payload = self.event("evt-out-of-order", "upload.processing.completed")
+
+        with self.assertRaises(ValueError):
+            self.processor.handle(payload)
+
+        self.assertEqual(
+            self.processor.states["upload-1"],
+            UploadState.STAGED,
+        )
