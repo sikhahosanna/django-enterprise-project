@@ -24954,3 +24954,41 @@ Test coverage includes:
 
 ## Known Limitations
 The current test results confirm the event-processing logic covered by these eight tests. Full regression testing and any additional integration or concurrency checks are still to be verified.
+
+22/10/26
+# Day 4 – Observability and Integration Tests
+
+**Date:** 22 October 2026
+
+## 1. Objective
+To improve request traceability, validate error-handling scenarios, and verify application stability through integration and regression testing.
+
+## 2. Work Completed
+- Reviewed request ID middleware for request tracking and correlation.
+- Added tests to validate request ID generation and preservation.
+- Tested server-error responses and exception-handling behavior.
+- Validated duplicate event detection and rejection of invalid or out-of-order events.
+- Executed middleware and event-processing test suites.
+- Completed full Django regression testing to check existing application functionality.
+
+## 3. Testing and Validation
+- Middleware tests: 5 passed.
+- Event-processing tests: 8 passed.
+- Full regression suite: 152 tests passed with zero failures.
+- Python compilation check completed successfully.
+- Django system check completed with no issues.
+- Git whitespace validation completed successfully.
+
+## 4. Design Decisions
+- Request IDs support request tracing and troubleshooting.
+- Duplicate events should not be processed more than once.
+- Invalid state transitions must be rejected.
+- Automated regression tests help identify unexpected changes in existing functionality.
+
+## 5. Limitations
+- Client-side offline behavior requires separate client or network-level testing.
+- Test results validate the scenarios covered by the current test suite.
+- Production monitoring and distributed tracing require appropriate runtime configuration.
+
+## 6. Outcome
+Request-tracing and event-processing tests were validated successfully. The complete Django regression suite passed all 152 tests, providing confidence in the existing application functionality.

@@ -2,9 +2,11 @@
 from unittest.mock import Mock
 
 from django.http import HttpResponse
+import logging
+
 from django.test import RequestFactory, SimpleTestCase
 
-from accounts.middleware import RequestIDMiddleware, request_id_context
+from accounts.middleware import RequestIDFilter, RequestIDMiddleware, request_id_context
 
 
 class RequestIDMiddlewareTests(SimpleTestCase):
@@ -58,4 +60,37 @@ class RequestIDMiddlewareTests(SimpleTestCase):
             with self.assertRaises(RuntimeError):
                 middleware(request)
 
+        self.assertEqual(request_id_context.get(), "-")
+
+    def test_server_error_response_includes_request_id_and_logs_status(self):
+        request_id = "server-error-test-123"
+        request = self.factory.get("/", HTTP_X_REQUEST_ID=request_id)
+        middleware = RequestIDMiddleware(
+            lambda req: HttpResponse("Server error", status=500)
+        )
+
+        with self.assertLogs("accounts.middleware", level="INFO") as logs:
+            response = middleware(request)
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response["X-Request-ID"], request_id)
+        self.assertTrue(any("status_code=500" in line for line in logs.output))
+
+    def test_exception_log_contains_correlation_id(self):
+        request_id = "exception-trace-123"
+        request = self.factory.get("/", HTTP_X_REQUEST_ID=request_id)
+
+        def raise_error(req):
+            raise RuntimeError("simulated server failure")
+
+        middleware = RequestIDMiddleware(raise_error)
+
+        with self.assertLogs("accounts.middleware", level="ERROR") as logs:
+            with self.assertRaisesRegex(RuntimeError, "simulated server failure"):
+                middleware(request)
+
+        self.assertTrue(
+            any("API request failed" in record.getMessage()
+                for record in logs.records)
+        )
         self.assertEqual(request_id_context.get(), "-")
