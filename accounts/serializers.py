@@ -1,4 +1,4 @@
-import re
+﻿import re
 
 from rest_framework import serializers
 
@@ -1072,7 +1072,7 @@ class ServiceImageSerializer(serializers.ModelSerializer):
     def validate_image(self, image):
 
         try:
-            return validate_image_upload(image)
+            return validate_image_file(image)
 
         except ValidationError as exc:
 
@@ -1100,4 +1100,5 @@ class SavedServiceSerializer(serializers.ModelSerializer):
             "customer",
             "created_at",
         ]
+
 

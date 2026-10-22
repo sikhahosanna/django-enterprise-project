@@ -24992,3 +24992,54 @@ To improve request traceability, validate error-handling scenarios, and verify a
 
 ## 6. Outcome
 Request-tracing and event-processing tests were validated successfully. The complete Django regression suite passed all 152 tests, providing confidence in the existing application functionality.
+
+## Day 5 — Workflow Capstone (23 October 2026)
+
+### Objective
+Complete and verify the upload-to-result workflow, including image validation, event processing, retry/recovery behavior, and security boundaries.
+
+### Work Completed
+- Added image validation for supported JPG, JPEG, and PNG files, file size limits, and corrupted image rejection.
+- Verified profile image upload through the authenticated API.
+- Tested event processing, duplicate-event prevention, invalid transitions, and unsupported schema versions.
+- Verified Celery retry behavior and notification recovery after simulated transient failures and timeouts.
+- Tested WebSocket authentication and unauthorized connection rejection.
+- Prepared workflow documentation covering execution steps, security boundaries, and troubleshooting.
+
+### Workflow
+1. Authenticate the request.
+2. Validate the uploaded image's type, size, and content.
+3. Accept valid uploads and reject invalid files.
+4. Process workflow events and validate their state transitions.
+5. Retry eligible transient failures within the configured retry limit.
+6. Record the successful result or report a terminal failure.
+
+### Test Evidence
+
+| Test Area | Result |
+|---|---|
+| Image validation | 4 tests passed |
+| Profile image upload API | 2 tests passed |
+| Event processing, retry/recovery, and WebSockets | 20 tests passed |
+| Profile and service regression | 64 tests passed |
+
+*These results come from separate test runs. The full regression suite still needs to be executed.*
+
+### Security and Privacy
+- Require authentication for protected image upload endpoints.
+- Reject unsupported formats, oversized images, and corrupted image content.
+- Reject invalid or out-of-order events and unsupported schema versions.
+- Validate WebSocket authentication and authorization.
+- Keep secrets out of source control and logs; configure media storage securely.
+
+### Troubleshooting
+- **HTTP 400 on upload:** Check image format, file size, and image integrity.
+- **Authentication failure:** Check the request token and permissions.
+- **Event rejected:** Check the upload ID, schema version, attempt, and expected state.
+- **Celery retry:** Inspect logs for the underlying transient error.
+- **WebSocket denied:** Verify the token and user authorization.
+
+### Remaining Release Checks
+- Run the full regression suite.
+- Review the final Git diff and verify all intended files.
+- Commit changes according to the team workflow.
